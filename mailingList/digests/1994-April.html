@@ -1,0 +1,2451 @@
+<TITLE>
+Radiance Digest v2n6
+</TITLE>
+<html>
+<a name="top"><h2>RADIANCE Digest Volume 2, Number 6</h2></a>
+<hr>
+<pre><body>
+Dear Radiance User,
+
+I've been accumulating mail messages for about half a year, and it's
+time to send them out before the digest hits the treacherous 100K mark.
+
+As usual, the mail is broken into indexed catagories for more
+convenient browsing.  These are the topics covered in this issue:
+
+	<A HREF="#BRIGHTNESS">BRIGHTNESS MAPPING</A>	- Mapping luminance to display values
+	<A HREF="#LIGHTING">LIGHTING CALCULATIONS</A>	- Lighting and daylighting questions
+	<A HREF="#SPECULAR">SPECULAR APPROXIMATION</A>	- Fresnel approximation changes
+	<A HREF="#MEMORY">MEMORY USAGE</A>		- Memory used by rpict and oconv
+	<A HREF="#SGI">SGI GAMMA</A>		- Correct gamma setting on Silicon Graphics
+	<A HREF="#PROGRAM">PROGRAM NAMING</A>		- Radiance program name collisions
+	<A HREF="#RVIEW">RVIEW SURFACE NORMALS</A>	- Learning about surface normals in rview
+	<A HREF="#WATER">WATER</A>			- Modeling water
+	<A HREF="#STAR">STAR FILTER</A>		- Using pfilt star filter in animations
+	<A HREF="#GLOW">GLOW</A>			- Details on glow type definition
+	<A HREF="#TMESH2RAD">TMESH2RAD</A>		- New triangle mesh converter
+	<A HREF="#LUMINAIRE">LUMINAIRE MODELING</A>	- Modeling unusual luminaire geometry
+	<A HREF="#GENSKY">GENSKY</A>			- Getting gensky to mimic a measured sky
+	<A HREF="#COMPILE">COMPILE PROBLEMS</A>	- ANSI-C compilation trauma
+	<A HREF="#GLASS">GLASS BRICKS</A>		- Modeling glass bricks
+	<A HREF="#AMBIENT">AMBIENT VALUES</A>		- Setting the ambient value (-av parameter)
+	<A HREF="#LOCK">LOCK MANAGER</A>		- Problem with rpiece/rpict on some machines
+	<A HREF="#SPECKLE">SPECKLE</A>			- Source of image speckle
+	<A HREF="#OBJVIEW">OBJVIEW</A>			- Using objview to look at a single object
+	<A HREF="#CSG">CSG</A>			- Constructive Solid Geometry (not)
+	<A HREF="#RAD">RAD PROBLEMS</A>		- Strange behavior with rad program
+
+If you wish to be taken off the Radiance mailing list, please send mail
+to "radiance-request@hobbes.lbl.gov".
+
+-Greg
+
+<A NAME="BRIGHTNESS">==========================================================================</A>
+BRIGHTNESS MAPPING
+
+[The following refers back to some material under the same heading in
+Radiance digest v2n5, part 2.]
+
+Date: Wed, 17 Nov 1993 12:48:19 GMT
+From: lilley@v5.cgu.mcc.ac.uk (Chris Lilley, Computer Graphics Unit)
+To: GJWard@lbl.gov
+Subject: Re: Radiance Digest, v2n5, Part 2 of 2
+
+Kevin said:
+
+> I also looked up the 
+>definition of the candela which is based upon radiance measurements that are
+>converted to luminous measurements by a max luminous efficiency of 
+>683 lumens/watt is at a wavelength of 545 nm.
+
+You said:
+
+>Luminous efficacy doesn't really have much to do with luminance or the
+>perception of brightness.  Luminous efficacy tells how efficiently a
+>lamp converts electrical energy into visible light.
+
+I think there may be a misunderstanding here. You are talking about the
+luminous efficiency of a light source - light output for power input.
+Kevin is actually talking here about the luminous efficiency of the eye
+which clearly does relate to the perception of brightness.
+
+He is firstly referring to luminous efficacy, which is where the 683
+comes from.  Indeed you later talk about that yourself. And to get
+luminous efficacy you take the quoitent of luminous flux by radiant
+flux. Luminous flux in general assumes photopic vision, which is where
+the 545nm comes from (although Wyszecki & Stiles give it as 555nm). And
+the photopic luminous efficiency is also involved - brightness
+sensation for light input wrt wavelength, for the standard photometric
+observer.
+
+Do you agree with this?
+
+You also said:
+
+>For a standard color monitor, the formula boils down to:
+
+>	exposure = .882/(1.219 + L^0.4)^2.5
+
+Could you explain what you mean by a standard colouyr monitor as there
+are a number of standards, mainly related to video broadcast and
+encoding rather than computer graphics, which does not use standard
+monitors but rather what each workstation manufacturer happens to
+supply.
+
+The power of 2.5 looks like a form of gamma correction. (and the 0.4,
+its inverse) Where do the .882 and the 1.219 come from though?
+
+Charles Ehrlich said:
+
+>Very little is known about the way our eyes actually measures light
+
+I suspect the CIE would take issue with that statement ;-)
+
+Regards,
+
+Chris Lilley
+----------------------------------------------------------------------------
+Technical Author, ITTI Computer Graphics and Visualisation Training Project
+Computer Graphics Unit, Manchester Computing Centre, Oxford Road, 
+Manchester, UK.  M13 9PL                     Internet: C.C.Lilley@mcc.ac.uk 
+Voice: +44 61 275 6045   Fax: +44 61 275 6040   Janet: C.C.Lilley@uk.ac.mcc
+
+     "The word 'formal' in this context is a euphemism for 'useless'."
+     H.M. Schey, 'Div, Grad, Curl and all that'. Norton: New York  1973
+----------------------------------------------------------------------------
+
+
+
+Date: Wed, 17 Nov 93 09:50:32 PST
+From: greg (Gregory J. Ward)
+To: lilley@v5.cgu.mcc.ac.uk
+Subject: Re: Radiance Digest, v2n5, Part 2 of 2
+
+Hi Chris,
+
+OK, I apologize for my glib answer to Kevin.  The statement I made
+about luminous efficacy not having much to do with luminance or
+brightness is clearly wrong -- I was just trying to get him on a
+different track.
+
+There are many ways to interpret what Kevin wrote, but it seemed to me
+like he was confusing the efficacies of the light sources with the
+display of the rendered image, and the two are not really related.  An
+incandescent light has an efficacy around 14 lumens/watt because most
+of the energy is given off as heat.  The 179 lumens/watt value I use is
+the theoretical maximum efficacy of uniform white light over the
+visible spectrum.  (You may contest this number, but it's right around
+there and it doesn't much matter what value is used as long as it's
+used consistently -- see first section in part 1 RD v2n5.)
+
+I do agree with your statements.  (I believe 555 nm is the defined peak
+of v(lambda).)
+
+The formula I picked out works for "average" workstation monitors.
+Mine is from SGI and has a Sony XBR tube with Mitsubishi electronics
+(20" model).  It is derived in a graphics gem I wrote to be published
+in Gems IV by Paul Heckbert, Academic Press.  I can mail you a
+PostScript version of the text and formulas from it if you like, but
+the pictures must be carefully reproduced so I can't offer those as
+readily.
+
+The short answer to your questions about the constants' origin is that
+they came from Blackwell's fit to his subject data, the same way
+everything else "known" about the human visual system is derived.
+
+-Greg
+
+<A NAME="LIGHTING">==========================================================================</A>
+LIGHTING CALCULATIONS
+
+From greg Fri Nov 19 08:48:05 1993
+Return-Path: <greg>
+Date: Fri, 19 Nov 93 08:47:39 PST
+From: greg (Gregory J. Ward)
+To: Francis_Rubinstein@macmail.lbl.gov, RGMARC@engri.psu.edu
+Subject: Re: Daylighting
+Status: RO
+
+Dear Rick,
+
+Francis forwarded your questions to me, and I will do my best to answer.
+
+> 1. To determine the illuminance at a photocell location, with an appropriate
+> view function.
+
+You should probably use rtrace with the -I option -- this returns irradiance
+at a given point and surface normal direction in your scene.  As for the
+other parameters, it really depends on your scene.  Can you describe it for
+me?  (Esp. with regard to how light is getting to the workplane.)
+
+To convert the watts/m^2 you get out of rtrace for red green and blue to
+illuminance in lux, pipe the output to "rcalc -e '$1=54*$1+106*$2+20*$3'".
+
+> 2. To determine the distribution of illuminance across the workplane.  (Is it
+> possible to do this directly in Radiance?)
+
+Yes, you can do this by sending an array of points to rtrace then converting
+the result, like so:
+
+% cnt 10 5 | rcalc -e '$1=($1+.5)*20/10;$2=($2+.5)*10/5;$3=2.5' \
+	-e '$3=0;$4=0;$5=1' | rtrace -h -I -ab 1 -av .2 .2 .2 myscene.oct \
+	| rcalc -e '$1=54*$1+106*$2+20*$3' > workplane.ill
+
+To understand this command, you should read the manual pages on cnt, rcalc
+and rtrace.  Good luck!
+
+-Greg
+
+
+Date: 19 Nov 1993 11:57:49 -0400 (EDT)
+From: "Richard G. Mistrick" <RGMARC@ENGR.PSU.EDU>
+Subject: Re: Daylighting
+To: greg@hobbes.lbl.gov
+
+Greg:
+    Thanks for the advice.  With respect to the photocell condition, what we
+plan to study (and Francis may provide input as a member of a student's M.S.
+committee) is the preferred photocell response (considering shielding, etc.)
+that is most appropriate for daylight dimming systems under sidelighting
+conditions.  We will also look at different lighting systems - direct,
+indirect, direct/indirect.  So, what we want to do is mimic a detector view
+field with the detector either on the ceiling or on the wall.  I suppose that
+I can simply put in a reflectance function that would approximate the detector
+field of view.
+    One addition question that I have is what is the correlation between RGB
+and reflectance for diffuse surfaces?  Thanks for your help, and as I write
+this I see that I have a new message from you on a new version.
+--Rick Mistrick
+
+Date: Fri, 19 Nov 93 10:06:50 PST
+From: greg (Gregory J. Ward)
+To: RGMARC@ENGR.PSU.EDU
+Subject: Re: Daylighting
+
+Hi Rick,
+
+There are two ways to get what you're after.  The most direct is to model
+the actual photocell geometry and use rtrace -I at the appropriate position
+on the photosensor.  The other way is to generate a hemispherical fisheye
+view of the scene and apply some masking to take out the part of the view
+appropriate for different (hypothetical) shielding devices.  The options
+for such a view (to rview or rpict) are -vth -vv 180 -vh 180.  Just adding
+up (averaging) all the non-black pixels in such a picture gives you the
+irradiance.
+
+For your second question, the following is a diffuse surface with 75%
+reflectance (gray):
+
+void plastic gray75
+0
+0
+5 .75 .75 .75 0 0
+
+If there is a specular component (eg. for glossy paint), the actual
+reflectance of the following:
+
+void plastic shiny_gray70
+0
+0
+5 .75 .75 .75 .04 .05
+
+would be .75*(1-.04) + .04, or 76%.  The completely general formula to
+get reflectance from the parameters of plastic is:
+
+	(.263*R+.655*G+.082*B)*(1-S) + S
+
+Where R, G and B are the first, second and third parameters, and S is the
+fourth parameter.
+
+For metal, the formla is simpler, just (.263*R+.655*G+.082*B), since
+the specular component is also modified by the material color.
+
+-Greg
+
+Date: 02 Dec 1993 14:40:49 -0400 (EDT)
+From: "Richard G. Mistrick" <RGMARC@engri.psu.edu>
+Subject: Radiance questions
+To: gjward@lbl.gov
+
+Greg:
+    We are slowly learning more about Radiance, but I still have some basic
+questions that we have not been able to answer.
+
+1. In commands such as source and glow, what are the R G B values?  
+
+2. For assigning reflectances, it would be nice to have a command in which you
+enter the R G B values and the output is the color on the screen and its
+reflectance.  Is there such a command?
+
+3. We have followed the daylighting example in the tutorial and are attempting
+to get an IES standard clear sky distribution.  One thing that we notice is 
+that as we change the turbidity and use RTRACE to determine irradiance, we 
+get different irradiances inside the building but not outside.  How do we get
+the accurate values for the daylight available on an exterior horizontal or
+vertical plane?
+
+Any suggestions that you have would be most appreciated.
+
+--Rick
+
+Date: Thu, 2 Dec 93 12:56:06 PST
+From: greg (Gregory J. Ward)
+To: RGMARC@engri.psu.edu
+Subject: Re:  Radiance questions
+
+Hi Rick,
+
+To answer your questions:
+
+1.  The RGB values for glow, light, spotlight are all spectral radiance values
+in watts/sr/m^2.  To compute appropriate values use the interactive program
+"lampcolor".
+
+2.  I agree it would be nice to have such a tool.  I wrote something like this
+a long time ago for X10, but never ported it to X11 or anything else.  Maybe
+it's time to do it, if I can just find the time.
+
+3.  To compute irradiance outdoors, you must use -ab 1 at least with rtrace.
+This value is available directly from gensky, though, in a comment in the
+output.  When it says "Ground ambient level:" you can just take that number
+and multiply it by pi and you'll have the diffuse irradiance at the
+groundplane.  The global irradiance needs the solar component as well,
+which may be computed from the solar radiance and altitude.  For a vertical
+plane, you'll just have to rely on rtrace.
+
+-Greg
+
+Date: Wed, 19 Jan 1994 17:49:46 +0000 (GMT)
+From: "Dr R.C. Everett" <rce1001@cus.cam.ac.uk>
+Subject: RADIANCE QUESTIONS
+To: GJWARD@lbl.gov
+
+Dear Mr.Ward,
+      Here at the Martin Centre in Cambridge University, we've just started 
+using RADIANCE on a number of Silicon Graphics Indigo machines. The department 
+is involved in various form of 3-D visual computer programming, including 
+walk-throughs using a space-ball. We're finding RADIANCE very interesting 
+and the new RSHOW routine is excellent and helps the slightly ponderous
+task of data input.
+
+I am mainly concerned on two European Community funded daylighting 
+research projects, mainly so far about a Greek hospital.
+The ability of RADIANCE to model different sky conditions makes 
+it a useful alternative to testing cardboard models in an artificial
+sky chamber, (especially when our sky chamber doesn't quite do Greek 
+conditions). 
+
+I have been trying to marry up daylight factor contours for a simple room 
+as produced with the DAYFACT routine with measurements on our cardboard 
+model rooms and mundane simple theory. I'm not getting good agreements, 
+so I'm probably not pressing the right buttons and I haven't read the 
+instructions properly.
+
+Since the DAYFACT routine was sponsored by LESO in Switzerland, is there 
+any formal documentation of the theory? If so how can I get a copy?
+
+I am also puzzled by a number of things:
+
+Do windows have to have two sides to get the proper transmission 
+coefficients?
+
+The illum process appears to replace a diffuse window light source with 
+an equivalent point source. What are the geometric maths of this?
+
+What is the format of the illum.dat files? Presumeably they all add up to 
+the total light passing through the window. Can I use this file to 
+cross-check this with my own calculations, or even insert my own numbers?
+
+The -as parameter appears to be some sort of spatial smoothing filter. 
+When I use it on DAYFACT daylight factor contour maps, is there a danger 
+of getting wrong answers by using too much smoothing?
+
+I also feel that the only way I'm really going to get things to work 
+properly is to sit down with someone who is already using RADIANCE for 
+daylighting work. Any suggestions of people I can pester on this side of 
+the Atlantic?
+
+Best Wishes,
+
+
+Bob Everett - alias  RCE1001@cus.cam.ac.uk
+
+The Martin Centre
+Cambridge University Dept.of Architecture,
+6, Chaucer Rd.,
+Cambridge .U.K.
+TEL +44-223-332981   FAX +44-223-332983
+
+Date: Wed, 19 Jan 94 10:32:03 PST
+From: greg (Gregory J. Ward)
+To: rce1001@cus.cam.ac.uk
+Subject: Re:  RADIANCE QUESTIONS
+
+Hi Bob,
+
+It just so happens that one of the best experts on using Radiance for daylight
+calculations works at Aberdeen University there in G.B.  His name is John
+Mardaljevic, and his e-mail is "j.mardaljevic@aberdeen.ac.uk".
+
+Just offhand, I'm not sure what is going wrong in your calculations.
+To answer your questions, though, you don't need to use two surfaces for
+your window as long as you use the type "glass", but you do need to make
+it's surface normal face inwards if you want to use mkillum with it.
+Mkillum does not make the window into a point source, though it may look
+that way in rview, which approximates large sources as points to save
+calculation time.  You may change this and other behaviors using the
+various rview options -- -ds .3 will get it to treat area sources as
+area sources.  You should familiarize yourself with the "rad" program
+for rendering -- it sets a lot of these options for you.
+
+The format of the illum.dat files is mysterious.  I can't even tell you
+which values correspond to which points, as it is a rather strange
+coordinate mapping.  (Uneven increments of the polar angle.)
+
+The -as option associated with the renderers merely improves the accuracy
+of the indirect calculation in spaces with a lot of light variability.
+It is not a smoothing option.
+
+-Greg
+
+Date: Mon, 24 Jan 1994 16:05:02 +0000 (GMT)
+From: "Dr R.C. Everett" <rce1001@cus.cam.ac.uk>
+Subject: RADIANCE QUESTIONS
+To: Greg@hobbes.lbl.gov
+
+Dear Greg,
+    Thanks for coming back on my questions. 
+
+I've already talked to John Mardelevic. Unfortunately his new job in 
+Aberdeen is not involved with Radiance, so he's not really in a position 
+to help with the kind of detailed questions I want to ask.
+
+His main advice to me was to learn by experiment, which I can see taking 
+a long time. This is difficult for me because I have project deadlines 
+and other such administrative nonsense to meet.
+
+Can you send me the e-mail address of the people in Switzerland?
+
+Perhaps I can press you again on the format of the illum.dat files, 
+because that would allow me to isolate my problems to either the inside 
+of the room or the sky model. I shouldn't worry about it being in obscure 
+coordinates - we have people here who have to teach this sort of thing.
+
+I have tried the Rad script. In many ways it is very useful, but in other 
+ways it obscures the processes going on underneath and it is these that I am 
+trying to understand. My first attempts at using it just set off some 54-hour
+ renderings, whereas I just wanted something that would run overnight. 
+The most useful information has been the tables 
+of settings that you sent out in answer to other e-mail questions. This 
+has enabled me to make my own best pick of values to give reasonable 
+quality.
+
+It would help if there was a layman's guide to what the various rpict 
+options do.
+
+Since we are involved in producing daylighting teaching material and 
+daylighting design competitions, we really are interested in finding out 
+about daylighting software. We would also like to be in a position to help 
+develop it for simple design applications. 
+
+If there is any descriptive material, on paper, rather than in 
+electronic form, that might help us, we will happily pay for photocopying 
+and postage,
+
+I look forward to hearing from you,
+
+Best Wishes,
+
+Bob Everett  alias  rce1001@bootes.cus.cam.ac.uk
+ 
+Date: Mon, 24 Jan 94 09:44:53 PST
+From: greg (Gregory J. Ward)
+To: rce1001@cus.cam.ac.uk
+Subject: Re:  RADIANCE QUESTIONS
+
+Hi Bob,
+
+Alas, there is nothing written in layman's terms, or any terms for that
+matter, on the options to rpict.  The only available documentation is
+what you have.  My best advice is to read the rpict manual page very
+carefully, and ask me to clear up the points or topics giving you trouble.
+The ultimate reference of course is the C code (yuck).
+
+[Just an aside, I have since updated the notes on setting rpict options
+in the ray/doc/notes/rpict.options file in release 2.4.]
+
+I have been wanting to write a better description of rpict for years
+now, but have found no source of funding that would allow me the time
+to do so.  If it's any consolation, even I can't guess how long a
+rendering's going to take without some experimentation.
+
+The file src/gen/illum.cal contains the definitions for the mkillum
+data file's coordinate system.  Unless you are using mkillum on a sphere,
+the one's you need to decypher are il_alth and il_azih:
+
+	il_alth = sq(-Dx*A7-Dy*A8-Dz*A9);
+	il_azih = norm_rad(Atan2(-Dx*A4-Dy*A5-Dz*A6, -Dx*A1-Dy*A2-Dz*A3));
+
+	norm_rad(r) = if( r, r, r+2*PI );
+
+These expressions look worse than they really are.  For example, il_azih
+simply gives the azimuthal angle (in radians) using the argument unit
+vectors [A1 A2 A3] and [A4 A5 A6].  The altitude coordinate is more
+unusual.  It says that the coordinate index is equal to the square of the
+dot product between the ray direction and the local surface normal
+(which is given by [A7 A8 A9] in this case).  What's even stranger, you
+will notice that the range of this coordinate is 0 and 1, but in the
+data file the range is somewhat different.  This is to provide proper
+interpolation and extrapolation for data values in the normal direction
+and on the "horizon".
+
+The actual data in the mkillum files are radiance values in watts/sr/m^2.
+Multiply the values by 179 to obtain luminance in cd/m^2.  Note that the
+actual output of a flat illum surface is the radiance or luminance
+multiplied by the projected area, that is, the surface area times the cosine
+to the normal.  The answer is in watts/sr or cd (depending on your choice
+of units).
+
+Hope this helps.
+-Greg
+
+P.S.  The address of Raphael Compagnon in Switzerland is
+	"compagnon@eldp.epfl.ch".
+
+From: Stuart Lewis <stuart@archsun.arch.gatech.edu>
+Subject: RADIANCE Question
+To: gjward@lbl.gov
+Date: Thu, 31 Mar 1994 16:38:22 -0500 (EST)
+
+Dr. Ward,
+
+I am using Radiance2.3 to investigate elements of daylight design.
+I am most interested in extracting illuminance information from 
+Radiance scenes, and as such would appreciate any pointers you might 
+have to documentation beyond that found in the Radiance distribution 
+and the tutorial that would help me to make better use of RTRACE to 
+write scripts, etc. in which I (and more importantly, my advisor!) 
+can have some confidence.
+Any other leads in this area would be greatly appreciated.
+
+Thanks for your assistance.  I would have posted this request to 
+the Radiance mailing list instead, but have not yet received any 
+confirmation of my enrollment (via newuser.)
+
+Stuart Lewis
+stuart@archsun.arch.gatech.edu
+
+Georgia Tech
+
+Date: Thu, 31 Mar 94 14:19:05 PST
+From: greg (Gregory J. Ward)
+To: stuart@archsun.arch.gatech.edu
+Subject: Re:  RADIANCE Question
+
+Hi Stuart,
+
+You are on the mailing list.  Normally, I do not send out confirmation to
+new users.  Also, the mailing list is for my postings of user mail only,
+not for general questions (which you should send to me directly).  If you
+want to see back issues of the "Radiance Digest," they may be found in
+the /pub/digest directory on the anonymous ftp account of hobbes.lbl.gov.
+
+Using rtrace is a bit tricky, since it is a fairly general interface to
+the Radiance calculation.  You can see an example of how it might be
+applied in the file ray/src/util/dayfact.csh.
+
+Together with cnt, rcalc and total, rtrace may be used to calculate almost
+any lighting metric.  A very simple application where illuminance (in lux)
+is calculated may be found in the file ray/src/util/rlux.csh.  The way this
+script works is like so:
+
+	% ximage picture_file | rlux [rtrace options] octree
+
+Typing 't' (or hitting the middle mouse button) at a point on the image
+will cause the illuminance at that point to be printed on the standard
+output.
+
+If you want more help, I'd be glad to assist you in a specific example, or
+check the work that you've done.
+
+-Greg
+
+<A NAME="SPECULAR">==========================================================================</A>
+SPECULAR APPROXIMATION
+
+Date: Mon, 22 Nov 93 10:28:38 MST
+From: jmchugh@carbon.lance.colostate.edu (Jon McHugh)
+To: GJWard@lbl.gov
+Subject: Fresnel's relations
+
+Hi Greg,
+
+In your discussion of Radiance 2.3 you say that 
+"Removed Fresnel approximation to specular reflection from Radiance materials,
+since the direct component was not being computed correctly.  This
+may have a slight affect on the appearance of surfaces, but it can't be
+helped."
+
+
+How are the Fresnel relations approximations? I thought they are a direct
+application of Maxwell's Equations. Is there some problem with using
+the Fresnel relations to calculate angular properties of dielectrics
+such as glass and many specular building materials?
+
+______________________________________
+|         Jonathan R. McHugh          |
+|   Dept. of Mechanical Engineering   |
+|      Colorado State University      |
+|       Fort Collins, CO 80523        |
+|          (303) 491-7479             |
+|          (303) 491-1055 FAX         |
+| jmchugh@carbon.lance.colostate.edu  |
+---------------------------------------
+
+Date: Mon, 22 Nov 93 09:42:48 PST
+From: greg (Gregory J. Ward)
+To: jmchugh@carbon.lance.colostate.edu
+Subject: Re:  Fresnel's relations
+
+Hi Jon,
+
+There is nothing wrong with the Fresnel relations!  I still do use them
+(in one form or another) for the types dielectric, interface and glass.
+(Glass uses an exact solution to the infinite series resulting from
+internal reflections in a pane of glass, and includes polarization as it
+affects transmittance and reflectance.)
+
+I used to use an approximation to the "unpolarized" Fresnel reflectivity
+function in my normal materials that used an exponential fit I
+discovered (and probably not for the first time).  This formula was an
+approximation, and was used only because it provided a faster
+calculation with little loss in accuracy.  I don't use any Fresnel term
+in these materials anymore, which is a shame, but it caused a measurable
+inconsistency in the calculated results.
+
+-Greg
+
+<A NAME="MEMORY">==========================================================================</A>
+MEMORY USAGE
+
+From: apian@ise.fhg.de
+Subject: rpict memory statistics ?
+To: gjward@lbl.gov (Greg Ward)
+Date: Wed, 24 Nov 1993 06:30:05 +0100 (MEZ)
+
+Hi Greg,
+
+just curious: you ever wondered where the memory goes in rpict ?
+This sounds like an offensive question, which it isn't. I also see
+that rpict is probably one of the best optimized raytracers around.
+
+Just wondering where the 40MB size of my running rpicts come from,
+there's an 8MB picture, some redicolous amount of books and 25 or so
+function files for windows generated by mkillum.
+
+Not that 40MB is something to really worry about, just that 32MB machines
+do choke a bit...
+
+(not a high prio request)
+TIA
+Peter
+-- 
+
+----------------------------------------------------------------------
+ Peter Apian-Bennewitz				apian@ise.fhg.de
+ Fraunhofer Institute for Solar Energy Systems	   Tel +49-761-4588-123
+ (Germany) D-79100 Freiburg, Oltmannsstrasse 5,    Fax +49-761-4588-302
+----------------------------------------------------------------------
+
+Date: Tue, 23 Nov 93 22:43:31 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  rpict memory statistics ?
+
+Hi Peter,
+
+A large picture will definitely occupy a lot of memory, since the data
+routines treat it the same as any data file and each pixel gets put into
+three floats, thus takes up at least (width*height*4*3) bytes of memory.
+Best to work with small images for this reason...  Also, my malloc()
+routines are not as efficient space-wise as they could be, using up
+to twice as much core as is actually required (typically 25% waste).
+This is usually compensated by my use of bmalloc() which is 100%
+space-efficient for most of my allocations.  Not used for data
+arrays, though (sorry).  Unless you are using some outrageous options
+for mkillum, it's doubtful that the data files it produces use a
+significant amount of memory.
+
+For large, complicated models, the surface identifiers can end up taking
+a fair bit of core, then are almost never accessed!  For this reason,
+I put them into their own large blocks of memory that are the first
+to get swapped out when the going gets rough.  (See common/savqstr.c.)
+
+An rpict process can grow quite large with the interreflection calculation,
+especially if -ab is 2 or higher and the scene has a lot of detail
+geometry.  Excluding trees and stuff from the calculation is a good idea
+using the -ae and/or -aE options.
+
+The rest of the memory is used to store the geometry and the octree, and
+is about as efficient as I can make it.  You can try recompiling everything
+with the -DSMLFLT option, which reduces scene storage space by around 30%,
+but this has many drawbacks in rendering accuracy as cracks may appear in
+scenes with large ranges of dimensions.
+
+Hope this helps.  I wrote Radiance on an 8M machine, so I remember
+what it's like to have limited memory.  (An oxymoron?)
+
+-Greg
+
+From: apian@ise.fhg.de
+Subject: Re: rpict memory statistics ?
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Wed, 24 Nov 1993 08:16:20 +0100 (MEZ)
+
+Hi Greg and a yawnful good morning,
+astonishingly its getting light outside...
+
+thanks for the fast reply, I fancy its the scene complexity (ab=1,
+768x576 pixel).  The machine doesn't come to a complete standstill, so
+some fairly large amount gets swapped out and stays out most of the
+time.  I'll look into this before doing the next attempt for a movie.
+thanks again,
+
+have a nice evening,
+Peter
+
+From: "Mr. A. Morris" <jabt282@liverpool.ac.uk>
+Subject: oconv query part 2
+To: greg@hobbes.lbl.gov
+Date: Fri, 3 Dec 1993 09:40:20 +0000 (GMT)
+
+Dear Greg
+
+Thanks very much for your reply, 1st Dec to my initial query about the
+"out of octree space" system error I've been encountering.
+Unfortunately I haven't resolved it yet.  I've tried running the
+command as a batch job on one of the larger machines when I did
+encounter the message "out of octree space- out of memory" However once
+I ran it again as a unlimited memory and filesize job the error
+reverted to the usual "out of octree space" again.
+
+I have just installed the lasest version of radiance and included in
+the installation the option for scenes with a large no. of objects, but
+this doesn't seem to have had any effect on the problem.
+
+In your reply you stated,
+
+"If not, then you may be running up against the internal limits to the
+octree size.  To change them, you need to rerun makeall install,
+changing the rmake command to include -DBIGMEM as one of the MACH=
+options.
+
+At any rate, you shouldn't start having this sort of problem until your
+scene has 10,000+ polygons"
+
+I am unsure how to estimate the no. of polygons that my scene may have could
+you explain roughly how to estimate it, ie does a cube have 6 polygons at its
+simplest and how many will a cylinder have? My current scene description has
+about 600 objects, am I right in thinking that with that no. of objects it could
+be possible to exceed the internal limit of 10,000 polygons?
+
+Could you also explain more simply the process of "changing the rmake command
+to include -DBIGMEM as one of the MACH= options" I'm a novice at this sort of
+thing!
+
+With respect to the "artificial sky" question, mine are being generated by the
+"torad" autocad to radiance converter which I've been using. I presume that it
+is generated using the gensky command as I am prompted to give the time, date,
+lat. and long. etc.
+
+I hope you can explain the procedure for changing the rmake command, I'm getting
+desperate to complete this work! 
+
+yours faithfully
+
+Alex Morris.
+
+Date: Fri, 3 Dec 93 09:21:39 PST
+From: greg (Gregory J. Ward)
+To: jabt282@liverpool.ac.uk
+Subject: Re:  oconv query part 2
+
+Hi Alex,
+
+If you are using AutoCAD, it may create many surfaces per cylinder when only
+one is actually required (a Radiance cylinder).  Unfortunately, AutoCAD only
+produces polygons.  There should be a parameter somewhere that would allow
+you to change the number of facets a given volume is broken into.  Cubes
+and other polyhedral objects shouldn't be affected, but it's a good idea to
+break small curved objects into the smallest number of polygons you can live
+with.
+
+To change the compile parameters, run "makeall install" again, this time say
+"yes" when asked if you want to change the rmake command.  Then, change the
+MACH= line by adding -DBIGMEM and change the OPT= line by removing -DSMLFLT.
+(This is probably what's causing your results to look speckled.)  Makeall will
+do the rest.
+
+With -DBIGMEM defined, it is unlikely that you will run into internal limits
+before you run out of swap space.
+
+I'm not sure what kind of artificial sky torad generates since I've never used
+it, but it sounds as though it's running gensky all right.  The sky shouldn't
+affect your octree size, therefore.
+
+-Greg
+
+<A NAME="SGI">==========================================================================</A>
+SGI GAMMA
+
+Date: Thu, 9 Dec 93 16:44:52 GMT
+From: ann@graf10.jsc.nasa.gov (ann aldridge)
+Apparently-To: greg@hobbes.lbl.gov
+
+Hi Greg,
+
+We have been collecting beautiful pictures from the HST repair mission.
+I will send you a three pictures which we hope to work on.
+
+...
+   2. Image of HST.  This picture appears to be lit only by payload bay lights.
+      Hopefully, without sun we can reproduce lighing.  Have just begun work
+      on this picture.  See pic2real.pic. This picture looks terrible as a pic
+      file.  See pic2real.rgb for better image if you can display this format!
+...
+
+Do you want the radiance files to work on getting better images?  We would
+welcome any suggestions you have.
+
+Thanks, Ann
+
+
+Date: Thu, 9 Dec 93 10:08:31 PST
+From: greg (Gregory J. Ward)
+To: ann@graf10.jsc.nasa.gov
+Subject: pictures
+
+Hi Ann,
+
+The .rgb version looks the same as the .pic version on my display.  The fact
+that yours doesn't means either that the gamma value associated with the
+original file is not the default 2.2 that ra_tiff expected, or that you have
+not set your GAMMA environment variable properly for ximage to work.
+
+SGI's are weird because they have something called the system gamma (stored
+in /etc/config/system.glGammaVal and set by the gamma program) that is a
+partial correction factor for the natural gamma of the monitor.  This value
+is not the gamma that you get, which is:
+
+	Gf = Gm/Gs	where:	Gf = final gamma,
+				Gm = natural monitor gamma,
+				Gs = system gamma set by "gamma" program
+
+The final gamma, Gf, is what you should set your GAMMA environment variable
+to.  Most monitors have a natural gamma around 2.0, and most SGI systems
+set the gamma value to 1.7, so the Gf number is around 1.2.  Personally, I
+don't like all this fussing with the natural gamma of the monitor because
+I believe it introduces quantization errors, so I set the system gamma
+to 1, like it is on non-SGI systems.
+
+Anyway, you can find out what the final gamma of your display is directly
+by using the picture ray/lib/lib/gamma.pic, like so:
+
+	ximage -b -g 1 gamma.pic
+
+Just back up and make the closest match between the brightness on the left
+and the one on the right, and take the corresponding number as the combined
+gamma.  Then, put a line like:
+
+	setenv GAMMA 1.2
+
+in your .login or .cshrc file.  In the next release, you should be able
+to use the radiance.gamma resource on your X11 server to accomplish the
+same thing.  In my opinion, the powers that be should have worked out
+these problems ages ago.  It's a bit sticky, though, since monitor gamma
+changes with brightness and contrast settings...
+
+-Greg
+
+<A NAME="PROGRAM">==========================================================================</A>
+PROGRAM NAMING
+
+From: Kurt.Jaeger@rus.uni-stuttgart.de (Kurt Jaeger aka PI)
+Subject: Radiance 2.3 and the calc binary
+To: GJWard@lbl.gov
+Date: Fri, 24 Dec 1993 11:55:27 +0100 (MEZ)
+
+Hi!
+
+During the installation of the radiance 2.3 software, a binary
+called calc was installed as well. While it is a very useful tool,
+I'd like to know where it is used by other radiance binaries.
+
+We have established a common software installation scheme
+and the name for the calc binary collides with the recently posted
+calc-2.92.
+
+So I'd like to know whether calc is a required binary for
+radiance. Otherwise it would lighten Your burden of administrating
+the distribution by not including calc with radiance because there
+is a different calc out there 8-)
+
+		So short, PI
+
+-- 
+PI at the User Help Desk Comp.Center U of Stuttgart, FRG      27 years to go ! 
+EMail: pi@rus.uni-stuttgart.de
+Phone: +49 711 685-4828                (aka Kurt Jaeger)
+
+
+Date: Fri, 24 Dec 93 06:55:11 PST
+From: greg (Gregory J. Ward)
+To: Kurt.Jaeger@rus.uni-stuttgart.de
+Subject: Re:  Radiance 2.3 and the calc binary
+
+Hi Kurt,
+
+You're right that calc is not an essential part of the distribution, but
+then there are a lot of non-essential things in the distribution.  What
+is this calc-2.92 you mention?  The name "calc" also collides with a program
+on the PC under Windows, so it may be time to come up with a new name.
+Any suggestions?
+
+-Greg
+
+Subject: Re: Radiance 2.3 and the calc binary
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 24 Dec 1993 16:31:30 +0100 (MEZ)
+
+Hi!
+
+> You're right that calc is not an essential part of the distribution, but
+> then there are a lot of non-essential things in the distribution.
+> What is this calc-2.92 you mention?
+I'll attach the intro file of the software below (its calc-2.9.0, actually,
+I remembered the wrong version). It was posted a few days ago in
+some of the sources groups.
+
+> The name "calc" also collides with a program
+> on the PC under Windows, so it may be time to come up with a new name.
+
+I would suggest that You try to limit the radiance distribution
+to the essential stuff. You can factor out the additional stuff
+and maybe even distribute it seperatly. I think cnt, total etc
+are good programs, its just that I'd prefer to keep things
+seperate, if possible. Are these programs in any way
+essential, because they are called by the core radiance binaries ?
+
+Otherwise the namespace of the programs that can live in $PATH
+will be cluttered sometime in the future. Ok, this is no problem
+for You as maintainer of radiance, but I already begin to sense
+the problems we have locally with the name space of $PATH.
+
+You can ask the authors of calc-2.9.0 if he wants to merge
+the two calc's (and their additional tools) into one package ?
+
+Their EMail adress is:
+    dbell@canb.auug.org.au
+    chongo@toad.com
+
+I'd be interested in hearing about Your decision on this aspect.
+
+	Thanks, PI
+
+---intro-calc-2.9.0---
+
+Quick introduction
+
+	This is an interactive calculator which provides for easy large
+	numeric calculations, but which also can be easily programmed
+	for difficult or long calculations.  It can accept a command line
+	argument, in which case it executes that single command and exits.
+	Otherwise, it enters interactive mode.  In this mode, it accepts
+	commands one at a time, processes them, and displays the answers.
+	In the simplest case, commands are simply expressions which are
+	evaluated.
+
+[Stuff deleted.]
+
+Kurt Jaeger
+
+Date: Fri, 24 Dec 93 08:12:09 PST
+From: greg (Gregory J. Ward)
+To: Kurt.Jaeger@rus.uni-stuttgart.de
+Subject: Re: Radiance 2.3 and the calc binary
+
+Just one other question.  Since the user community for Radiance on any
+given machine is probably small, why not put all the binaries in a 
+separate directory and only include that in the path of those who
+really need it?  That's the usual way of handling large software
+packages, after all.
+
+From: Kurt.Jaeger@rus.uni-stuttgart.de (Kurt Jaeger aka PI)
+Subject: Re: Radiance 2.3 and the calc binary
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 24 Dec 1993 23:04:42 +0100 (MEZ)
+
+Hi!
+
+The binaries for different packages *are* in seperate directories.
+
+But we provide a common directory called /client/, where the
+subdirectories bin/, lib/ etc are accessed by the users through $PATH.
+
+> That's the usual way of handling large software packages, after all.
+Yes, You're right. We are working on a scheme where the end users, the
+biggest part of a community, have nothing special to call or do
+to access as many packages as possible.
+
+So, providing something like a getpub procedure can be done, but is
+not preferred.
+
+		So short, PI (aka Kurt Jaeger)
+
+<A NAME="RVIEW">==========================================================================</A>
+RVIEW SURFACE NORMALS
+
+Date: Thu, 6 Jan 94 17:55:07 -0500
+From: phils@boullee.mit.edu (Philip Thompson)
+To: greg@hobbes.lbl.gov
+Subject: Rview suggestion
+
+Greg,
+Here's one for the suggestion box.
+
+It would be nice if in rview the user could somehow get the orientation
+of a surface surface.  A quick way would be to just have a dot product
+of the incident ray and surface normal.  This would give a indication of
+whether or not a surface was facing the viewer or not.
+
+It's not easy, if not impossible, to have control of how polygons are
+written  from a cad modeler.  This option would make life easier in
+those cases where it matters.
+Thanks,
+Philip
+
+
+Date: Thu, 6 Jan 94 15:02:05 PST
+From: greg (Gregory J. Ward)
+To: phils@boullee.mit.edu
+Subject: Re:  Rview suggestion
+
+Hi Philip,
+
+Sure, that sounds easy enough.  All the information is available within
+the trace routine, but I never thought the surface normal was much use
+since it's such a confusing quantity.  How would it be if I gave both
+the surface normal and the angle to the incoming ray (computed from the
+dot product)?  I think this might be the most meaningful combination.
+
+-Greg
+
+Date: Thu, 6 Jan 94 18:17:43 -0500
+From: phils@boullee.mit.edu (Philip Thompson)
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re:  Rview suggestion
+
+Yes, I was thinking of something along those lines.  The problem I
+and other people run into is when we make windows in a cad model.
+When we want to turn windows into illum sources then orientation
+matters.  So to simplify this its seems the easiest solution
+would be to stand inside a room and point at the windows and get
+some feedback as to their orientations. You could call it "n" or
+"o".
+
+- Philip
+
+Date: Thu, 6 Jan 94 15:47:29 PST
+From: greg (Gregory J. Ward)
+To: phils@boullee.mit.edu
+Subject: Re: rview suggestion
+
+As a final compromise, I added a check so if the ray hit the back side
+of the material, the trace command mentions that fact, without going
+into detail about the intersected angle and surface normal.
+
+-G
+
+<A NAME="WATER">==========================================================================</A>
+WATER
+
+From: phils@MIT.EDU
+Date: Tue, 11 Jan 1994 14:54:19 -0500
+To: greg@hobbes.lbl.gov
+Subject: Material for water
+
+Greg,
+
+What is the best material for water when modeling a pool?
+It seems when I use a dielectric I can't see the bottom.
+What is the difference between the two materials in this case?
+
+I'll send you a sample pool.rad below.
+
+Thanks,
+Philip
+
+# pool.rad
+
+void plastic white_paint
+0
+0
+5 .5 .45 .4 0 0
+
+# pool water
+void texfunc wavy
+6 wave_x wave_y wave_z wave.cal -s .25
+0
+1 .05
+
+wavy dielectric wavy_water
+0
+0
+5 .9 .9 .91 1.33 0
+
+# wavy glass wavy_water
+# 0
+# 0
+# 4 .9 .9 .91 1.33
+
+# genbox white_paint pool 3 5 1
+
+[etc...]
+
+Date: Wed, 12 Jan 94 10:03:20 PST
+From: greg (Gregory J. Ward)
+To: phils@MIT.EDU
+Subject: Re:  Material for water
+
+Hi Philip,
+
+The difference between dielectric and glass is that glass imitates a thin
+pane (or whatever) made of glass, and dielectric represents an interface
+between air and some dielectric material.  Glass is only appropriate for
+windows or other thin glass surfaces, and more efficient in those cases
+than two opposite-facing surfaces of type dielectric.  Dielectric is the
+only type to use for thick bodies of transparent media, such as a crystal
+ball or a swimming pool.  (There is also the type 'interface', which is
+appropriate for a boundary between two dielectric media, neither of which
+is air.)
+
+Unfortunately, lighting inside a dielectric medium is none too easy.
+The chief problem within Radiance is the difficulty of finding the
+light source (e.g. the sun) from the bottom of the pool.  The only person
+I am aware of who's tackled this problem successfully is Mark Watt, and
+he wrote a paper about it in the 1990 Siggraph proceedings.
+
+You might be able to get Radiance to find the sun for a still body of
+water using the 'prism2' type, but you have to know what you're doing.
+
+How important is this to you?  If you're just going for looks and not
+very interested in physical accuracy, go ahead and use 'glass'.  At
+least you will be able to see the bottom of your pool that way.
+
+-Greg
+
+<A NAME="STAR">==========================================================================</A>
+STAR FILTER
+
+Return-Path: <srouten@rubidium.service.indiana.edu>
+Date: Sat, 12 Feb 1994 14:24:30 -0500
+From: srouten@rubidium.service.indiana.edu
+To: greg@hobbes.lbl.gov
+
+Hi Greg, 
+
+Reuben and I are working on a short animation which consists of some lights
+simply flying by an object.  The trouble is, we'd like to use the star
+filter, which seems to rule out an absolute exposure for every frame.  I
+read digest v2n4 where you mention, in the VIDEO section, that you could 
+provide some information on dynamic exposure, so that is what i'm asking
+for.
+
+Thanks in advance,
+Scott
+
+Date: Mon, 14 Feb 94 10:42:45 PST
+From: greg (Gregory J. Ward)
+To: srouten@rubidium.service.indiana.edu
+Subject: exposure
+
+Hi Scott,
+
+Well, I guess we need ANOTHER option for pfilt!  Actually, you can just do
+a two-pass filtering, and follow it up with a one-pass run to bring the
+exposure back to where you want it.  Unfortunately, this is the only easy
+solution right now.  To find out what exposure pfilt actually used, run
+getinfo on the filtered image and look at the EXPOSURE= line.  You can
+use the following command to go from the exposure you got to the value "1.7".
+Of course, you may substitute whatever you like for the '1.7' value:
+
+	% pfilt -2 [options] orig.pic > filtered.pic
+	% pfilt -1 \
+	-e `getinfo<filtered.pic|rcalc -i 'EXPOSURE=${ex}' -e '$1=1.7/ex'` \
+	filtered.pic > corrected.pic
+
+Be sure to pay attention to back-quotes vs. regular quotes!
+
+-Greg
+
+<A NAME="GLOW">==========================================================================</A>
+GLOW
+
+Date: Wed, 16 Feb 1994 01:41:43 -0800
+From: COURRET@sc2a.unige.ch
+To: greg@hobbes.lbl.gov
+Subject: glow material
+
+Hi greg,
+
+I am having some difficulties to understand the definition of the glow
+material.  From manuel Ray.1 yoou wrote the 8/12/93, i can see that the
+difference between the light and the glow materials is that the glow
+one is limited in its effect.  Could you, please, quantify this
+limitation ?
+
+In the tutorial named tutorial.1, you describ a  standard sky and ground
+to follow a gensky sun and sky distribution. Why is the sky modelized with
+a glaw material and not a light one as it is the case for the sun?
+
+Gilles.
+
+Date: Wed, 16 Feb 94 10:21:32 PST
+From: greg (Gregory J. Ward)
+To: COURRET@sc2a.unige.ch
+Subject: Re:  glow material
+
+Hi Gilles,
+
+The limitation of the glow type is determined by the setting of the distance
+(fourth) parameter.  Any calculation point further than this distance from
+a glow source will not look to the source for direct illumination.  The
+glow source will, however, contribute in the interreflection calculation
+if -ab is 1 or greater.  If a distance of 0 is used, or the source is at
+infinity (such as the sky), then a glow can only contribute indirectly.
+
+If we used a light type for the sky, Radiance would not be able to sample
+it adequately, because it is much too large.  Light sources must be
+reasonably well localized in order to act properly in the direct calculation.
+The indirect calculation, on the other hand, works very well for widely
+distributed illumination sources.
+
+I hope this clears things up for you a little.
+
+-Greg
+
+<A NAME="TMESH2RAD">==========================================================================</A>
+TMESH2RAD
+
+[The following discussion relates to the creation of the new tmesh2rad
+translator.]
+
+Date: Fri, 18 Feb 94 20:19:59 GMT
+From: ann@graf10.jsc.nasa.gov (ann aldridge)
+Apparently-To: greg@hobbes.lbl.gov
+
+Hi again,
+
+We do not usually use WaveFront format.  We have an internal format,
+but can convert to various other output formats. Below is a short
+sample of the file I currently use (included for you
+entertainment):DEFAULT is material name. first 3 numbers are vertex,
+last three are normal.
+
+triangle DEFAULT -14.673 -3.119 50 -0.95677 -0.203374 1.17936e-10
+-14.673 3.118 50 -0.94236 0.271166 -1.6951e-10
+-14.673 3.118 -50 -0.97118 0.135583 -8.47551e-11
+triangle DEFAULT -14.673 3.118 -50 -0.97118 0.135583 -8.47551e-11
+-14.673 -3.119 -50 -0.95677 -0.203374 1.17936e-10
+-14.673 -3.119 50 -0.95677 -0.203374 1.17936e-10
+triangle DEFAULT -14.673 -3.119 50 -0.95677 -0.203374 1.17936e-10
+-14.673 -3.119 -50 -0.95677 -0.203374 1.17936e-10
+-12.136 -8.817 -50 -0.791363 -0.574922 4.84915e-10
+     .....etc.
+
+I was being lazy using WaveFront because it was so similar to your
+format.  To get the vertex normals I will have to convert format
+above.  Most WaveFront objects we use are not triangles, so you
+probably should keep your format.  I can work with it.  (We do have a
+routine to triangularize a WaveFront file.)
+
+I am still working on recompiling.  Then I will make a new cylinder file
+with normals.
+
+Thanks again, Ann.
+
+Date: Thu, 17 Feb 94 12:41:35 PST
+From: greg (Gregory J. Ward)
+To: ann@graf10.jsc.nasa.gov
+Subject: suggestion
+
+Instead of putting all the vertices before the triangles, it would be easier
+to convert your format as follows.  The original:
+
+	triangle DEFAULT -14.673 -3.119 50 -0.95677 -0.203374 1.17936e-10
+	-14.673 3.118 50 -0.94236 0.271166 -1.6951e-10
+	-14.673 3.118 -50 -0.97118 0.135583 -8.47551e-11
+	triangle DEFAULT -14.673 3.118 -50 -0.97118 0.135583 -8.47551e-11
+	-14.673 -3.119 -50 -0.95677 -0.203374 1.17936e-10
+	-14.673 -3.119 50 -0.95677 -0.203374 1.17936e-10
+
+would become:
+
+	m DEFAULT
+	v 1 -14.673 -3.119 50 n -0.95677 -0.203374 1.17936e-10
+	v 2 -14.673 3.118 50 n -0.94236 0.271166 -1.6951e-10
+	v 3 -14.673 3.118 -50 n -0.97118 0.135583 -8.47551e-11
+	t 1 2 3
+
+	m DEFAULT
+	v 1 -14.673 3.118 -50 n -0.97118 0.135583 -8.47551e-11
+	v 2 -14.673 -3.119 -50 n -0.95677 -0.203374 1.17936e-10
+	v 3 -14.673 -3.119 50 n -0.95677 -0.203374 1.17936e-10
+	t 1 2 3
+
+Notice that the same vertex id's are reused.  This is an advantage of
+my format -- you can save memory and confusion by grouping
+your triangles and vertices however you like.  The 'm' command of
+course did not need to be repeated in this case, but that way your
+translator can be a little simpler.  The final output of tmesh2rad
+is the same.
+
+If you want, you can use rcalc instead of writing a translator, like so:
+
+	% rcalc -i inp.fmt -o out.fmt orig_file | tmesh2rad > rad_file
+
+Where inp.fmt contains:
+
+triangle $(mat) $(x1) $(y1) $(z1) $(nx1) $(ny1) $(nz1)
+$(x2) $(y2) $(z2) $(nx2) $(ny2) $(nz2)
+$(x3) $(y3) $(z3) $(nx3) $(ny3) $(nz3)
+
+And out.fmt contains:
+
+m $(mat)
+v 1 $(x1) $(y1) $(z1) n $(nx1) $(ny1) $(nz1)
+v 2 $(x2) $(y2) $(z2) n $(nx2) $(ny2) $(nz2)
+v 3 $(x3) $(y3) $(z3) n $(nx3) $(ny3) $(nz3)
+t 1 2 3
+
+If I understand your format correctly, this should do it.
+
+-Greg
+
+<A NAME="LUMINAIRE">==========================================================================</A>
+LUMINAIRE MODELING
+
+Date: 18 Feb 1994 17:24:32 -0400 (EDT)
+From: "Richard G. Mistrick" <RGMARC@ENGR.PSU.EDU>
+Subject: Tubular luminaires in radiance
+To: greg@hobbes.lbl.gov
+
+Greg:
+    We are getting some good use out of Radiance.  I have a simple question as
+to how to best model tubular luminaires.  Below are a few questions:
+
+1. The photometry is general performed relative to the center of the
+luminare.  As I understand it, you generate a luminous rectangle or two
+(horizontal plane) that emit light upward and downward.  How can I put
+these at the luminous center of a tubular luminaire?  All that I've
+found to date is that I can use an illum source, but must put it
+outside the luminaire.
+
+2. How can I make the luminous element of the luminaire (which may be curved)
+appear bright without contributing additional light to the space?
+
+I would appreciate any tips related to the above that you can pass along.
+
+Thanks, Rick Mistrick
+
+Date: Fri, 18 Feb 94 14:50:53 PST
+From: greg (Gregory J. Ward)
+To: RGMARC@ENGR.PSU.EDU
+Subject: Re:  Tubular luminaires in radiance
+
+Hi Rick,
+
+I was reading your e-mail and thinking to myself, "Gee, this guy really
+knows his stuff."  I didn't notice your name until I got to the end...
+
+Yes, you have hit on a sticking point.  The solution of putting a rectangle
+above and below the luminaire is a marginal one, and is used by ies2rad
+mostly because the IES format doesn't give much of a clue as to the true
+fixture geometry.
+
+1.  When you say you have a "tubular luminaire," do you mean a cylinder?
+If in fact you had a cylinder whose entire area emitted light, you could
+model this as a cylindrical light source directly in Radiance (with or
+without an associated intensity distribution).  If, as I suspect, only
+part of your tube is luminous, you may need to use an illum that
+is outside the actual luminaire.  This illum may composed of one or
+more polygons, or you could use a cylinder larger than the actual fixture.
+The computed emission will be from the whole illum surface, so you shouldn't
+make it too much larger than the actual radiating area.
+
+2. Use the material type "glow".  If you give a small positive value as
+the influence distance (fourth real parameter), then the assigned surfaces
+will illuminate local objects (ie. other parts of the luminaire).  If the
+value is zero, the assigned surfaces will be visually bright without having
+any direct contributions.  In any case, the (invisible) illum surface will
+block any rays from reaching the glow surface, so the luminaire can't be
+overcounted.
+
+Luminaire modeling is definitely an art, and a rather painful one at that.
+I wish the IES computer committee was a little more focused on the future
+of full geometric models and near-field photometry and a little less
+focused on database issues, but I shouldn't complain if I won't volunteer...
+
+-Greg
+
+<A NAME="GENSKY">==========================================================================</A>
+GENSKY
+
+Date: Fri, 4 Mar 94 08:01:34 EST
+From: TCVC@ucs.indiana.edu
+Subject: Re:  water swells
+To: greg@hobbes.lbl.gov
+
+Fractals can be fun.. yes it will take a while to "hone" in on the
+right effect, but thanks for opening the door for me!
+
+This might sound awefully naive from a "long time explorer " of 
+Radiance, but I need to run a daylight image (first one!!!!)..
+I feel like a vampire that has come out into the sun.
+
+All of our geometry is based on :
+
+		+z	= north
+                +x       = west
+  		+y     is up
+
+Say its at your location or Hong Kong for that matter,
+How do I twist gensky to line up with my coordinate system?
+And where is the suggested "ambient" value found?
+
+-Rob
+(I will have a series of images that I think you will enjoy. Some are
+highly theatrical from my Graduate Design Students in THeatre, and
+I am working on a building top that should be quite interesting!!
+Will post when all are complete)
+
+From greg Fri Mar  4 09:16:15 1994
+Return-Path: <greg>
+Date: Fri, 4 Mar 94 09:15:50 PST
+From: greg (Gregory J. Ward)
+To: TCVC@ucs.indiana.edu
+Subject: Re:  water swells
+Status: R
+
+Hi Rob,
+
+To change gensky's output from its default coordinates (+Y = North, +X = East,
++Z = up), use xform.
+
+The easiest way for me to think about it is to imagine what the sky looks
+like in my coordinate system when first output by gensky, then move it where
+it ought to go.  When gensky is run, it produces a sky whose North direction
+is pointing straight up instead of in the +Z direction like we want it, and
+whose other directions are wrong as well.  To rotate gensky's North from our
+up (+Y) to our North (+Z), we need to rotate about our X-axis by +90 degrees
+(using the right-hand rule to determine the sign).  Once we have done this,
+the original gensky X orientation will still be wrong, pointing East instead
+of West.  We therefore rotate about the Z-axis by 180 degrees (sign doesn't
+matter for this particular rotation).  So, the command is:
+
+	gensky Month Day Time [options] | xform -rx 90 -rz 180
+
+Note that the order of rotations is important.  There are many
+other equivalent rotations, also.
+
+I look forward to seeing more examples of your work and your students'.
+
+-Greg
+
+Date: Fri, 4 Mar 94 09:37:23 PST
+From: greg (Gregory J. Ward)
+To: TCVC@ucs.indiana.edu
+Subject: P.S.
+
+I forgot to answer the part about Southern latitudes.  Simply apply the -a
+option to gensky, giving a negative latitude to indicate the number of
+degrees below the equator.
+
+
+From: apian@ise.fhg.de
+Subject: gensky (take #645)
+To: gjward@lbl.gov (Greg Ward)
+Date: Thu, 24 Feb 1994 21:03:15 +0100 (MEZ)
+
+Dear Greg,
+
+Anne Kovach and myself are wondering for the nth time what the
+hack genksy is producing.
+
+....
+
+Hi Greg,
+
+Im sitting here with Peter and we were discussing some
+of my calculation results in figuring out what gensky
+is doing.
+
+I was/am testing how well Radiance is suited (ie. gensky) in
+determining the Irradiation (rtrace -I option I used for this case) on
+an area.  To test the values from gensky , I simulated the global
+irradiation on the horizontal with gensky over an entire year for the
+Freiburg location.  The values that I got were verz very low.  Then I
+thought maybe the 3 values out from rtrace should be summed since these
+are the 3 channels.  SO I summed them and got a value 3 times larger.
+(oh... [P. editorial remark])
+
+When I compared these values of +s, -s, +c, -c (4 simulations each with
+a different distribution) with the TRY data from Freiburg, the data IN
+ALL CASES was still too low -- although I multiplied by 3!!
+(Thismultiplication by 3 I learned is not correct -- via Peter.)
+("Each channel can be thought of in terms of
+watts/m2/steradian/"bandwidth".  In other words, going from a
+three-color measure of radiance to a monochromatic measure, we wouldn't
+add up the three channels to compute the total radiance, we would take
+some average.  This simplifies computations quite a bit." [ from your
+mail 1 month ago, P.] )
+
+THe main points of this simulation which were puzzling are
+asfollows:
+
+1. Why are the Irradiation values (units + W/m2 I am assuming
+so low?)  eg. June in Freiburg is 38 kWh/m2/month and in the
+TRY year it is around 169 kWh/m2/month. (THis was calculated
+with the +s option in this case.)
+
+2. What can be done to make these values higher??  ie. WHat parameters
+could be changed? in sky_glow ? bandwidth values?  (not just
+the RGB??)
+( I guess your answer is adjusting the zenith brightness, just why ??
+Adjusting CIE to local climate ??? P.)
+
+3.  FOr SF data, does the monthly measured data correspond to
+gensky?
+
+4. Is multiplying by 3 such a bad idea??
+
+P.S.  THe only other option I used is -ab 1 for gensky,  with 
+, of course the skyfunc glow values as given in the 
+Radiance tutorial . (Cindy Larson)i as follows:
+
+skyfunc glow sky_glow
+0
+0
+4 .9 .9 1 0
+
+sky_glow source sky
+0
+0
+4 0 0 1 180
+
+( Yes, the glow problems, requiring ab=1, are known here - P.)
+
+As far as I (P.) understand, the basic problem we have is:
+	a) we don't use the options correctly (unlikely)
+	b) we don't understand some basic principles (well...)
+	c) CIE is stuffed and/or requires local adjustments
+
+cheers
+Anne , Peter
+
+-- 
+ Peter Apian-Bennewitz	apian@ise.fhg.de  +49-761-4588-[123|302] 
+ Fraunhofer Institute for Solar Energy Systems, D-79100 Freiburg
+
+
+Date: Thu, 24 Feb 94 12:13:44 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de, kovach@ise.fhg.de
+Subject: Re:  gensky (take #645)
+
+Hi Peter and Anne,
+
+The problems you are experiencing with gensky are probably due to the
+absolute difference between the zenith and solar radiances computed by
+the program and those of your TRY data.
+
+Daylight is a highly variable quantity, as you must know.  Even if the CIE
+sky distributions were good approximations of realy skies (which they are
+not), the variation in absolute brightnesses is going to make for very
+poor agreement between measurements and simulations.
+
+The best thing to do is to use the -r (or -R) and -b (or -B) options of
+gensky to calibrate the absolute levels to match your weather data.
+Otherwise, gensky is going to use some default assumptions about atmospheric
+turbidity and mean solar brightness to come up with highly approximate
+brightness values.
+
+Note that a new option has been added to gensky in version 2.3 for the
+modeling of so-called "intermediate" skies.  This may be more appropriate
+for many of your daylight conditions in Germany than either the default
+clear or overcast model.
+
+In the process of implementing this option, I also managed to wreck the
+calculation of ground plane brightness, and you should pick up the repaired
+version of gensky.c from hobbes.lbl.gov in the /pub/patch directory.
+However, from the description of your problem, the ground plane brightness
+is probably not the source of your disagreement.
+
+I hope this helps!
+
+-Greg
+
+From: apian@ise.fhg.de
+Subject: Re: RGB nm values ?
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 25 Feb 1994 15:33:53 +0100 (MEZ)
+
+Hi Greg,
+
+about gensky/CIE:
+
+(before you say "read my lips", I read your last mail... )
+
+after a cross-check with x11image.c and falsecolor.csh,
+everyone here is convinced that the average (il)luminance has to be 
+the weighted average of the RGB channels (and NOT the sum).
+(we had this discussion already)
+
+Ok, - so the CIE are aprox. a factor 3-6 too low. 
+Question: Do you know from other chaps who checked gensky against
+reality and what's the factor between these too ?
+If gensky is good enough for Berkeley weather, a factor of 6
+for Freiburg seems to be far out.
+6 is for average monthly radiance, 3 is for daily luminance, both
+global radiation on a horizontal surface.
+
+as always, many TIA
+Peter
+
+-- 
+ Peter Apian-Bennewitz	apian@ise.fhg.de  +49-761-4588-[123|302] 
+ Fraunhofer Institute for Solar Energy Systems, D-79100 Freiburg
+
+
+From: apian@ise.fhg.de
+Subject: anne's factor
+To: gjward@lbl.gov (Greg Ward)
+Date: Fri, 25 Feb 1994 17:49:30 +0100 (MEZ)
+
+seems to be more on the 1.5 - 2.0 side, not so much a factor 6.
+user error gone unchecked. crunch.
+
+-- 
+ Peter Apian-Bennewitz	apian@ise.fhg.de  +49-761-4588-[123|302] 
+ Fraunhofer Institute for Solar Energy Systems, D-79100 Freiburg
+
+
+Date: Fri, 25 Feb 94 08:58:19 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  anne's factor
+
+I recently compared gensky's values to San Diego weather averages, and
+the gensky values seemed to be lower than measured averages by about 30%.
+
+The low values from gensky are probably due to a too-high turbidity value.
+You can lower it to correspond better with your weather, but the best
+way to proceed (as I said before) is to plug in your own values for
+zenith and solar radiance.  There is no other way to get good correspondence
+with measurements.
+
+-G
+
+From: kovach@ise.fhg.de
+Subject: Radiance
+To: greg@hobbes.lbl.gov
+Date: Fri, 4 Mar 1994 11:50:18 +0100 (MEZ)
+
+Hi Greg,
+
+Thanks for your help and comments with gensky.  I am presently 
+investigating the effect of the individual parameters -R, -b and
+-t on the output of gensky in comparison with a Freiburg climate.
+
+In comparing the monthly values of Freiburg TRY weather data,
+the highest discrepancy between gensky +s and Freiburg TRY
+using the default values was 34 %, where TRY global horiz. was 34 %
+higher than gensky's values.  The lowest amount of discrepancy occurred 
+in Dec where TRY was only 8% higher than gensky.  For the 
+other options with no direct source, the TRY values were approx.
+70-80 percent higher than those values generated by gensky.
+
+Since  I dont want to blindly plug in different parameters that
+dont make any physical sense, I took a look in the source code
+for gensky.   I also
+took a look at Superlite since it also uses a CIE sky distribution.
+There was a list of turbidity factors in the Superlite manual
+and the factors all seemed to
+be lower than 1.   Therefore I only have 2 questions.
+
+1) Did you use a specific turbidity model to estimate
+the turbidity factor? (eg. Linke Turbidity Factors?) What are
+the units in this case? (or are there no units?)
+
+2) Could you recommend a reference where I could take a look
+at to get a better understanding of the  meaning of the different
+values of these parameters and to help explain the role of these
+factors in the gensky model?
+Unfortunately Freiburg is not as full of bookstores as Berkeley!
+-- a great disadvantage!
+
+Your helpfulness is really appreciated.
+
+Ciao,
+Anne
+
+Date: Fri, 4 Mar 94 09:51:41 PST
+From: greg (Gregory J. Ward)
+To: kovach@ise.fhg.de
+Subject: Re:  Radiance
+
+Hi Anne,
+
+I am disappointed to hear that your sky measurements are in disagreement
+with gensky's output.  The default turbidity factor (reported by
+"gensky -defaults") is 2.75.  This is Linke's turbidity factor, which by
+its place in our equation should have units of kcd/m^2.  It is quite
+probable that a higher turbidity factor is called for in your climate.
+
+The formulas I use in gensky can be found around line 200 in gensky.c:
+
+                if (overcast)
+                        zenithbr = 8.6*sundir[2] + .123;
+                else
+                        zenithbr = (1.376*turbidity-1.81)*tan(altitude)+0.38;
+                if (skytype == S_INTER)
+                        zenithbr = (zenithbr + 8.6*sundir[2] + .123)/2.0;
+
+For an overcast sky, I think I use the same formula used in SUPERLITE.  I
+wish I knew where it came from, especially since it's so far off from your
+measurements.  Perhaps this is not too surprising, though, since cloud
+cover varies considerably and one overcast day can be MUCH darker than another.
+
+For the clear sky luminance, I use the formula reported in a 1984 paper by
+Karayel, Navvab, Ne'eman and Selkowitz (Energy and Buildings, 6, pp. 283-291).
+This formula is apparently a simplified version of one proposed by Dogniaux
+relating turbidity to zenith luminance, and the factors were determined
+empirically from measurements of clear skies over San Francisco.  Again, it
+may not be the most appropriate formula for your area.
+
+For intermediate skies, a recent addition to the program, I had no idea
+what to use for the zenith luminance so I just averaged the clear and
+overcast brightnesses together.
+
+Let me just emphasize once more that sky conditions and luminance patterns
+are highly variable, and predicting them is not an exact science.  Obviously,
+the formulas used in gensky could use updating, and I've been trying to find
+an opportunity to do that.  A lot of good data has been gathered by your group
+and others as part of the IEA International Daylight Measurement Year, and
+some of this data has even been digested and fitted to more advanced sky
+models.
+
+As I said before, the best you can do is to use your own values for
+zenith luminance (or the equivalent ground plane illuminance) and go
+from there.  Even doing this, I think the standard CIE clear sky formula
+is starting to show its age.  I should really be replaced by something
+that correlates better to real skies.
+
+If you want to use gensky's calculation of clear sky luminance for some
+reason, just adjust the turbidity factor up by 30% or so until the zenith
+luminances more closely match your measurements.  There is nothing you
+can do other than override the default luminance value for overcast
+skies.  Again, this is what I recommend you do for all sky types, anyway.
+
+-Greg
+
+<A NAME="COMPILE">==========================================================================</A>
+COMPILE PROBLEMS
+
+Date: Thu, 3 Mar 94 15:14:38 +0100
+From: Education <lucius@arch.ethz.ch>
+To: greg@hobbes.lbl.gov
+Subject: fun with a compiler
+
+Hi Greg !
+
+Don't know if you still remember me, but I'm still working hard bringing
+Radiance to different plattforms. I don't know, if I told you, but at
+the moment I trying to compile it on a Intel Paragon, a 100 processor
+machine, that is supposed to be really fast. I finally got the accont,
+but now I have several problems with the compiler.  For example, the
+Paragon doesn't know the call of CLK_TCK (it occors in rpict.c: 155, so
+I have to solve this problem). What happens, if I set to a fixed value,
+does the programm still work propably.
+Another question is, why do you define
+	 -DDCL_ATOF -DALIGN=double
+Is that really nessesary for every compiler or just for a specific one.
+
+And a last one: Since I only want to use the Paragon as a number
+cruncher, I only need to run rpiece ( and so I guess rpict ). Do you
+have any makefile, that is creating only the basic parts of Radiance,
+that would save me a lot of time. My problem is, that I don't know
+enough about your programm structure to remove single parts of the
+Rmakefiles
+
+			thanks a lot, 	Daniel
+					c\o Prof. Schmitt
+					Architektur & CAAD
+					HIL D 74.3, CH- 8093 ETH Zuerich					E-Mail 	lucius@arch.ethz.ch
+				phone	+41 1  633 29 20
+
+Date: Thu, 3 Mar 94 16:03:51 +0100
+From: Education <lucius@arch.ethz.ch>
+To: greg@hobbes.lbl.gov
+Subject: a few more questions
+
+Hi greg !
+
+Here are a few more questions  
+
+1. Very often I get the following message. Do I have to take care of it ?
+
+PGC-W-0118-Function ebotch does not contain a return statement (calexpr.c: 274)
+PGC/Paragon Paragon Rel 4.1.1: compilation completed with warnings
+
+2. Why do you redefine fabs:
+
+PGC-W-0221-Redefinition of symbol fabs (./defs.h: 346)
+PGC/Paragon Paragon Rel 4.1.1: compilation completed with warnings
+
+3. Even more often I get :
+
+PGC-W-0095-Type cast required for this conversion 
+
+Is that a special problem with the Paragon compiler or is it because of
+the complier options I told you about within the other E-Mail
+
+						Thanks, Daniel
+
+Date: Thu, 3 Mar 94 11:12:16 PST
+From: greg (Gregory J. Ward)
+To: lucius@arch.ethz.ch
+Subject: Re:  fun with a compiler
+
+Hi Daniel,
+
+The problem with CLK_TCK being undefined has been repaired, and the new
+version of rpict.c is in the /pub/patch directory on hobbes.lbl.gov.
+I found out after I wrote this code at the insistence of Peter Apian
+that there are many different ways that so-called System-V compatible
+and POSIX-compatibe UNIX implementations handle this stupid problem.
+
+The -DDCL_ATOF definition is usual for systems that declare atof()
+as double but don't necessarily put it in math.h.  If atof() is declared
+as something strange or is a macro, then this option is left off.
+The -DALIGN=double is needed for proper compilation of the memory
+allocation routines (common/*alloc.c) on RISC architectures.  Older
+CISC machines usually use int as the alignment type, which is the default.
+
+The warnings you are getting can probably be safely ignored.  You no doubt
+have an ANSI-standard C compiler on the Paragon.  Radiance predates ANSI
+C, so you should find a way to switch off function prototypes if you want
+the warnings to go away.  Some ANSI compilers offer a -cckr option for
+"Kernighan and Ritchie" standard, which is the original standard and the
+one to which Radiance adheres best.
+
+Hope this helps.
+-Greg
+
+<A NAME="GLASS">==========================================================================</A>
+GLASS BRICKS
+
+Date: Fri, 4 Mar 94 11:20:25 WST
+From: crones@puffin.curtin.edu.au (Simon "fish" Crone)
+To: greg@hobbes.lbl.gov
+Subject: Re:  Street Scapes
+
+Hi Greg,
+
+	Thanks for the information.  Don't worry about the Ove Arup slide or
+the San Francisco images, but I would like to see your nighttime roadway 
+simulation.  Would you mind putting it up on your ftp server?
+
+Also ( I forgot to mention it yesterday ), have you, or do you know of
+anyone else, who has tried to model a glass block wall?
+
+I have basically been modeling each brick individually using a rippled
+glass texture for the front and back sides of each block and then a white
+mortar in between.  The problem with this is that the inside 'walls' of
+the glass block, ( ie. the mortar ), appear quite dark ( as they are in
+shadow ).  I don't particulary want to make the far side glass block a
+light source ( ie illum ) as there are so many glass blocks.
+Any clues?
+
+Simon.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+|                                                                              |
+|                       Simon Crone - Masters Student                          |
+|                                                                              |
+|          School of Architecture, Curtin University of Technology,            |
+|                GPO Box U1987, Perth, Western Australia 6001                  |
+|         Phone:+61-9-351-7310 Internet:crones@puffin.curtin.edu.au            |
+|                                                                              |
+|                   "He who dies with the most toys wins!"                     |
+|                                                                              |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Date: Fri, 4 Mar 94 08:59:12 PST
+From: greg (Gregory J. Ward)
+To: crones@puffin.curtin.edu.au
+Subject: Re:  Street Scapes
+
+Hi Simon,
+
+I just happened to have the roadway simulation in an 8-bit Sun rasterfile
+(your favorite format), which I compressed and put on my ftp server in
+the /xfer directory.  The file is called "road.ras.Z".
+
+As for your glass blocks, what material are you applying to the surfaces?
+Are you really using the type "glass", or are you using "dielectric" or
+something else.  I would recommend that you use either "glass" or "trans",
+since these materials have a special property which allows light to pass
+through them directly even if they have a texture also.  Dielectric, though
+it may be more realistic, does not allow light to pass through without being
+refracted, and this refraction usually messes up the direct calculation in
+the way you described.
+
+A single glass or trans surface at the front and back (and sides if you like,
+though you should make sure to leave a small gap between your bricks and your
+mortar if you do this) should work.
+
+-Greg
+
+<A NAME="AMBIENT">==========================================================================</A>
+AMBIENT VALUES
+
+Date: Fri, 25 Mar 94 09:23:57 GMT
+From: jon@esru.strathclyde.ac.uk (jon)
+To: mdonn@arch.vuw.ac.nz, greg <greg@hobbes.lbl.gov>
+Subject: ambient values query
+
+Mike Donn and/or Greg Ward,
+
+We are having a debate here over the use of ambient values.  The sky
+file includes a ground ambient and with outside views the inclusion of
+these values in the "-av" option of rpict seems to work quit nicely.
+
+Question is - in an inside view which has ONLY daylighting and direct
+sun penetration I am assuming that I should include the same -av
+values.  Some of the students complain that this gives high lux
+values.  No, I have not gotten around to pulling across the new release
+but it is on my todo list.
+
+Our desktop/converter e2r scans the sky file and picks up the ground
+ambient values and uses them in rpict calls unless the user overrides
+it.  Any opinions?
+
+Regards,
+
+Jon Hand
+
+Date: Fri, 25 Mar 94 08:37:25 PST
+From: greg (Gregory J. Ward)
+To: jon@esru.strathclyde.ac.uk
+Subject: Re:  ambient values query
+Cc: mdonn@arch.vuw.ac.nz
+
+Hi John,
+
+You are correct in using the ambient value suggested by gensky for exterior
+views, but your students are correct that it is too high for interiors.
+In fact, setting this parameter correctly is not easy to do automatically.
+You would have to perform some sort of zonal cavity approximation to find
+out how much average light (excluding sources) you have bouncing around
+your interior.
+
+The method I've found to be most effective is the one incorporated in the
+new "rad" program distributed with release 2.3.  It takes an exposure value
+as determined by the user, and computes the ambient value from that.  The
+user is still charged with finding the right exposure, but once that's done,
+the rest is automatic.
+
+(The computation of ambient value from exposure is simply 0.5/exp_mult.)
+
+-Greg
+
+<A NAME="LOCK">==========================================================================</A>
+LOCK MANAGER
+
+From: sjain@arch2.engin.umich.edu
+Date: Fri, 1 Apr 94 09:24:58 -0500
+To: greg@hobbes.lbl.gov
+Subject: Storing Indirect Illuminance Values in a File
+
+Thanks for the advice with the "RAD" program.  I am trying to write the
+indirect illuminance values to a file by using the "-af" option in RPICT.
+Even though RPICT opens the file with read/write permissions there is the
+following error:
+  rpict: system - cannot (un)lock ambient file: Invalid argument
+
+I am using the following RPICT options
+  rpict -vtv -vp 33 -16 1.76 -vd -11 3 0 -vu 0 0 1 -vh 60 -vv 60
+  -x 300 -y 300 -pa 1 -ab 1 -af rokko_ab -t 0 rokko2.oct | pfilt >
+  /users/sjain/rokko2.pic
+
+Please advice.
+
+- Shailesh
+
+Date: Fri, 1 Apr 94 09:03:24 PST
+From: greg (Gregory J. Ward)
+To: sjain@arch2.engin.umich.edu
+Subject: Re:  Storing Indirect Illuminance Values in a File
+
+Dear Shailesh,
+
+Sounds like your on a machine with a completely broken lock manager.  I
+noticed this behavior before.  There is a file called BUGS in the top
+directory on the anonymous ftp account of hobbes.lbl.gov.  Here's what
+it has to say:
+
+			KNOWN BUGS AND WORKAROUNDS
+
+Silicon Graphics:
+
+	The network lock manager seems to be broken on release 5.1.1.1
+	of IRIX, and therefore rpict, rtrace and rview will not be able
+	to share ambient files while running simultaneously.  Also,
+	rpiece will not work.
+
+System V derivative UNIX's:
+
+	The network lock manager in general seems to be unreliable on
+	most SGI's, so rpiece may abort with strange results.  I haven't
+	a clue how to fix this, as it appears to be an operating system
+	defect.  Please take the time to complain to your vendor if you
+	run into this problem.  It's going to take a lot of people
+	coming to them before they're likely to do anything about it.
+
+	If the renderers give you some message about not being able
+	to lock or unlock a file, you can add the following line
+	to the end of src/common/standard.h as a last resort:
+
+	#undef F_SETLKW
+
+	This should remove all the dependent code, killing
+	rpiece in the process.
+
+
+I can only hope they will fix this problem in coming releases.  I do
+encourage you to register a complaint.
+
+-Greg
+
+<A NAME="SPECKLE">==========================================================================</A>
+SPECKLE
+
+From: "Mr. A. Morris" <jabt282@liverpool.ac.uk>
+Subject: radiance query
+To: greg@hobbes.lbl.gov
+Date: Mon, 11 Apr 1994 15:32:51 +0100 (BST)
+
+Greg
+
+I don't know if you remember answering my queries last autumn I've been
+using radiance for several months now and have found it very useful 
+especially since the addition of the rad function in the latest version.
+
+Receintly however I've been having difficulties producing clean images
+which I know it is capeable. I've enlarged a model which previously 
+produced very good images, increasing the complexity of the model. the 
+model now has several thousand objects and renders well except that
+round objects inthe scene (which previously rendered giving smooth shading)
+now have a speckled appearance which is very pronounced. the flat elements
+all seem to be rendering as normal although as the columns and other round
+elements are created on autocad they are actually faceted. I've tried rendering
+these round elements alone and they work fine.
+Have you got any suggestions?
+
+Alex Morris Liverpool Uni.
+
+Date: Mon, 11 Apr 94 10:02:58 PDT
+From: greg (Gregory J. Ward)
+To: jabt282@liverpool.ac.uk
+Subject: Re:  radiance query
+
+Hello Alex,
+
+There are three possible sources of the artifacts you are seeing:
+
+1. You are using an outdated release of Radiance where I was using an
+inaccurate calculation for sphere intersections.  This bug has existed
+since the dawn of Radiance, but only recently became noticeable as people
+started working on very large models with very small spheres.  It was
+fixed last November, well in time for release 2.3.
+
+2. You are seeing the result of Monte Carlo sampling for the rough specular
+(i.e. directional-diffuse) component, which can show up as speckles under
+certain circumstances.  You can mitigate this effect using the new -m option
+of pfilt, or by increasing -st above the specularity of your surface or
+decreasing the -sj parameter.  The latter two approaches diminish image
+accuracy, however.
+
+3. You have answered "yes" to the question about rendering huge models during
+the Radiance makeall build, thus causing -DSMLFLT to appear in the rmake
+script used to compile the programs.  As it warned you, there are sometimes
+errors in the intersection calculations that result from using this option,
+and as a general rule I don't recommend it.  I have since taken out this
+question, so the next release will have to be hacked to compile with short
+(4-byte) floats.  To go back to double-precision data values, run
+"makeall clean" followed by removing the rmake command from your Radiance
+executable directory (/usr/local/bin by default), followed by "makeall install".
+This time, answer "no" when it asks you if you plan to render huge models.
+
+Hope this works.
+-Greg
+
+<A NAME="OBJVIEW">==========================================================================</A>
+OBJVIEW
+
+Date: Fri, 15 Apr 1994 09:40:04 -0600 (MDT)
+From: Ric Wilson <rwilson@boi.hp.com>
+Subject: Radiance question
+To: GJWard@lbl.gov
+
+This is probably a stupid question, but how do render the sample .oct
+scenes in the radiance package?  I get the warning that there is no light
+source and then a black picture.  Any help would be greatly appreciated.
+
+Ric Wilson
+rwilson@boi.hp.com
+
+Date: Fri, 15 Apr 94 09:16:50 PDT
+From: greg (Gregory J. Ward)
+To: rwilson@boi.hp.com
+Subject: Re:  Radiance question
+
+Hi Ric,
+
+The sample octrees are meant to be included in other scenes as instances
+using the "instance" primitive type.  If you want to render them by
+themselves, I suggest you use the following rather tortured command line:
+
+	% objview '\!echo void instance example 1 example.oct 0 0'
+
+You may do this from any directory and it should work so long as your
+RAYPATH variable is set to search the location containing the actual
+octree ("example.oct" in this example).
+
+Objview is a generaly useful script that adds a few light sources and
+a background to a scene or object, puts it in an octree and starts rview
+on it.  The source to this script may be found in ray/src/util/objview.csh.
+There is a manual page, also, but it doesn't say much.
+
+-Greg
+
+P.S.  A question is only as stupid as its answer.
+
+<A NAME="CSG">==========================================================================</A>
+CSG
+
+From: cloister bell <cloister@u.washington.edu>
+Sender: cloister bell <cloister@u.washington.edu>
+Reply-To: cloister bell <cloister@u.washington.edu>
+Subject: complex objects in radiance.
+To: greg@pink.lbl.gov
+
+hi there.  i've been using radiance for a month or so now, and thought i'd
+offer some comments and ask a question.  overall, i'm terribly impressed
+with radiance.  it does lighting so well that i'm not seriously tempted to
+switch back to anything like povray or rayshade.  but there are some 
+things which were a lot easier in pov and rayshade that are giving me 
+fits in radiance:
+
+1. there doesn't seem to be any comprehensive documentation source for 
+   all the math that radiance seems capable of.  for example, i'm 
+   constantly seeing hermite(....) being used in scene description files, 
+   but it took forever to find out (by looking in rayinit.cal) that it 
+   was a library function.  and i wasn't able to find out anything more 
+   than that.
+
+2. the documentation for surface property definition/declaration is 
+   pretty sparse.  most of what i've been able to do i had to learn by 
+   looking at other people's sample files.  while this works, no one ever 
+   bothers to comment their example files it, which means i'm left with a 
+   lot to guesswork and hocus pocus in my files.
+
+3. not being able to group objects into larger objects for composite 
+   solid geometry is making life hard.  it wouldn't be a problem except 
+   that intersecting antimatter volumes create problems.  for 
+   example, short of using heightfields (which i really want to avoid for 
+   performance reasons), i can't think of a way of making the 90 degree 
+   fillets at an inside corner of a cube meet smoothly.  the obvious 
+   thing to is to use 3 mutually orthogonal antimatter cylinders and a 
+   sphere such that the center of the sphere is also one of the endpoints 
+   of each cylinder.  of course, the overlapping antimatter makes big 
+   black spots on my image.  i tried just using an antimatter rounded 
+   box from genbox, but of course that didn't do what i wanted at all. am i
+   missing something really obvious?
+
+i hope that the problems i'm having have simple solutions that have 
+already been explained in some document that i managed not to get.  but 
+if that isn't the case, could you give me some hints?  i anticipate doing 
+a lot more work with radiance, and any advice you could give that would 
+make my life easier would be greatly appreciated.  thanks,
+
+jason.
+
+
+Date: Fri, 15 Apr 94 19:43:25 PDT
+From: greg (Gregory J. Ward)
+To: cloister@u.washington.edu
+Subject: Re:  complex objects in radiance.
+
+Hi Jason,
+
+The only other documentation you might be missing is the User's Manual in
+the mac.sit.hqx file in the ray/doc directory.  You'll need a Macintosh
+with StuffIt and Microsoft Word to print it out, but there's a lot of
+good examples and information in there.  It's a bit out of date, and not
+100% error-free, but it's all we have at the moment.  I've been trying
+to interest a publisher in sponsoring a book on Radiance, but so far I've
+had no luck.  The documentation is lamentable, but there's been consistently
+zero funding from the Department of Energy to do anything about it.
+
+The problems with antimatter are numerous, and I generally don't use it
+myself.  Complicated surfaces are best represented as (smoothed) polygons,
+which can be produced nicely by the gensurf(1) or genrev(1) programs.
+The additional cost in rendering time is much less than you'd expect,
+thanks to the octree acceleration techniques employed in Radiance.
+
+In fact, the only reason I created antimatter was to cut windows out of
+walls and the like for CAD programs that work that way.  Also, if you
+absolutely must have an accurate sphere with a section missing, antimatter
+is the only way in Radiance.
+
+I can't say for certain, but I have a hunch that the additional intersections
+and overhead associated with CSG would outweigh any advantage you might
+get from simplifying the geometric model in this way.  Also, for the scenes
+Radiance is usually used to represent (architectural lighting), CSG is
+not really necessary.
+
+Are you really doing all this nasty geometry in the scene file itself?
+I thought I was the only one stubborn enough to do that...
+
+On the bright side, I've almost finished a Wavefront .obj to Radiance
+file translator, which might make a few things easier.
+
+-Greg
+
+Date: Fri, 15 Apr 1994 22:44:07 -0700 (PDT)
+From: cloister bell <cloister@u.washington.edu>
+Subject: Re: complex objects in radiance.
+To: "Gregory J. Ward" <greg@hobbes.lbl.gov>
+
+> The only other documentation you might be missing is the User's Manual in
+> the mac.sit.hqx file in the ray/doc directory.
+
+ok.  i'll check it out.
+
+> Are you really doing all this nasty geometry in the scene file itself?
+> I thought I was the only one stubborn enough to do that...
+
+yep.  i do better with doing the geometry in my head and on paper than in 
+trying to use front end modelers
+ 
+> On the bright side, I've almost finished a Wavefront .obj to Radiance
+> file translator, which might make a few things easier.
+
+cool.  thanks.
+jason.
+
+<A NAME="RAD">==========================================================================</A>
+RAD PROBLEMS
+
+[The conversation starts with my thanking Veronika Summeraur for her
+work on the HTML manual pages.  Her questions on rad follow in her response.]
+
+Date: Wed, 13 Apr 94 11:49:23 PDT
+From: greg (Gregory J. Ward)
+To: summer@arch.ethz.ch
+Subject: man pages
+
+Hi Veronika,
+
+Thank you so much for translating the Radiance 2.3 manual pages to HTML
+format.  They look GREAT!
+
+Raphael told me about them, and I just loaded them on our WWW server
+(ftp://hobbes.lbl.gov/www/radiance/radiance.html).
+
+How did you do it?  There was obviously a fair amount of work just in
+specifying the links and everything, but you surely must have a program
+of some sort to convert nroff-formatted text into HTML.  Anyway, the
+results are terrific!
+
+Thanks a million!
+-Greg
+
+Date: Sun, 17 Apr 94 06:06:13 +0200
+From: summerauer veronika <summer@arch.ethz.ch>
+To: greg@hobbes.lbl.gov
+Subject: Re: man pages
+
+hi Greg,
+
+thanks for your mail - it's really good to hear that you liked this 
+html-stuff i did.
+
+> How did you do it?  There was obviously a fair amount of work just in
+> specifying the links and everything, but you surely must have a program
+> of some sort to convert nroff-formatted text into HTML.  
+
+the tutorial and the reference manual i did 'by hand' i.e. using a vi i 
+have customized with a lot of macros, which make the insertion of html-
+tags quite comfortable and fast (though very cryptic ;-). for the manual 
+pages i modified one of the man2html Perl scripts that are availabe on 
+the Net, but still had to do some editing by hand (since i have no 
+experience in programming perl, and the scripts did not meet all my needs 
+regarding formatting).
+
+as we do not have a www server at our site (i cannot use &lt;ISINDEX&gt; search), 
+i worked on your digests as well - inserting named anchors for each 
+topic, and created a 'list of keywords' document (currrently it is sorted 
+alphabetically, maybe i'll add one sorted by topics...), which allows you
+to access the digests by topic, not 'by date/version'. if you are interested,
+i can upload those files to hobbes.
+
+
+
+i'd like to add some questions on Radiance to this mail - i had planned to
+ask you before but never got to actually write an e-mail.
+
+maybe you remember - i am (still) working on an AutoCAD extension program,
+which is used as a graphical interface to Radiance. currently i'm updating
+the first version which has been used by students here during the last two
+months. i think the results were pretty good (though the interface is
+not yet very stable and has lots of bugs) - you might ask Florian 
+(wenz@arch.ethz.ch) in case you would like to see some of the final images.
+everyone who started to work with Radiance here is very enthusiastic about
+your software and the possibilites it offers to examine and visualize
+architectural projects.
+
+my questions are related to the 'rad' program, which i use to start the
+rendering process after the AutoCAD user has selected the preferred
+settings for sun, sky, ambient light, viewpoint, quality ...
+
+1) oconv:
+   i have noticed that most of the times the rad-program executes the 
+   oconv command twice.
+   i think that this relates to the way the sun-definition is specified
+   (using !gensky [options] in a seperate scene file, with one of the +s, 
+   -s, -c and -u options besides the specification of location and 
+   date+time.)
+   (playing around with !gensurf i watched 'rad' rebuiling the octree 
+   three (!) times before starting rpict or rview - that's why i think 
+   it is related to !gen[something].)
+   when the size of the octree is rather big (2 to 5 Mbyte), this slows 
+   down the process a lot, especially if the user chooses the option for 
+   'preview' (-> rview). 
+   can you give me any clues on when and why the oconv program is applied 
+   more then once?
+   
+2) scene= /object=
+   the translation of an AutoCAD drawing/scene is organized according to
+   entity color or layer structure. This may result in many different
+   scene files (one per color/layer), which 'rad' takes as arguments for
+   the oconv command. i repeatedly had the problem that the length of the 
+   oconv command exceeded a limit of maximal string length (?), i guess that 
+   comes from the bourne shell or csh (i use both).
+   i tried to work around the problem by maintaining a scene master file, 
+   (!cat filename.rad for each seperate scene file), and specifiying the
+   scene files as objects, but i still have the same problem if i use
+   'rad' to create a complete rif-file (-n and -e option), as 'rad' places
+   all objects on one line, which again exceeds a builtin limit. the result
+   is that the rif-file is incomplete and cannot be used again with 'rad'.
+   currently i no longer specify the scene files as scene= or objects= for
+   'rad', but try from inside AutoCAD to keep the scene master file as 
+   up-to-date as possible. 
+   i know that i could use 'make' as an intermediate step to create/rebuild
+   the octree but i am still looking for a solution with 'rad'. 
+   
+   ( BTW - we am working with Sun sparc2 / SunOS 4.1.3 
+                          and SGI Indigo / IRIX 4.0.5H )
+
+3) ambientfiles
+   what exactly are the parameters which are considered by 'rad' whether
+   to remove an already existing ambientfile or to re-use it? 
+   (material definitions are kept in a seperate file, specified as 
+    materials= project.mat in project.rif)
+   
+   
+thanks in advance for any advice you can give.
+veronika. 
+
+
+Date: Sun, 17 Apr 94 10:15:15 PDT
+From: greg (Gregory J. Ward)
+To: summer@arch.ethz.ch
+Subject: Re: man pages
+
+Hi Veronika,
+
+Yes, I would like very much to get the index you made for the Radiance Digests.
+I will add it to my WWW server's digest page.  Please drop it off in the /xfer
+directory on hobbes.lbl.gov.  Thanks!
+
+Regarding your interface work, I would be very interested to see it at some
+point.  We may be embarking on a project with the U.S. Federal Aviation
+Administration (which controls air traffic in our country), writing a
+graphical user interface for Radiance, possibly linking it to AutoCAD.
+
+Anyway, I will try my best to answer your three questions:
+
+1) In fact, rad does call the oconv() routine in two or three places, and
+only the first call should cause the octree to be rebuilt.  The reason is
+that oconv() checks the file modification times, and only rebuilds the
+octree if the current one is out of date with respect to one or more of
+the scene= or objects= files.  What I suspect is happening in your case
+is that you are on a network of machines that disagree about what time
+it is, and NFS doesn't resolve these differences.  Rad runs oconv() the
+first time, creating an up-to-date octree, then calls it a little
+while later and somehow the the system still says the octree is old.
+The best way to solve this problem is to run the network time daemon on
+your networked machines, so they can all agree about what time it is.
+A secondary option is to manually synchronize your machines' clocks and
+do this periodically as inaccuracies cause them to drift.  I will check
+my code again to see if there is something I can do to circumvent the
+problem within rad.
+
+2) This is a problem I noticed as well, and I have put in a fix for the
+next release.  In the meantime, the solution you have come up with seems
+adequate.  There is a limit built into oconv as to the maximum number of
+object files as well (63 according to my version of oconv.c), so fixing
+the -e option of rad as I have done isn't a complete solution to the problem.
+Beyond that, there is a limit to the length of a UNIX command line, though
+I believe it is quite generous (on the order of 10k).
+
+3) Ambient files are removed by rad whenever there is a change to any scene
+or object file that causes the octree to be rebuilt, or if there is a change
+to a materials file.  Basically, if anything about a scene changes, the
+ambient file is no longer reliably valid.
+
+Thank you again for all the great work you have done!
+
+-Greg
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 6</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

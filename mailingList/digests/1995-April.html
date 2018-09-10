@@ -1,0 +1,682 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head><a name="top"></a>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+<title> Radiance Digest v2n8 (Part 1a) </title>
+<h2>Radiance Digest Volume 2, Number 8 (Part 1a)</h2></head>
+<hr>
+<body>
+
+<pre>
+Dear Radiance Users,
+
+Here is a long-overdue digest of mail between myself and some of you,
+dating back to October of last year.  Because I've been so derelict
+in my moderator's duties, I had to break this into two parts since one
+part exceeded the 100K limit on many mailers.  The second part, however,
+consists of just one discussion, which is rather long-winded and highly
+speculative.  I figured there would be only a few people interested in
+that one, so I put it in a separate, ready-to-delete message.
+
+As usual, the digest is broken into easily searched topics.  This message
+contains discussions on the following topics:
+
+
+<a HREF="#DAYLIGHT_CALCULATIONS">DAYLIGHT CALCULATIONS</a>		- Daylight and sky simulation
+<a HREF="#RADIANCE_PORTS">RADIANCE PORTS</a>			- Ports to the Amiga and Macintosh
+<a
+HREF="#RENDERING_PARAMETERS">RENDERING PARAMETERS</a> 		- Q&amp;A on rpict and rad parameters
+<a
+HREF="v2n8_1b.html#SGI_BUG">SGI BUG</a>				- Core dumps on IRIX 5.x
+<a HREF="v2n8_1b.html#RADIANCE_VS">RADIANCE VS. POV AND RENDERMAN</a>	- Crude analysis of program diff's<a
+HREF="v2n8_1b.html#MIRROR_ABUSE">
+</a><a
+HREF="v2n8_1b.html#MIRROR_ABUSE">MIRROR ABUSE</a>			- What happens in a perfect funhouse?
+<a
+HREF="v2n8_1b.html#RETROREFLECTIVE_SURFACES">RETROREFLECTIVE SURFACES</a>	- Modeling retroreflection
+<a
+HREF="v2n8_1b.html#COLOR_AND">COLOR AND REFLECTANCE</a>		- CIE -&gt; RGB and reflectance models
+<a
+HREF="v2n8_1b.html#GEOMETRIC_MODELERS">GEOMETRIC MODELERS</a>		- What to use with Radiance?
+<a
+HREF="v2n8_1b.html#LENSES">LENSES</a> 				- Correct modeling of caustics
+<a
+HREF="v2n8_1b.html#HERMITE_CUBIC">HERMITE CUBIC FUNCTIONS</a> 	- How to specify Hermite curves
+<a
+HREF="v2n8_1b.html#AMBIENT_BOUNCES">AMBIENT BOUNCES</a> 		- Sorting out some test results
+<a
+HREF="v2n8_1b.html#BUMP_MAPS">BUMP MAPS</a>			- Converting height-field to texdata</pre>
+
+<pre>
+ Enjoy!
+-Greg
+
+
+=======================================================================
+<a name="DAYLIGHT_CALCULATIONS">DAYLIGHT CALCULATIONS</a>
+
+From: kathrin schwarz <kathrin@prehp.physik.uni-oldenburg.de>
+Subject: radiance
+To: greg@hobbes.lbl.gov
+Date: Fri, 7 Oct 94 10:35:58 MEZ
+
+Dr. Ward,
+we have a short and simple question:
+How do we get the direct irradiance and diffuse irradiance in 
+W/m/m in Radiance 2.3 ?
+
+Thanks Kathrin and Christof
+
+Date: Fri, 7 Oct 94 09:07:29 PDT
+From: greg (Gregory J. Ward)
+To: kathrin@prehp.physik.uni-oldenburg.de
+Subject: Re:  radiance
+
+Radiance computes only total irradiance, using the -I or -i options of rtrace.
+If you wish to separate &quot;direct and diffuse&quot; for daylight calculation purposes,
+you must perform two calculations using different executions of gensky.
+For direct only, you must remove the sky source description and/or turn the
+interreflection calculation in rtrace off by setting -ab 0 -av 0 0 0.
+For diffuse only, you can use the -s option of gensky to remove the sun
+source, or simply do a full calculation and subtract the direct component
+computed above.
+
+I hope this makes some sense.  I realize that it is confusing.  The chief
+difference between Radiance and other lighting programs is that Radiance
+will not calculate anything that cannot be measured.  Direct only and
+diffuse only portions can only be approximately measured by shading the
+photosensor from the solar direct.  You can do this in Radiance also
+by creating a small shield in front of the sun source, if you like.
+
+-Greg
+
+Date: Sun, 19 Feb 95 15:22:41 CST
+From: sabol@zen.wes.army.mil (Bruce Sabol)
+To: greg@hobbes.lbl.gov
+Subject: Generating sky in RADIANCE
+
+Greg:
+
+     I'm involved in a forestry remote sensing project in which
+we're trying to use RADIANCE to generate false color scenes of a
+natural forest in LANDSAT Thematic Mapper Bands (#2:0.52-0.62um
+{mapped to blue}, #3:0.63-0.69um {mapped to green}, and #4:0.75-
+0.88um {mapped to red}). I need to better understand how GENSKY
+functions in order to set the direct solar flux and diffuse
+skylight in these bands. To assist in determining direct and
+diffuse irradiance values in these bands I'm using the atmospheric
+model LOWTRAN7. Below is an example .RAD file output from GENSKY,
+with some added documentation comments, followed by some questions.
+
+------------------------------------------------
+# Howland Maine 9/8/90 11 AM clear sky
+# gensky 9 8 11 +s -a 45.2 -o 68.75 -m 75
+# Solar altitude and azimuth: 49.7 -12.8
+# Ground ambient level: 18.3
+# turbidity set at default value of 2.75
+
+void light solar
+0
+0
+3 6.88e+06 6.88e+06 6.88e+06
+# (watts/rad sq/sq m)
+
+solar source sun
+0
+0
+4 0.142792 -0.630758 0.762728 0.5
+
+void brightfunc skyfunc
+2 skybr skybright.cal
+0
+7 1 1.33e+01 2.37e+01 6.53e-01 0.142792 -0.630758 0.762728
+
+# end GENSKY output, begin my add-ons
+
+skyfunc glow skyglow
+0
+0
+4 0.03 0.4 1.0 0.0
+# rgb radiance (w/rad^2/m^2), max radius 
+# values set to look right - no physical basis for selection
+
+skyglow source sky
+0
+0
+4 0 0 1 180
+--------------------------------------------------------
+
+Questions:
+
+1. Direct Solar Flux. Turbidity was systematically manipulated from
+1 to 10. Zenith brightness (variable A2 in skybright.cal) and
+ground plane brightness (variable A3) both increase with turbidity
+as expected. However, the RGB solar values were constant (at
+6.88e+06) for all bands for all turbidity values. This was
+unexpected - as aerosol turbidity increases diffuse irradiance
+increases and direct solar flux decreases. Where does the value
+6.88e+06 come from and why is it the same across all 3 bands and
+for all turbidity values?  This is considerably higher than the red
+green or blue direct irradiance estimates from LOWTRAN7, although
+it is very close to the broadband visible radiance (0.4-0.7 um)
+value predicted by LOWTRAN7. Where should I be substituting in 
+estimates of direct spectral flux in other bands?
+
+2. Diffuse Irradiance. How is A2 (1.33e+01 in example above)
+computed and what does it represent? It appears very close to
+zenith sky irradiance in the visible band (0.4-0.7um) predicted by
+LOWTRAN.  How does (or should) it relate to RGB values in skyglow?
+Should the spectral irradiances (RGB) be summed to equal A2?
+
+Any help you can give me on these questions would be greatly
+appreciated.
+
+Regards
+
+Bruce Sabol
+U.S. Army Waterways Experiment Station
+Environmental Laboratory
+3909 Halls Ferry Rd.
+Vicksburg, MS  39180
+
+sabol@zen.wes.army.mil
+
+Date: Tue, 21 Feb 95 12:20:05 PST
+From: greg (Gregory J. Ward)
+To: sabol@zen.wes.army.mil
+Subject: Re:  Generating sky in RADIANCE
+
+Hi Bruce,
+
+In order to better understand the ouput of gensky and its meaning, you should
+refer to the file &quot;skybright.cal&quot; in the src/gen directory, which should be
+duplicated also in your Radiance library directory (wherever that is).
+I assume you have done this already, based on the questions you posed.
+
+Let me start by saying that I have little confidence in the sky or solar
+luminance calculations of gensky.  They are based on some simple rule-of-thumb
+calculations and mean sky measurements taken years ago.  If you are serious
+about your sky model (and it appears that you are), you should insert your own
+values for sky and solar luminance via the -b and -r (or -B and -R) options
+to gensky.  This will override the turbidity calculation for zenith luminance,
+which as you noted, does not affect solar luminance as it ought.
+
+If you have access to LOWTRAN, I would recommend that you stick with its
+calculations for the relevant luminances.  You will find even that the CIE-
+recommended model for clear and overcast skies is not very accurate.  It
+is used more as a standard for calculation than anything else.  There are
+better sky models floating about, but no official groups have yet gotten
+together and put their stamp of approval on them.
+
+Luminance can be computed from spectral radiance in Radiance with the
+approximate formula:
+
+	cd/m^2 = 179 lumens/watt * (.265*R + .670*G + .065*B)
+
+Note that the default output of gensky is achromatic.  This is simply so that
+renderings come out white-balanced.  Since most people are after a picture
+rather than 4 digit accuracy, this is the default.
+
+The meaning of red, green and blue in Radiance is somewhat vague, and this
+is intentional.  You can in fact define these to be whatever you want.  If
+you wish that they represent integrated spectral power from lambda1 to lambda2,
+then that's what they represent.  Of course, you have to figure out what to
+do with the pictures produced, as well as how to set the material reflectances
+appropriately, but the calculation is the same.
+
+Let me know if I can be of any more assistance.  You might also try looking
+through the back issues of the Radiance digest, available by anonymous
+ftp from hobbes.lbl.gov in the /pub/digest directory, or conveniently indexed
+from our WWW site:
+
+	http://radsite.lbl.gov/radiance/HOME.html
+
+-Greg
+
+Date: Mon, 27 Mar 1995 13:26:25 +0200 (MET DST)
+From: Maus <M.F.A.Bierhuizen@TWI.TUDelft.NL>
+Sender: Maus <M.F.A.Bierhuizen@TWI.TUDelft.NL>
+Subject: green-house questions
+To: greg@hobbes.lbl.gov
+
+Hi Greg, 
+I'm trying your Radiance package to measure light efficiency in
+greenhouses under cloudy sky conditions. I'm specifically interested in
+the ratio between the light measured in a point just above the greenhouse
+and the light measured in a number of points 2 meters above the ground
+inside the greenhouse. I have some questions considering these
+simulations. 
+
+Plants respond to the same portion of the spectrum as the human eye. But
+the human eye reponds best to green-yellow light while plants respond best
+to red-orange light. Furthermore,the response curve of the human eye is
+more or less a Gaussian curve while the responsecurve of a plant follows a
+saw-tooth. Am I right to say that I should not measure luminance like
+(.3*r + .59*g + .11*b) {watts} * 470 {lumens/watt} but substitute the rgb
+multipliers by other values to measure the light plants like best? How,
+thereupon, should I measure this specific light in points two meters above
+the ground? 
+
+What exactly is the use of specifying a groundglow in addition to a
+skyglow. Is it to simulate reflection of light by air molecules? 
+
+I read once that for glass, the 8% difference between 96% (transmission
+through the medium itself) and 88% (transmissivity) is due to reflection,
+and it varies with incident angle. Does this mean the 88% is a mean
+percentage for all possible angles of incidence, in other words, is it the
+percentage of light coming through the glass under diffuse lighting
+conditions ? (the conditions I'm interested in). 
+
+Regards,
+
+Maurice Bierhuizen. 
+
+Date: Mon, 27 Mar 95 09:26:14 PST
+From: greg (Gregory J. Ward)
+To: M.F.A.Bierhuizen@TWI.TUDelft.NL
+Subject: Re:  green-house questions
+
+Hi Maurice,
+
+You are correct that you should not use photometric units (luminance
+or illuminance) to gauge the amount of plant-food light in a space.
+I don't know what factors you should use.  However, it really doesn't
+matter unless your glass is tinted, because light is transmitted evenly
+over the visible spectrum for clear glazing.
+
+The 88% transmittance value is at normal (i.e. perpendicular) incidence,
+and the amount transmitted will decrease at higher incident angles.  Radiance
+accounts for this variation, and asks that the user specify the transmission
+(amount of light not absorbed in one pass through the material) at normal
+incidence and (optionally) the index of refraction for the glass type.
+
+The ground glow accounts for light reflected from the ground towards the
+horizon, assuming that you have some local geometry for the ground in the
+vicinity of your model.  It is not advisable in Radiance to specify the entire
+Earth as local geometry, as the difference between the largest and smallest
+object is then too great for the octree structure to manage.
+
+I hope this helps, and I wish you luck with your investigation.  I assume you
+are using rtrace in your calculations.
+
+-Greg
+
+[P.S.  I have been having a long discussion with Tony Yuricich about an
+advanced sky model he's been working on, and hopefully he will provide
+some code for us all in the coming months.  I didn't include that
+conversation here because it was very specific and went on and on.]
+
+=======================================================================
+<a name="RADIANCE_PORTS">RADIANCE PORTS</a>
+
+Date: Thu, 20 Oct 1994 03:32:28 -0400
+From: DWEINREBER@aol.com
+To: greg@hobbes.lbl.gov
+Subject: Disk space for Radiance
+
+I am a lighting designer in Nashville.  I spoke with you on the phone a few
+months ago about Radiance.  I am considering installing A/UX on my Centris
+650 to run Radiance but I'm concerned about disk space.  How much disk space
+is needed for Radiance?  Are there any quirks or problems with running it
+under A/UX?  
+
+Any plans on a PowerPC version?
+
+Thanks
+
+Dan Weinreber
+DWEINREBER@aol.com
+
+Date: Thu, 20 Oct 94 09:18:50 PDT
+From: greg (Gregory J. Ward)
+To: DWEINREBER@aol.com
+Subject: Re:  Disk space for Radiance
+
+Hi Dan,
+
+A/UX itself requires about 120 Megs of disk space, and you should have at
+least 20 Megs of RAM installed to be comfortable.  Radiance uses about 40
+Megs of disk space on top of this, and I operate A/UX comfortably on a
+160 Mbyte external drive.  You can buy one from Apple with A/UX already
+installed, and it will save you some hassle (at the expense of a rather
+steep price per megabyte.)
+
+There are no quirks that I know of running Radiance under A/UX.  Unfortunately,
+Apple does not plan to carry their A/UX product to the PowerPC platform, which
+to my mind is really ideally suited to it.  Instead, they're going to let their
+former enemy, IBM, service the PowerMac with their persnickity AIX product.
+Radiance will run in this environment, but compiling it is a bit tricky because
+the compiler is so cranky.  Also, AIX offers no access to your Macintosh
+applications, a key benefit of A/UX.
+
+I have no plans myself to port Radiance to the native Macintosh OS, though
+I just spoke yesterday with someone who might.  It may happen, but not
+right away.
+
+-Greg
+
+Date: Sun, 30 Oct 94 00:35:30 +0100
+From: Harald Backert <Harald.Backert@rz.uni-regensburg.de>
+To: greg@hobbes.lbl.gov
+Subject: Amiga port of Radiance 2.4
+
+Hi Greg,
+
+maybe  you  remember me.  I was the the one who wanted to port Radiance
+to the Amiga half a year ago.
+
+While  my  first  attempt  did  not  work as I expected (I was too busy
+trying  to  convert  Radiance'  K&amp;R-C  into  ANSI-C, my fault).  Then I
+concacted  Per Bojsen in Denmark who made the first port and he told me
+that  he  will  port  a newer version of Radiance later.  Well...half a
+year  went  by  and nothing happened.  So I started to compile Radiance
+again.  And guess what:  I now have a running and stable Radiance :-)
+
+I  am  going to upload my Amiga version to hobbes.lbl.gov including the
+slightly  modified sources.  I had to make small changes like inserting
+a '#include <stdlib.h>' and the like.
+
+Now my question:  I would like to upload a complete package of Radiance
+ready-to-run  for  Amigas.   This includes the standard Radiance files,
+binaries  and  ASCII  docs  translated  with 'nroff -man *.1'.  And two
+support packages for pipes.  May I?
+
+greetings,
+   Harald
+
+Date: Sun, 30 Oct 94 07:40:16 PST
+From: greg (Gregory J. Ward)
+To: Harald.Backert@rz.uni-regensburg.de
+Subject: Re:  Amiga port of Radiance 2.4
+
+Hello Harald,
+
+Thank you for writing, and thank you for porting Radiance to the Amiga!
+
+In answer to your first question, please feel free to upload your complete
+Radiance package for the Amiga to the /pub/ports/amiga directory on 
+hobbes.lbl.gov with a suitable title.  I haven't checked write permissions
+on that directory, but if you have any trouble you can always upload it
+to the /xfer directory and tell me to move it.
+
+-Greg
+
+=======================================================================
+<a name="RENDERING_PARAMETERS">RENDERING PARAMETERS</a>
+
+Date: Wed, 2 Nov 1994 16:41:12 +0200 (METDST)
+From: Shaul Baruch <novebaru@inet.uni-c.dk>
+To: Ward greg <greg@hobbes.lbl.gov>
+
+Hi Greg,
+
+I dont forward this to the discussion groupe because I dont think its so 
+intersting to that forum.
+
+I have changed 2 parameters in my rpict bat file, in order to get a 
+&quot;cleaner&quot; picture (more round contor lines of falsecolor).
+my old parameters were : -lr 8 -lw 0.005 -as 1024 -ad 512 -ar 4 -aa .1  
+-ab 4 -st .01 -ps 1 -dj .75 -pt .001
+my new parameters are the same except for -aa .05 &amp; -ab 6.
+With the old parameters together with a uniform cloudy sky and a 4x3 room 
+with a skylight window (not using illum function), it took about 10 hours 
+to generate a picture.
+With the new parameters it took 48 hours to complete 94.68 % of the 
+picture but then I got a message: system out of memory in doambient,
+Radiance stub failed.
+Can you tell me why this happened and if there is any way to check such 
+thing in advance?
+What would be your advise , in order to get a better (but realistic) contour 
+lines? 
+by the way my PC has 16mB ram (12.5mB extended ram)
+
+best regards
+
+Shaul
+
+Date: Wed, 2 Nov 94 09:14:46 PST
+From: greg (Gregory J. Ward)
+To: novebaru@inet.uni-c.dk
+
+Hi Shaul,
+
+You ran out of memory because you are storing so many values.  You should
+probably increase -ad to 1024 and reduce -as to 512, use -ab 3 instead of
+6 and set -aa to .1.
+
+Unfortunately, there's no way to know in advance how long a rendering is
+going to take or how much memory it will use.  You just have to learn
+from experience with your particular problems.  It varies quite a lot
+from one scene to the next.
+
+I would also recommend that you set the -av parameter to something non-zero,
+for more accurate results.  You can use a zonal cavity approximation to
+do this in most cases.  It's a bit difficult to do this for daylighting
+situations, unfortunately, but the formula I recommend is:
+
+	ambient_value = (Sum_i PHI_i)/(pi * A_total) * <rho>/(1 - <rho>)
+
+where:
+	Sum_i PHI_i	= sum of all source output flux (in watts)
+	A_total		= total surface area of all surfaces
+	<rho>		= area-weighted average of surface reflectance
+
+-Greg
+
+[The following was culled from the discussion group list:]
+
+Date: Fri, 2 Dec 94 11:01:50 PST
+From: greg (Gregory J. Ward)
+To: crones@puffin.curtin.edu.au, radiance-discuss
+Subject: Re: Radiance farming.
+
+Hey folks,
+
+I don't know why your renderings are taking so long, but somehow I feel that
+I'm to blame.  (Now why is that?)
+
+I've been doing a bunch of renderings myself, lately, and they do take a
+while but I don't think I'd ever wait 400+ hours for a single picture!
+The last high-quality 1000x700 (or so) picture I generated took about
+10 hours on my SGI Indigo R4000, and it was a fairly complex space.
+
+Since I want to encourage people to use rad (and the new GUI trad), I feel
+I should give some appropriate hints on minimizing rendering time or at
+least understanding why a particular rendering is taking so darned long.
+
+As most of you know already, the indirect calculation in Radiance is what
+makes it special and also what can make it especially slow if you're not
+careful about how you apply it.  Using rad, most of the so-called
+&quot;ambient&quot; parameters (-a*) are derived from the following variables.
+I have arranged their values in order of least to most costly in
+calculation time:
+
+	QUALITY=	Low	Medium	High
+	INDIRECT=	0	1	2	3	...
+	VARIABILITY=	Low	Medium	High
+	DETAIL=		Low	Medium	High
+
+In addition to the above rad variables, the PENUMBRAS variable if set to
+&quot;True&quot; will significantly slow down most renderings.  The RESOLUTION
+setting also has some effect, though not as much as you would suppose.
+Also, setting the AMBFILE variable is generally a good idea, since it
+improves the results noticeably without increasing rendering time by
+much.  In fact, for multiple renderings of the same scene, rad will
+proceed much faster with an ambient file.
+
+Now, let me explain a bit how the above variables affect calculation time.
+The QUALITY variable has the greatest effect on rendering time, which is
+why I listed it first.  A low quality rendering NEVER uses the indirect
+calculation, regardless of the setting of the INDIRECT variable, unless
+overridden by the render options variable.  (We'll discuss when you might
+want to do this a little later.)  A medium quality rendering uses as many
+bounces as indicated by the INDIRECT setting, and a high quality rendering
+uses INDIRECT+1 bounces in its calculation.  Even more significant is
+how the QUALITY variable changes all the other rendering parameters that
+affect accuracy.  Since these changes are too numerous to list exhaustively,
+suffice it to say that there's a BIG difference between the times and
+results for different settings of the QUALITY variable.
+
+The next most important variable after INDIRECT, which controls the
+number of bounces in the calculation (along with the QUALITY setting as
+described above), is the VARIABILITY variable.  This tells rad just how
+hard it is to compute the indirect component at any given point in the
+scene.  If the variability is low, then we don't have to send as many
+samples around to figure out the indirect contribution.  If VARIABILITY
+is set to medium, then we send about three times as many samples, and
+space our calculations more closely.  If VARIABILITY is set to high
+(something I don't recommend unless you have direct sun penetrating
+your space), then about 1500 samples will be sent out at each
+calculation point, and there will be roughly 4 times as many of these
+points as there would be with a low setting.  Therefore, all else being
+equal, you should expect a VARIABILITY=High calculation to take roughly
+25 times as long as a VARIABILITY=Low calculation -- something to
+think about!
+
+Finally, the DETAIL variable has a modest effect on the calculation time,
+as it controls the &quot;ambient resolution&quot; calculation parameter, which
+determines the minimum spacing between indirect calculation points.
+A low detail sene means we can afford to limit our indirect value density
+to a modest level compared to a medium or high detail scene.  The precise
+effect this will have depends on the geometry of the particular scene,
+but it generally doesn't have more than a 10 times effect moving from
+a low to a high setting.
+
+Unfortunately, the above information is not enough to predict how long
+a given rendering will take to complete.  (The best indicator still is
+the time elapsed so far and how much has finished, as given by rpict's
+reporting facility.)  However, there are some important scene-related
+factors that we should consider.
+
+The most important scene characteristic that affects rendering time is
+geometric detail.  (Note that this would seem to contradict my placement
+of the DETAIL variable as the least important setting.  While it is true
+that the setting of this variable has a minor effect, the ACTUAL scene
+detail has a rather major one.  In other words, changing the DETAIL
+variable from &quot;medium&quot; to &quot;high&quot; might double the rendering time, but
+increasing the actual scene complexity will have a much greater effect.)
+This is because Radiance adjusts the calculation of indirect illumination
+to the local scene complexity, unlike most radiosity rendering algorithms.
+(Thus Radiance maintains accuracy with the minimum effort.)  Increasing
+the number of do-dads and knick-knacks therefore increases the number of
+indirect calculation points required to maintain accuracy.  A worst-case
+scenario for Radiance is something like a packed forest, where every pine
+needle is participating in the indirect calculation.
+
+In scenes of such complexity, a different approach is required, and
+that's when we bring in the render variable to override some of the
+settings determined by rad.  In the worst-case of a forest given above,
+we would probably want to turn off the indirect value storage and
+interpolation altogether, and greatly reduce the number of sample
+rays sent out, i.e:
+
+	render= -ab 1 -aa 0 -ad 10 -as 0
+
+Here we are forcing a 1-bounce calculation (more than that would be
+painful), set -aa to 0 to turn off interpolation, and using just 10 samples
+over the hemisphere at each point.  The resulting picture will be somewhat
+noisy, but a forest is not a visually quiet place, so chances are no one
+will notice.  (And if a tree falls, no one will hear it.)
+
+The second, more common case encountered is one where most of the geometry
+is fairly plain, consisting of walls, furniture and the like, but parts of
+the scene are incredibly detailed, like rows and rows of books in an
+enormous bookcase.  We want to use our indirect interpolation technique
+to get the smoothest possible results over most of the scene, but if we
+apply it also to the bookcase, our rendering will never finish.  What you
+should do in such a case is employ the &quot;ambient selection&quot; options,
+-ae and -aE to explicitly exclude materials from the indirect calculation,
+or -ai and -aI to include them.  (You can use only one set or the other.)
+Thus, you &quot;remove&quot; the offending objects from consideration (giving them
+the default -av ambient value), speeding the overall calculation.  Since
+the objects removed have a large amount of geometric detail, the loss in
+illumination detail will probably go unnoticed.  I use this technique all
+the time in my own renderings, and it is one of the chief tricks that make
+high-quality renderings tractable.  (Ultimately, a better solution would
+be automatic geometric simplification, but the problems involved are
+nasty, nasty and nasty.)  For example, let's say we had venetian blinds on
+the window that were slowing down our nighttime calculation.  The material
+used for the blind slats is called &quot;slat_mat&quot;.  We would then add the
+following setting to our render variable:
+
+	render= -ae slat_mat
+
+If there were other materials involved, we could list them in additional
+-ae options, or use an -aE &quot;file&quot; option, where the file contains a list
+of the appropriate materials.
+
+I hope this helps to shed some light on a very murky subject.
+
+-Greg
+
+P.S.  In answer to Simon Crone's question about running rpiece more elegantly,
+I usually use the OPTFILE variable of rad to create a rendering options file,
+then apply that to rpiece, like so:
+
+	% rad -n -s scene.rif OPTFILE=scene.opt
+	% rpiece @scene.opt [other options] scene.oct &amp;
+
+Date: Tue, 6 Dec 94 15:41:24 -0500
+From: westin@dsg145.nad.ford.com (Stephen H. Westin)
+To: greg@hobbes.lbl.gov
+Subject: Radiance newbie question
+
+Greg,
+
+I'm finally trying to make some real pictures with Radiance. I'm
+struggling, though. My images are very speckly in what seems the
+specular component of a rough surface. Direct lighting is fine, but
+the (diffuse) reflection of the environment is extremely noisy. Which
+of the ninety-'leven parameters to &quot;rpict&quot; should I tweak? I have
+tried -pt, -st, -ab, and a couple of others I've forgotten. &quot;-ps .2&quot; gives
+the message
+
+  rpict: fatal - command line error at '-ps'
+
+so I can't use that. I'll E-mail you a uuencoded image file; I'm sure it's 
+something simple. The material I'm using is
+
+void metal CHAMPAGNE
+0
+0
+5 0.7 0.641 0.58 1 .4
+
+and yes, I know that you don't recommend a roughness greater than 0.2,
+but it doesn't seem to make a lot of difference. I'm trying to create
+some approximation of metallic paint, which gets its main color from
+metal and pigment particles suspended in the binder, but includes a
+clear coat that reflects in an ideal specular fashion. I haven't dug
+into this deeply enough to see if I can do this directly in Radiance;
+I would like a &quot;metal&quot; with a &quot;plastic&quot; or &quot;glass&quot; overlayed.
+
+By the way, it would be helpful if your documentation could be
+expanded; at least tell me what the default value is for each
+parameter, so I have some idea whether I've tweaked it or not. Any
+further elucidation as to the function of each would also help.
+
+-Steve
+</pre></body><hr>
+<a HREF="v2n8_1b.html#CONTINUED_RENDERING">CONTINUED...</a>
+
+
+
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 8, Part 1a</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

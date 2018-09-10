@@ -1,0 +1,1102 @@
+<!DOCTYPE HTML PUBLIC "-//Netscape Comm. Corp.//DTD HTML//EN">
+<HTML>
+<HEAD>
+    <!-- SGI_COMMENT COSMOCREATE -->
+    <!-- SGI_COMMENT VERSION NUMBER="1.0" -->
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+</HEAD>
+<BODY>
+<H2>
+<A NAME="top">Radiance Digest Volume 3, Number 0</A></H2>
+<HR>
+<PRE>
+Dear Radiance Users,
+
+It's been some time since I last put out a Radiance Digest -- almost a year!
+It has been a very busy time for me (and probably for you as well), so let
+me bring you up to date with a few changes.
+
+First, I am leaving LBNL to work for Silicon Graphics, Inc. starting
+May 5th.  I am taking this opportunity to normalize my name usage
+everywhere to &quot;Gregory Ward Larson,&quot; which has been my legal name since
+1985 when I was married, though I never bothered to change it at work.
+(My wife and I picked this new, neutral last name to share with our two
+daughters, now 4 and 6 years of age.  Larson is actually Cindy's maternal
+grandmother's maiden name, so you can think of it as a kind of affirmative
+action in a paternal society.)  My new e-mail address at SGI is
+&quot;gregl@sgi.com&quot;, but the old addresses should continue to work for some time.
+I will send out my official mailing address as soon as I figure out what it is.
+
+Second, &quot;Rendering with Radiance: The Art and Science of Lighting
+Visualization,&quot; is nearly completed.  We have a new publisher, which
+makes us very happy -- Morgan Kaufmann.  The book, which will be accompanied
+by a CD-ROM, shall be available for purchase sometime in early 1998.  We
+expect the list between $80 and $90, which is a lot for a book, but not
+much for software.  We don't expect to sell a whole lot of them, or to get
+rich from it.  Six authors have worked on the project.  Rob Shakespeare of
+Indiana University and I wrote the bulk of it, with Charles Ehrlich, John
+Mardaljevic, Peter Apian-Bennewitz and Erich Phillips lending their expertise
+in the application chapters.
+
+Third, Charles Ehrlich will be taking over most of my Radiance support
+duties in my stead, though technically, we were never supposed to be doing
+support, anyway.  His e-mail address is &quot;CKEhrlich@lbl.gov&quot;, for those of
+you who don't know.  He has been the ADELINE contact person for over a year
+now, and knows quite a bit about Radiance as he has been using the software
+intensively since 1988 or so.  I will still be working on Radiance as time
+permits in my new job, and I hope that SGI will support it as part of their
+optional software distribution with their machines.
+
+And now, without further ado, the index for this digest:
+
+       <A HREF="#OPACITY_MAPPING">OPACITY MAPPING</A>                - using mixfunc to make holey materials
+       <A HREF="#RPIECE">RPIECE</A>                        - best use questions for parallel rendering
+       <A HREF="#3D_STUDIO">3D STUDIO</A>                - translating from 3D Studio to Radiance
+       <A HREF="#COMPUTING_REFLECTANCES">COMPUTING REFLECTANCES</A>        - what is the total reflectance of a material?
+       <A HREF="#RTRACE_QUESTIONS">RTRACE QUESTIONS</A>        - using the -I option and computing radiosities
+       <A HREF="#PROCEDURAL_TEXTURES">PROCEDURAL TEXTURES</A>        - displacement mapping and efficiency issues
+       <A HREF="#MIST">MIST</A>                        - questions about the new mist type
+       <A HREF="#MKILLUM_QUESTIONS">MKILLUM QUESTIONS</A>        - how best to apply mkillum to daylighting
+       <A HREF="#COLORED_LIGHT SOURCES">COLORED LIGHT SOURCES</A>        - accounting for colored light sources
+
+All the best,
+-Greg
+
++---------------------------------------------------------------------------+
+| PLEASE AVOID THE EVIL REPLY COMMAND, AND ADDRESS YOUR E-MAIL EXPLICITYLY! |
++---------------------------------------------------------------------------+
+| Radiance Discussion Group mailing list:  radiance-discuss@radsite.lbl.gov |
+| Mail requests to subscribe/cancel to:    radiance-request@radsite.lbl.gov |
+| Archives available from:                 ftp://radsite.lbl.gov/pub/discuss|
++---------------------------------------------------------------------------+
+
+=================================================================
+<A NAME="OPACITY_MAPPING">OPACITY MAPPING</A>
+
+To: greg@hobbes.lbl.gov
+Date: Thu, 27 Jun 1996 19:29:02 EDT
+From: Takehiko Nagakura &lt;takehiko@MIT.EDU&gt;
+
+Greg:
+
+How are you? 
+
+I am the MIT professor using radiance for architecture space rendering,
+if you remember me.  I have a quick question. I would be glad if you could
+give me a tip.  Is there any way to do opacity map in radiance?  All I would 
+like to do is to make a greyscale image and use the greyness to be translated
+into degree of transparency.  I know how to do a color map, but cannot figure 
+out how to do opacity map.  Hope I am not bothering you.  Thanks very much.
+
+Takehiko Nagakura (Assist. Prof. of architecture, MIT)
+
+
+Date: Sat, 29 Jun 96 17:45:10 PDT
+From: greg (Gregory J. Ward)
+To: takehiko@MIT.EDU
+Subject: opacity maps in Radiance
+
+Yes, I remember you, and yes, there is a way.  In 3.0 (available at our
+ftp site, hobbes.lbl.gov), use the &quot;mixdata&quot; primitive with a converted
+image file, using &quot;void&quot; as one of your two modifiers.  In version 2.5,
+you could do the same thing, but you would have to use a trans primitive
+with 100% transmittance instead of &quot;void&quot;.
+
+To convert the image, I suggest you use pvalue, and edit the output.
+Something like this:
+
+% pvalue -d -b Radiance_picture &gt; data_file
+% vi data_file
+
+The top of the file will look something like this:
+
+#?RADIANCE
+ra_tiff -r
+pfilt -x /3 -y /3 -1 -r .6 
+pvalue -d -b 
+FORMAT=ascii
+
+-Y 133 +X 270
+      2.639e-01
+      2.639e-01
+      2.639e-01
+      2.639e-01
+... and so on
+
+Edit it so that you have a valid data file, i.e.:
+
+# Data file produced from a picture:
+##?RADIANCE
+#ra_tiff -r
+#pfilt -x /3 -y /3 -1 -r .6 
+#pvalue -d -b 
+#FORMAT=ascii
+
+2		# Number of dimensions
+1 0 133		# U image coordinate, decreasing
+0 2.03 270	# V image coordinate, increasing
+
+      2.639e-01
+      2.639e-01
+      2.639e-01
+      2.639e-01
+... and so on
+
+Then, apply this in a opacity map as follows:
+
+void plastic my_material
+0
+0
+5 .5 .3 .7 .05 .02
+
+void mixdata my_mixture
+7 my_material void mymapping data_file mymapping.cal my_v my_u
+0
+0
+
+The file &quot;mymapping.cal&quot; then contains definitions of the function mymapping(b),
+my_u and my_v, which indicate the mapping from grey pixel value to opacity,
+and the U and V picture coordinates, respectively.  A really simple example
+is as follows:
+
+       mymapping(b) = min(b,1);
+       my_u = Px;
+       my_v = Py;
+
+This assumes the object in question is located in the positive quadrant of
+the XY plane in world coordinates, and its size corresponds to the dimensions
+we entered for the image, namely 2.03 units in X and 1 unit in Y.  The image
+pixel brightness values also equal the opacity we desire.  (The min function
+is just to limit the range from 0 to 1, to avoid any confusion even though
+the routines don't break if we go over 1.)  You could then add a transformation
+to the end of the mixdata primitive's string arguments to move it to a
+different location and size.
+
+I hope this gives you the idea.  If you do this in 2.5, you should leave off
+the #-delimited comments in the data file, and use a transparent primitive
+rather than &quot;void&quot;, i.e.:
+
+void trans invisible
+0
+0
+7 0 0 0 0 0 1 1
+
+-Greg
+
+=================================================================
+<A NAME="RPIECE">RPIECE</A>
+
+From: &quot;Alois Goller&quot; &lt;goller@icg.tu-graz.ac.at&gt;
+Date: Mon, 2 Sep 1996 14:39:05 -0600
+To: &quot;Gregory J. Ward&quot; &lt;greg@hobbes.lbl.gov&gt;
+Subject: Parallel Radiance
+
+Hi Greg,
+
+back from holidays, I did some timing measurements. I got similar figures in
+the range you report in &quot;Parallel Rendering on the ICSD SPARC-10's&quot;
+(radiance/doku/Notes/parallel.html): Dividing the image in rather large
+patches, (about 5 to 10 per processor) and having each processor to render more
+than 20 minutes per patch, it results in a good CPU utilization (more than 98%
+continuously). As you already mentioned, some of the processors are idle at the
+very end. This causes the efficiency to be at about 85% in my cases.
+
+However, rendering smaller files, and using many pieces, there was a surprise:
+       | rpict (1)     | rpiece (1)    | rpiece (3)    | rpiece (10)
+--------+---------------+---------------+---------------+---------------
+A      | 1:49.66       | 19:02.09      | 14:22.93      | 14:48.25
+B      | 5:26.79       | 17:38.85      | 12:49.82      | 14:23.04
+C      |17:03.23       | 29:11.56      | 14:15.85      | 15:12.59
+
+C is 2 times larger than B (x and y, resulting in the fourfold number of
+pixels), B is 2 times larger than A. This fact can be also obtained by looking
+at the second column (rpict(1)) denoting rpict running on a single processor.
+Involving rpiece with 1, 3, and 10 processors needs constantly about 15
+minutes, at different CPU utilization levels ranging from 1% to 60%.
+
+Have you experienced similar results?
+Is there something wrong with our NFS, rpiece, etc.?
+
+-- 
++----------------------------------------------------------------------+
+| Alois GOLLER                                                         |
+| Parallel and Distributed Computing (for Remote Sensing Applications) |
+| Institute f. Computer Graphics and Vision, Technical University Graz | 
+| Muenzgrabenstrasse 11, A-8010 Graz, Austria                          |
++-----------------------------------------+----------------------------+
+| Tel. +43 (316) 873-50 25                 \  FAX  +43 (316) 873-50 50 |    
+| E-mail goller@icg.tu-graz.ac.at           \  Home +43 (316) 80 46-67 |
+| WWW http://www.icg.tu-graz.ac.at/alGo.html \  or   +43 (4842) 67 51  |
++---------------------------------------------+------------------------+
+
+Date: Tue, 3 Sep 96 09:50:09 PDT
+From: greg (Gregory J. Ward)
+To: goller@icg.tu-graz.ac.at
+Subject: Re:  Parallel Radiance
+
+Hi Alois,
+
+I would never attempt to render with rpiece any job that used less than an
+hour of CPU time on a single processor -- I don't think it's worth
+distributing such a small job.
+
+In particular, you should not break a short job into too many small pieces,
+as each piece will complete too quickly and you'll end up with NFS lock
+manager bottlenecks, which is what I assume you are seeing here.  Rpiece
+is waiting around for I/O completion most of the time.  Either use larger
+pieces on a shorter job, or else don't use rpiece at all if it's too short.
+
+I haven't done exetensive enough testing to give you more accurate information
+than this, but I expect if you did some parametric runs that you would find
+an optimum somewhere around a 5-10 minutes per piece in rpiece -- longer if
+you have more rpiece jobs running.  The NFS lock manager can be VERY slow
+on some systems.
+
+-Greg
+
+P.S.  Thanks for sharing your results with me!
+
+=================================================================
+<A NAME="3D_STUDIO">3D STUDIO</A>
+
+Date: Mon, 16 Sep 1996 14:47:25 -0400
+From: James_F_Todd@email.whirlpool.com (James F Todd)
+Subject: Radiance File Translators
+To: gjward@lbl.gov
+ 
+ I have just begun looking at the Radiance Website, and I had a question:
+ 
+ Does there exist a translator in existence that allows the import of POV, 
+ DXF, or 3DS models into the Radiance renderer?
+ 
+ This may be a very stupid question, but I'm more involved with the 
+ creative side of things, not the technical.
+ 
+ The reason I ask about those three is that I work with 3DStudio, and I 
+ have utilities to convert between its native 3DS format and either DXF or 
+ POV.
+ 
+ Thanks in advance for any information you can provide.
+ 
+ JT
+
+Date: Mon, 16 Sep 96 13:49:25 PDT
+From: greg (Gregory J. Ward)
+To: James_F_Todd@email.whirlpool.com
+Subject: Re:  Radiance File Translators
+
+Hi JT,
+
+There are a couple of programs by which you can get from 3DS to Radiance.
+The first converts 3DS into MGF -- a format I developed which is physically-
+based and fairly compatible with Radiance.  From there, we have a translator
+into Radiance.
+
+I recommend this route rather than going from DXF, which loses most of
+the pertinent material information needed for rendering.
+
+-Greg
+
+=================================================================
+<A NAME="COMPUTING_REFLECTANCES">COMPUTING REFLECTANCES</A>
+
+Date: Fri, 20 Sep 1996 17:57:33 -0400 (EDT)
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+From: jedev@visarc.com (John E. de Valpine)
+Subject: Material Reflectances
+
+Greg:
+
+I'll give the parallel rendering a try soon. I'll probably try doing a
+network rendering first before footing the bill for a new cpu.
+
+On another note, I am trying to get a better understand of how reflectance
+values relate to Radiance material definitions. I gleaned the following from
+the digests:
+
+General:
+        refl = (0.3)(r) + (0.59)(g) + (0.11)(b)
+
+Plastic:
+        refl = [(0.263)(r) + (0.655)(g) + (0.082)(b)](1 - spec) + spec
+
+Metal:
+        refl = (0.263)(r) + (0.655)(g) + (0.082)(b)
+
+How are these derived? How do these relate to ro_d ro_si ro_s ro_a in the
+reflection model described in materials.1? How are the weights derived? 
+
+If I understand correctly in the case of plastic the diffuse reflectance
+would be:
+        pC(1-r_subS) where
+                p = &lt;1,1,1&gt;
+                C = &lt;r,g,b.
+                r_subS = spec + (1 - spec)e^-6cos_sub1
+
+As always if there is something that I should read first please point me in
+the right direction?
+
+-Jack
+
+
+Date: Fri, 20 Sep 96 15:35:05 PDT
+From: greg (Gregory J. Ward)
+To: jedev@visarc.com
+Subject: Re:  Material Reflectances
+
+Hi Jack,
+
+Well, I'll admit that it's confusing -- especially when I keep changing the
+conversion from RGB to luminance all the time.  The problem is that there's
+no standard RGB color system, unless you count NTSC, which is not appropriate
+for computer monitors due to the different phosphors employed in early
+television.
+
+The correct, up-to-date conversion from RGB to luminance/efficacy is:
+
+       lb = .265*r + .670*g + .065*b
+
+This formula may be found (indirectly) in src/common/color.h, which is the
+ultimate reference.  Small changes in RGB space should not create large
+changes in the result.
+
+The relationship between reflectance and Radiance material parameters is
+more complicated than it probably should be, but it was done this way so
+that the parameters had clear legal ranges (i.e., 0-1 usually).  A more
+sensible specification would have required the user to figure out what
+all the components added up to to insure that they were not specifying
+a reflectance value greater than 1.  Even so, there are instances where
+parameter values greater than 1 are the best approximation to a color that
+is outside of the RGB gamut, for example.
+
+Anyway, getting back to your formulas, most of what you have written here
+is correct, except for the RGB coefficients, which should be as I have
+given them here, and the final formula, which must have come from an
+outdated version of material.1, back when I had a Fresnel approximation
+in there.  Now, r_subS = spec, with no exponential factor in there.
+
+-Greg
+
+
+Date: Fri, 15 Nov 1996 17:31:00 GMT
+From: Rosinda Duarte &lt;rduarte@lge3.dee.uc.pt&gt;
+To: greg@hobbes.lbl.gov
+Subject: Reflectance factor
+
+  Hi Greg!
+  When I have a material type plastic, Could I say its reflectance is the
+ three components RGB?  For example:
+
+  void plastic material
+ 0
+0
+ 3 0.64 .064 0.63
+ This material is not completely white, how can I define reflectance value?
+Because if it was white I think I could say its reflectanve is equal the value
+of three components RGB, couldn't I?
+
+ Thanks,
+
+ Bye,
+Rosinda
+
+
+Date: Fri, 15 Nov 96 09:31:54 PST
+From: greg (Gregory J. Ward)
+To: rduarte@lge3.dee.uc.pt
+Subject: Re:  Reflectance factor
+
+Hi Rosinda,
+
+It's nice to hear from you again.  I thought you had left the university,
+because your e-mails have been bouncing from the Radiance discussion group,
+and I had to remove you from the list.  If this gets through, I'll add
+you back in again.  In the meantime, you can look at the /pub/discuss
+directory on hobbes.lbl.gov to see what you've missed.
+
+The reflectance of plastic can be computed from the RGB, specularity and
+roughness as follows:
+
+total_reflectance = arg4 + (1-arg4)*(.265*arg1+.67*arg2+.065*arg3)
+
+where arg1-arg4 are the first four of five real arguments to the primitive.
+
+-Greg
+
+=================================================================
+<A NAME="RTRACE_QUESTIONS">RTRACE QUESTIONS</A>
+
+Date: Wed, 25 Sep 96 19:14 MDT
+From: dxs@november.diac.com
+To: gjward@lbl.gov
+
+i have a question about rtrace.  i ran the program with the following
+input points and command options in a options file.  i noticed that the
+input value for the x coodinate in  the output data was incorrect,
+it was 8.5 instead of 7.5.  my question is:  is rtrace using my
+input value of 7.5 and calculating with it and just not outputing it
+correctly?  or am i using incorrect options?  i am running on linux,
+using a pentium.  (this machine is new, so i am sure that it does
+not have the divide error).
+thanks,
+dan stanger
+sc3.pts
+ 7.5  7.5  2.6  1.0  0.0  0.0
+
+sc3.out
+#?RADIANCE
+oconv sc3.rad
+rtrace -oodv -I -dp 128 -ar 52 -ds 0.25 -dt 0.1 -dc 1.0 -dr 1 -sj 0 -st 1 -aa
+0 -ab 10 -as 0 -lw .02
+SOFTWARE= RADIANCE 3.0 official release June 19, 1996
+FORMAT=ascii
+
+8.500000e+00    7.500000e+00    2.600000e+00    -1.000000e+00   -0.000000e+00
+-0.000000e+00   2.995701e+00    2.995701e+00    2.995701e+00
+
+Date: Thu, 26 Sep 96 09:11:40 PDT
+From: greg (Gregory J. Ward)
+To: dxs@november.diac.com
+Subject: rtrace -I weirdness
+
+Hi Dan,
+
+You're not doing anything incorrectly, and there's nothing wrong with your
+system.  In fact, the -I option of rtrace causes some of the output to
+appear a bit strange because of the way it's computed.  Normally, ray
+tracing starts from a point and heads in some direction.  With the -I
+option to rtrace, we are asking it to start from an intersection at
+a virtual surface and look at the hemisphere centered on some normal vector.
+
+To trick the calculation into doing what we want, we create a virtual ray
+intersection with this virtual surface by starting off a ray 1 unit above
+the surface point and directing it towards are desired &quot;origin.&quot;  In fact,
+this means that the ray origin is 1 unit above our specified point, so
+that is why the -oo output option gives you this difference.  I suggest
+instead that you use -op to get the point echoed in the case of rtrace -I.
+
+-Greg
+
+
+From: &quot;Valois Jean-Sebastien&quot; &lt;valois@cim.mcgill.ca&gt;
+Date: Thu, 26 Sep 1996 08:56:47 -0400
+To: GjWard@lbl.gov
+Subject: Question.
+
+Hi Mr Ward,
+       How are you ?  I was wondering if it is possible to:
+
+       1. &quot;print&quot; the values of the variables in a &quot;.cal&quot; file ? (debugger)
+        2. simulate the noise (sampling) effect of a lens of a camera ?
+       3. simulate the various behavior of a camera to different lighting
+conditions ?
+
+Thank you.
+Sincerely
+Jean-Sebastien
+
+From greg Thu Sep 26 09:25:53 1996
+Return-Path: &lt;greg&gt;
+Date: Thu, 26 Sep 96 09:25:35 PDT
+From: greg (Gregory J. Ward)
+To: valois@cim.mcgill.ca
+Subject: Re:  Question.
+Status: R
+
+Hi Jean-Sebastien,
+
+In answer to your questions:
+
+&gt;        1. &quot;print&quot; the values of the variables in a &quot;.cal&quot; file ? (debugger)
+
+There is a shell script called &quot;debugcal.csh&quot; that may be found in the
+ray/src/util directory of the Radiance distribution.  Copy it from there
+to your bin directory with the name &quot;debugcal&quot; then set the mode to
+execute with &quot;chmod 755 {bin_directory}/debugcal&quot;.  Run the &quot;rehash&quot;
+command then in your scene directory call:
+
+       % ximage {picture} | debugcal {octree} -f {calfile} -e '{rcalc_code}'
+
+Where {picture} is a picture rendered with your problem {calfile}, and
+{rcalc_code} is a set of assignments to output variables you want to look
+at, e.g. '$1=wood_dx;$2=wood_dy;$3=wood_dz' -- that sort of thing.
+
+Once your picture is displayed, hit the middle mouse button on points in
+the image where you want to see the computed variables.
+
+&gt;        2. simulate the noise (sampling) effect of a lens of a camera ?
+
+If you mean the depth of field, there is a script in the Radiance 3.0
+distribution called &quot;pdfblur&quot; that may be used in conjunction with
+pinterp to produce depth of field blurring.  Motion blur is possible
+using a similar technique with the &quot;pmblur&quot; script, but this is usually
+applied within the new animation control program, &quot;ranimate.&quot;
+
+&gt;        3. simulate the various behavior of a camera to different lighting
+&gt;              conditions?
+
+I'm not sure exactly which effects you mean.  Can you be more specific?  I
+am working at this moment on some techniques and algorithms for adaptive
+display based on the human visual system, so you can look for that in the
+next release.
+
+-Greg
+
+
+From: bits1@teil.soft.net (BITS TRAINEES grp-1)
+Subject: rtrace and meshing
+To: greg@hobbes.lbl.gov
+Date: Thu, 17 Oct 1996 09:57:17 -0800 (PST)
+
+Hello Greg,
+
+I am doing a project in Visual simulation which involves adding diffuse
+lighting values to the scene model before it can be used for visual
+simulation purpose. I am using  RADIANCE for the above purpose. I
+really find Radiance a very cool package for the purpose. I however
+have some doubts in using it for my project.  They are :
+
+     1)  I am computing the radiosity at each vertex in the scene.
+In order to find the radiosity I use rtrace to find the Irradiance
+at each vertex. I fire a ray from each vertex in the direction of
+the normal. However I am a bit doubtful as to how I should find
+the radiosity from the irradiance. I am having the only the color of
+the face and no material properties. Since all the faces in my scene
+are diffuse I assume the color to be the diffuse reflectance function.
+I therefore multiply the irradiance with the reflectance function to
+get the radiosity which I use for display. Is this method correct?  Can
+you suggest as to how I can compute the radiosity from the irradiance
+if I am having the material properties or the BRDF data?
+
+     2)  My next doubt is does rtrace return the values in RGB space or
+in HSV space because I am at present assuming that it returns the values
+in RGB space.
+
+     3)  Before my scene is taken up by the rtrace program I mesh the scene
+suitably so that the lighting appears smooth. So I use some
+triangulation such as Delaunay triangulation to mesh the scene. However
+I knowe that Radiance also meshes the scene. Therefore can you please
+tell me as to how I can control the meshing done by Radiance. In my
+case I may want Radiance to override the meshing part because I am
+already doing it.
+
+     4)  Can you suugest as to what parameters I should use for rtrace so
+that it yields the best results. At present I am using rtrace in the
+following fashion :
+     rtrace -av 0.1 0.1 0.1 -ab 5 -ad 5 -as 5 -lr 5 -aw 4 -st 0.1 -dv -I\
+-h -w temp.oct &lt; rayinput.dat &gt; radiance.out
+     Here rayinput.dat is the input file of ray org. &amp; dir.
+the output is kept in radiance.out
+
+     5)  Finally Can you please send me an example file in which you apply
+texture to one of the polygons in the scene. I want to know as to how
+this is done. A simple example with one polygon and one RGB image as
+texture would suffice.
+     I know that I am asking a lot but please do find time to answer my doubts.
+It would help me in my project greatly if you could reply  quickly.
+
+     Thanking You.
+
+- Mahaboob Ali
+( bits1@teil.soft.net )
+
+
+Date: Thu, 17 Oct 96 09:51:03 PDT
+From: greg (Gregory J. Ward)
+To: bits1@teil.soft.net
+Subject: Re:  rtrace and meshing
+
+Hello Mahaboob,
+
+I will do my best to answer your queries....
+
+&gt;      1)  I am computing the radiosity at each vertex in the scene.
+&gt; ...
+
+Your current method is sound.  The radiosity is in fact the diffuse irradiance
+multiplied by the diffuse reflectance.  Radiosity for non-diffuse surfaces
+is undefined, so I cannot recommend a method for computing vertex radiosities
+considering specular reflection.  Your renderings wouldn't work anyway,
+since you are relying on the radiosities being the same from all directions,
+which cannot be the case with specular surfaces.
+
+&gt;      2)  My next doubt is does rtrace return the values in RGB space or
+&gt; in HSV space because I am at present assuming that it returns the values
+&gt; in RGB space.
+
+All computations in Radiance are carried out and represented in RGB space.
+
+&gt;      3)  Before my scene is taken up by the rtrace program I mesh the scene
+&gt; ...
+
+Radiance does not do any explicit meshing, and it is not possible to control
+how Radiance samples the scene at this level.  All you can do is adjust
+the rendering parameters to achieve denser (more accurate) sampling or
+sparser (less accurate) sampling.  The placement of samples is dictated
+by accuracy requirements rather than absolute spacing, which is one of
+the main advantages of Radiance over traditional radiosity codes.
+
+&gt;      4)  Can you suugest as to what parameters I should use for rtrace so
+&gt; ...
+
+These parameters will most certainly produce poor results.  In particular,
+the value of -ad 5 is much too low to get an accurate sampling of indirect
+diffuse radiation.  You really should use the &quot;rad&quot; program, with its more
+intuitive control variables, to come up with options for rtrace.  To do
+this, read the rad man page carefully, set up your rad input file, then
+set an OPTFILE=render.opt line in it and run:
+
+       rad -v 0 myscene.rif
+       rtrace @render.opt -I temp.oct &lt; rayinput.dat &gt; irradiance.out
+
+&gt;      5)  Finally Can you please send me an example file in which you apply
+&gt; texture to one of the polygons in the scene. I want to know as to how
+&gt; this is done. A simple example with one polygon and one RGB image as
+&gt; texture would suffice.
+
+This doesn't seem related to your project, since textures have no direct
+effect on irradiance values.  Nevertheless, here is a simple example of
+applying a &quot;texture&quot; (which we call a &quot;pattern&quot;) in Radiance:
+
+void colorpict oakfloor_pat
+9  red green blue  oakfloor.pic  picture.cal  tile_u tile_v  -s 1.16670
+1  .578313253
+
+oakfloor_pat plastic wood_floor
+0
+0
+5  .2  .2  .2  .02  .05
+
+This was taken from the draft Radiance user's manual by Cindy Larson.  Wiley
+is publishing a book on Radiance, which will hopefully be on the shelves by
+next summer, and this will offer a much more extensive guide to the software.
+In the meantime, please avail yourself of the materials that exist in the
+ray/doc directory, which includes this manual (called &quot;usman1.doc&quot;).
+
+I hope this helps!
+-Greg
+
+
+=================================================================
+<A NAME="PROCEDURAL_TEXTURES">PROCEDURAL TEXTURES</A>
+
+Date: Thu, 10 Oct 1996 13:25:28 -0400 (EDT)
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+From: jedev@visarc.com (John E. de Valpine)
+Subject: Procedural Textures
+
+Greg:
+
+As I understand it texfunc perturbs the surface normal for a material by
+modifying the normal with the results of the xfunc yfunc zfunc in some
+texture.cal file. This results in what I understand as 2-d bump mapping. Is
+there any way to do displacement mapping where the normal at the rayhit may
+or may not be displaced according to some set of parameters. I am trying to
+simulate the effects of concrete formwork, ie a panels size and the holes
+for form ties within a given panel. I made a procedural material that
+accomplishes this as a colorfunc. But I would like to be able to achieve 3d
+effects using displacement mapping.
+
+On a similar note, in writing code for procedural materials, is there a
+time/evaluation trade off between the two folowing:
+
+Tx = arg(1);
+Ty = arg(2);
+
+vs.
+
+T(xy) = select(xy,arg(1),arg(2));
+
+How does the evaluation occur? Everytime Tx or Ty is evaluated is arg(n)
+executed or are Tx and Ty instantiated on first evaluation?
+
+-Jack
+
+
+Date: Thu, 10 Oct 96 10:53:59 PDT
+From: greg (Gregory J. Ward)
+To: jedev@visarc.com
+Subject: Re:  Procedural Textures
+
+Hi Jack,
+
+There is no displacement mapping in the current release of Radiance, nor is
+any expected in the forseeable future.  This is because doing displacement
+mapping correctly is HARD!  My only suggestion is if you really want this
+effect, that you generate the geometry for one panel and put it in an octree
+to instantiate throughout your scene to keep the memory costs down.  The
+additional time spent ray tracing should not be that great, especially if
+you instantiate the little holes instead of the whole panel.  (You'll have
+to cut holes in the panels of an appropriate size, but this won't add too
+much time so long as they are rectangular.)
+
+As for your procedural materials, the first method of assigning separate
+variables is faster because variables are only evaluated once during each
+ray execution cycle, whereas a function is reevaluated on each call.
+
+-Greg
+
+
+=================================================================
+<A NAME="MIST">MIST</A>
+
+Date: Wed, 8 Jan 1997 18:41:37 -0500 (EST)
+From: Mark Stock &lt;mstock@engin.umich.edu&gt;
+To: radiance-discuss@hobbes.lbl.gov
+Subject: Mist Question
+
+Hello,
+
+I have a simple question: Why can I not get a mist sphere to rpict 
+properly with a user-defined albedo?
+
+void mist cloudstuff
+1 sky
+0
+6 0.005 0.005 0.005 0.8 0.8 0.8 
+
+cloudstuff sphere cloud1
+0 0 4  -100 -150 100 180
+
+...plus other stuff in the scene
+
+rpict -vp -700 -700 20 -vd 1 1 0.2 -ab 1 scene.oct &gt; image1.pic
+rpict: fatal - bad arguments for mist &quot;cloudstuff&quot;
+rpict: 8904 rays, 22.85% after 0.001u 0.000s 0.001r hours on ......
+
+The mist material works when only the extinction coefficients are used.
+
+Any help will be appreciated!
+
+Thanks!
+
+Mark Stock
+mstock@engin.umich.edu
+
+
+Date: Wed, 8 Jan 97 15:50:15 PST
+From: greg (Gregory J. Ward)
+To: mstock@engin.umich.edu
+Subject: Re:  Mist Question
+
+Hi Mark,
+
+There was a bug in release 3.0 regarding mist arguments, that has been fixed
+in a patch.  Be sure to install all the patches in the /pub/patch directory
+on hobbes.lbl.gov.  The process has been automated to make it easier.
+
+I'm not positive, but I'm pretty sure that putting &quot;sky&quot; as your scattering
+source is not going to work.  This is only meant for normal, non-glow sources.
+This should work anyway without it to give you a spherical cloud.
+
+Do you still want me to post this to the rest of the group, or shall I just
+stick it in the digest for the next distribution?
+
+-Greg
+
+
+Date: Wed, 8 Jan 1997 18:55:01 -0500 (EST)
+From: Mark Stock &lt;mstock@engin.umich.edu&gt;
+To: greg@hobbes.lbl.gov
+Subject: Re: Mist Question
+
+Greg,
+
+Naw, I don't think there's a need to post it to the group, I just
+hadn't realized that there were patches that weren't installed on our
+system here. If you've recieved enough questions about it, though, you
+may want to.
+
+Thanks for the quick reply!
+
+Mark Stock
+mstock@engin.umich.edu
+
+=================================================================
+<A NAME="MKILLUM_QUESTIONS">MKILLUM QUESTIONS</A>
+
+Date: Tue, 7 Jan 97 10:10:58 GMT
+From: milan@esru.strath.ac.uk (Milan Janak)
+To: greg@hobbes.lbl.gov
+
+Dear Greg,
+
+First of all I would like to wish you a Happy New Year.
+
+I am once again back here in ESRU Glasgow working on
+couple European Daylighting and Glazing research project.
+
+A part of this work involves detailed simulation of the
+daylight linking controls by run-time coupling of 
+the thermal simulation (ESP-r) and the lighting simulation
+(Radiance).
+
+Here I would appreciate to get little more insight to the
+&quot;mkillum&quot; treatment of the highly directional light sources
+such as a sun or any virtual light sources by specular reflection
+from external surfaces.
+
+I have carry out simple test with sky with sun and
+calculated window light distribution (window facing sun)
+by mkillum and then
+couple of internal point illuminances (e.g. 13000 lx and 476 lx)
+
+Then I have deleted sun from the model and repeated the calculation
+of the internal point illuminance with the same window light distribution
+calculated previously (model with sun) (e.g. 2000 lx and 475 lx).
+
+The results suggest to me that:
+
+mkillum does not &quot;map&quot; such highly directional sources (e.g. sun) into the 
+light distribution? These are probably moved to the direct calculation
+as that is in my opinion the most effective way to handle them.
+
+I am right to think that light distribution calculated by mkillum
+will not contain direct and specular contributions to the window
+plane?
+
+I would suppose that for direct and specular contribution mkillum
+window model reverts back to the primary material e.g. glass to
+calculate these direct contributions into the internal illuminance?
+
+With best regards,
+
+Milan Janak,
+ESRU
+University of Strathclyde, Glasgow.
+
+
+Date: Tue, 7 Jan 97 09:32:05 PST
+From: greg (Gregory J. Ward)
+To: milan@esru.strath.ac.uk
+Subject: mkillum
+
+Hi Milan,
+
+Yes, you are correct.  Mkillum only computes the directional diffuse
+component of light coming in through a window system -- the specular
+(beam) component is best handled by the default algorithm.  Actually,
+if you are only computing a few point values, there is no sense in
+using mkillum at all.  You are better off just using the ambient
+calculation unless you plan to produce one or more renderings.
+
+I can provide you with draft chapters from the Radiance book explaining
+all this, if you have a PDF viewer.
+
+I am very busy this week, working on a Siggraph paper.  You might do better
+to write back to me after the 13th.
+
+-Greg
+
+Date: Wed, 26 Mar 97 14:12:39 GMT
+From: milan@esru.strath.ac.uk (Milan Janak)
+To: greg@hobbes.lbl.gov
+Subject: Light shelf-ceiling and mkillum
+
+Dear Greg,
+
+I would appreciate very your help with following:
+
+As explained in your paper &quot;The RADIANCE Lighting Simulation System&quot; it
+is a good idea to treate illuminated part of the ceiling (e.g. from
+reflecting light shelf in my case) as illum source with precalculated
+light distribution.  As you said, this (ceiling) is in reality
+important light source.
+
+Up till now everything is clear. Its starts to be little more difficult
+to get it right in all details.
+
+The best probably is to give example:
+Let's say we have room with external specular light shelf and want to
+assess its performance under overcast and clear sky conditions.
+
+So firstly we run mkillum to precalculate light distribution for
+external windows. So as mkillum will include only diffuse directional
+contributions, for overcast sky it will map all external contributions
+(also from specular surfaces??) but for clear sky conditions (with sun)
+it will omitt beam contributions from sun or reflected from specular
+light shelf, as these are handled by default calculations.
+
+Then we build up octree with precalculated light outputs for external
+windows.
+
+Secondly, we run mkillum for part of illuminated ceiling by light
+reflected from light shelf.  So for overcast sky, ceiling will actually
+see only external window's illum light sources as there should not be
+any beam contributions? For clear sky conditions there will be
+additional beam contribution from sun reflected in light shelf which
+will be now included in ceiling illum light output?
+
+Base on my understanding, secondary light sources are not participating
+in specular and diffuse sampling (they revert to the original material)
+and therefore mkillum for ceiling should be calculated with -ab 0, as
+otherwise there would be double counting for ambient contribution from
+this part of the ceiling???
+
+Thank you ones again very much.
+
+Milan,
+ESRU, Glasgow.
+
+
+Date: Wed, 26 Mar 97 09:27:29 PST
+From: greg (Gregory J. Ward)
+To: milan@esru.strath.ac.uk
+Subject: Re:  Light shelf-ceiling and mkillum
+
+Hi Milan,
+
+Your understanding of the secondary light sources in Radiance using mkillum
+seems to be quite good, and I'll be the first to agree that this is a very
+confusing topic!
+
+Do not worry about double-counting in Radiance -- these things are pretty
+well taken care of so you don't have to think about it.  If you compute
+the distribution from your ceiling with -ab 0, then the ceiling output
+will not include these interreflections, because illum's do NOT participate
+as their original materials in the indirect calculation.  Therefore, I
+recommend that you set -ab at 1 or two when your run mkillum.  Also, you
+can save on calculation later if you set d=0 in the mkillum scene input
+file for the ceiling if it is a diffuse material.
+
+I hope this helps.
+-Greg
+
+
+=================================================================
+<A NAME="COLORED_LIGHT SOURCES">COLORED LIGHT SOURCES</A>
+
+Date: Wed, 9 Apr 97 19:19:08 BST
+To: greg@hobbes.lbl.gov
+Subject: Lamp colors in Radiance RGB format
+From: Jeff.Shaw@arup.com
+
+My name is Jeff Shaw, and I work with Steve Walker and Andy Sedgwick for Ove
+Arup &amp; Partners in London.  I have been doing a lot of work with Radiance
+lately, and Steve thought you may be able to offer some advice on a recent
+problem that I have encountered.
+
+Essentially what I am attempting to do is to accurately model the color of the
+lamps in some luminaires which I have modelled in Radiance for a particular
+project.  So far I hove gone about this in the following way:
+
+I have started with the Spectral Power Distributions of the fluorescent lamp 
+phospors which I am interested (provided to me by a lamp manufacturer). Using
+spreadsheet, I have converted these tables of values (between 400nm and 760nm)
+producing, for each lamp color, a single set of x and y CIE chromaticity
+chart coordinates.  I have used the CIE 1931 color-matching Functions
+(Distribution Coefficients) to do this, and am confident that this process
+has given me reasonable output.
+
+The problem I have is how then to proceed with the conversion of these x and y
+color chart coordinates into RGB values readable by Radiance which produce an
+accurate color for each lamp.  I first attempted this using an in-house C
+script (rgb.c - attached for your information) I believe written some time ago
+by a colleague who is no longer here.  The script, however seems incomplete
+and only converts to RGB according to NTSC standard rather than CIE standard.
+
+As it is, I used the script to covert my x and y color chart coordinates to
+RGB values.  For instance:
+For a 3500K fluorescent lamp:
+x = 0.4022 ; y = 0.3639 &gt; R = 0.4531 ; G = 0.3251 ; B = 0.2219
+For a 5400K fluorescent lamp:
+x = 0.3318 ; y = 0.3478 &gt; R = 0.3238 ; G = 0.2987 ; B = 0.3775
+
+When I applied these values to my Radiance scene and viewed the resulting 
+octrees, the 3500K lamp seemed too yellow/pink and the 5400K lamp seemed much
+too purple, as you may expect.  This could be for three reasons:
+1) The colors really are like that, the brainm just perceives them differently 
+in real life.
+2) The monitor is distorting/not properly showing the colors.
+3) The RGB values are wrong.
+
+Steve and I had a look at the new ra_xyze script which you wrote, and when we
+applied it to our pictures with the -r -p options (using the values on your man
+page for -p) the picture did appear slightly whiter as we wanted.  But we
+are not entirely sure what ra_xyze does and whether we used it correctly.
+
+Sorry to write a rather long and rambling email, but I hope I adequately
+explained the situation.  We thought that as you have been doing a lot of
+work on color recently for Version 3.0 of Radiance, you may be able to help.
+I would appreciate any comments or suggestions that you have.
+
+Regards,
+
+Jeff Shaw
+
+jeff.shaw@arup.com
+
+
+Date: Wed, 9 Apr 97 11:39:42 PDT
+From: greg (Gregory J. Ward)
+To: Jeff.Shaw@arup.com
+Subject: Re:  Lamp colors in Radiance RGB format
+
+Hi Jeff,
+
+Indeed, Radiance RGB values are not the same as NTSC RGB.  There are routines
+within Radiance for converting from CIE colors to Radiance RGB values, but
+it is probably easiest just to use the &quot;lampcolor&quot; program, providing it
+with your own lamp table with CIE (x,y) chromaticities.  This table is
+explained a bit in the manual page for ies2rad, and I can explain it further
+if it doesn't make sense to you after reading that and looking at the
+default &quot;lamp.tab&quot; file included in the ray/src/cv directory.
+
+Failing this, you can use the .cal file ray/src/cal/cal/xyz_rgb.cal to
+convert between XYZ and RGB values.  Again, let me know if you need help
+with this or the &quot;calc&quot; or &quot;rcalc&quot; programs.
+
+The resulting image will not look correct unless you adjust it for your
+particular monitor primaries, unless they just happen to match the canonical
+ones chosen for Radiance.  (This was the idea.)  To do this, you will have
+to either measure the monitor primaries or obtain this data from the
+manufacturers.
+
+Finally, I think you may be disappointed in your results for the other
+reason you mentioned, which is that the eye peforms an unconscious color
+(white) balancing operation when we view a scene.  This is why most
+color video cameras have a white balance feature, also, and color films
+are selected based on the expected illumination source.  Otherwise, all
+pictures taken under incandescent lighting would look orange, and/or
+outdoor images would look bluish.  Again, we don't perceive them that way,
+because our eye/brain system compensates for the prevalent illumination
+over a wide range of dominant spectra.
+
+This is why most renderings are performed with equal-energy white
+illuminants (i.e., RGB all equal), because a final white-balancing
+operation would divide by the dominant illuminant color, yielding
+the exact same result.  (See the -t option to pfilt.)  The only
+case where it really makes sense to use different lamp colors
+is when you are mixing different types of illumination in the same
+environment, or letting in daylight with incandescents, etc.
+(I assume this is what you are doing, or you wouldn't be asking.)
+Unfortunately, in this case, white balancing is problematic, since
+there is no one dominant spectrum to divide the result by.
+
+I hope this is helpful to you.  By the way, I recently got some bounced
+mail from &quot;radiance@arup.com&quot; -- is this alias no longer in action?
+I removed it from our mailing list, but if you are still using Radiance
+there, then you probably want to be on the list.  Shall I put your e-mail
+on the list, instead?
+
+-Greg
+</PRE>
+<HR>
+<P>
+<STRONG>Back to <A HREF="#top">Top of Digest Volume 3, Number 0</A></STRONG><A
+ HREF="#top"></A><BR>
+<STRONG> <FONT SIZE="3">Return to <I><A HREF="../HOME.html">RADIANCE</A></I><A
+ HREF="../HOME.html"> Home Page</A></FONT></STRONG><A
+ HREF="../HOME.html"></A><BR>
+ <STRONG>Return to <A HREF="rad_dig_HOME.html">RADIANCE Digests Overview</A>
+ </STRONG></P>
+<HR>
+<H5>
+All written material is the property of its respective author.<BR>
+ All written material is the property of its respective contributor.<BR>
+ Neither the contributors nor their employers are responsible for 
+consequences arising from any use or misuse of this information.<BR>
+ We make no guarantee that any of this information is correct. </H5>
+</BODY>
+</HTML>

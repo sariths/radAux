@@ -1,0 +1,1449 @@
+<!DOCTYPE HTML PUBLIC "-//Netscape Comm. Corp.//DTD HTML//EN">
+<HTML>
+<HEAD>
+    <!-- SGI_COMMENT COSMOCREATE -->
+    <!-- SGI_COMMENT VERSION NUMBER="1.0" -->
+    <TITLE> Radiance Digest v3n2 </TITLE>
+</HEAD>
+<BODY>
+<H2>
+<A NAME="top">RADIANCE Digest Volume 3, Number 2</A></H2>
+<HR>
+<PRE>
+Radiance Digest Volume 3 Number 2                August 25, 1997
+
+The latest version of the Radiance software is now: Radiance 3.1.3
+A patch is available for v3.1 at: ftp://radsite.lbl.gov/pub/patch
+
+To streamline operations, a separate digest of the &quot;discussion&quot; list
+will no longer be maintained.  As of this digest, content will be 
+gleaned from both direct contact e-mail and discussion list postings.  
+This may result in a slight increase in the frequency of postings to 
+the digest list.  Your comments and suggestions are (always) welcome.
+
+-----------------------------------------------------
+Topics:
+
+<A HREF="#8bit">CONVERTING TO 8-BIT COLOR DEPTH</A>
+<A HREF="#rviewram">RUNNING OUT OF RAM WITH RVIEW</A>
+<A HREF="#pcond">PCOND -H VERSUS XIMAGE -E HUMAN</A>
+<A HREF="#machten">RADIANCE ON MACHTEN (POWERMAC UNIX)</A>
+<A HREF="#oconv">OPTIMIZING OCONV (DENSE OCTREES)</A>
+<A HREF="#beginners">HINTS FOR BEGINNERS</A>
+<A HREF="#perspective">PERSPECTIVE AND PARALELL VIEW CORRESPONDENCE</A>
+<A HREF="#penumbras">PROBLEM WITH PENUMBRAS</A>
+<A HREF="#rpiece">RPIECE AND PARALELL PROCESSING</A>
+<A HREF="#groundplane">GROUND PLANE ILLUMINANCE (AND AN ERRATA)</A>
+<A HREF="#pcond">PCOND PROBLEMS (ERRATA AND PATCH AVAILABLE)</A>
+
+<A NAME="8bit">-----------------------------------------------------</A>
+CONVERTING TO 8-BIT COLOR DEPTH
+
+&gt;From joongnam@psych.nyu.edu  Thu Jul 31 07:01:08 1997
+Date: Thu, 31 Jul 1997 10:03:59 -0400 (EDT)
+From: Joongnam Yang &lt;joongnam@psych.nyu.edu&gt;
+Subject: Question on I/O on RADIANCE
+
+Hi,
+I've tried several times to ask questoins on RAIDANCE using the e-mail 
+addresses listed in the package, to no avail.
+I've got this email address somewhere on the NET.
+If I may, I'd like to ask the following question.
+
+I've created an image using rpict and I want to import it to an existing 
+experimental program by reading the binary bytes and reducing the number of 
+colors in the image to only 256.
+The image that I created right now contains 311 colors.   I've tried to 
+use existing UNIX graphics converters (*ppm*), but I do not want to 
+import the picture itself.   I read the image as bytes, so that I can 
+play around with it to change the number of colors.   Do you know if 
+there is a certain algorithm or rule to reduce the number of colors?
+The Unix converters produced 81 colors from 311 colors; so I do not want 
+to use such a crude algorithm.
+Thanks in advance.
+
+
+Joongnam Yang
+NYU Vision
+
+------
+
+&gt;From gwlarson@radiate.engr.sgi.com  Thu Jul 31 08:55:27 1997
+From: gwlarson@radiate.engr.sgi.com (Greg Larson)
+To: Joongnam Yang &lt;joongnam@psych.nyu.edu&gt;
+Subject: Re:  Question on I/O on RADIANCE
+
+Hi Joongnam,
+
+To answer your question, you may use either of the converters
+supplied with Radiance, ra_t8 or ra_pr to convert to 256 (or fewer) color
+images using the -c option.  If you want to write your own color reduction
+(quantization) program, you can look at the code in ra_t8.c, clrtab.c and
+neuclrtab.c in the ray/src/px directory.  The neural network color
+quantization scheme is particularly good at determining optimal colors,
+and you can get to it in ra_t8 with the -n option (use also -d to turn 
+off dithering for best results).
+
+I hope this helps.  In the future, you may send your questions to
+&quot;radiance@radsite.lbl.gov&quot;.
+
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<A NAME="rviewram">----------------------------------------------------------------</A>
+RUNNING OUT OF RAM WITH RVIEW
+
+&gt;From mkli@netway.at  Tue Aug  5 12:33:39 1997
+From: Martin Klingler &lt;mkli@netway.at&gt;
+To: &quot;'radiance@radsite.lbl.gov'&quot; &lt;radiance&gt;
+Subject: Problems with radiance and LINUX
+Date: Tue, 5 Aug 1997 21:29:23 +0200
+
+Hi,
+
+I am Martin.
+I just have set up my LINUX-System to run RADIANCE. LINUX is completely =
+new to me but it looked fine. But I have the following problem.
+
+The daffodil example runs well. But if I try the office example rad =
+quits with an error. I have tried my own examples and found out that I =
+always get an error with higher resolutions or higher quality. If You =
+have any  idea what this could be I would be very thankful if You can =
+give me a hint.
+
+Many thanks and best regards
+
+Martin
+
+-----
+
+Martin,
+
+I need much more specific information in order to diagnose what
+might be going on with your Linux box and Radiance.  Please write
+down each of your commands and the complete error message.=20
+
+Even still, I can't guarantee that I'll answer.  But if it is
+ok with you, I'll forward it to the Radiance discussion group
+for some help from the masses.
+
+-Chas
+
+-------
+
+&gt;From mkli@netway.at  Thu Aug  7 13:32:58 1997
+From: Martin Klingler &lt;mkli@netway.at&gt;
+To: &quot;'Radiance Account'&quot; &lt;radiance&gt;
+Subject: AW: Problems with radiance and LINUX
+Date: Thu, 7 Aug 1997 22:28:47 +0200
+
+Chas,
+
+thank you for your answer. Here are the details.
+
+I  am running LINUX from the newest S.u.S.E.-Distribution on a Cyrix =
+6x86 P166 with 32 MB.
+After starting the Office example within X11 (rad -o x11 office.rif) the =
+picture is produced but then, usually in the 512 refining, the process =
+is cancelled.
+
+The office.err looks like:
+
+Process 468 on Martin started Wed Aug  6 20:29:59 CEST 1997
+rad -v norm office.rif
+rpict -vu 0 1 0 -vp 8 36 -27 -vd -0.560723 -0.233635 0.794358 -vh 39.9 =
+-vv 27.5 -x 1024 -y 1024 -ps 6 -pt .08 -dp 512 -ar 18 -ms 1.3 -ds .3 -dt =
+.1 -dc .5 -dr 1 -sj .7 -st .1 -aw 1024 -aa .2 -ad 400 -as 64 -av 0.5 =
+0.5 0.5 -lr 6 -lw .002 model.oct &gt; office_norm.unf
+rad: error rendering view norm
+
+I have the feeling, that the error does not occur always on the same =
+position if I try the same a few times.
+
+Maybe you can help me with that. It is OK for me if you pass the problem =
+to the discussion group.
+
+Thanks a lot
+
+Martin
+
+------
+
+&gt;From radiance  Thu Aug  7 15:32:38 1997
+Date: Thu, 7 Aug 1997 15:32:38 -0700
+From: radiance (Radiance Account)
+To: Martin Klingler &lt;mkli@netway.at&gt;
+Subject: Re:  AW: Problems with radiance and LINUX
+
+Martin,
+
+If this is a very large size image (1000 pixels or greater)
+than the problem is that you are running out of RAM.  Rview
+is not intended for final renderings because it keeps a copy of
+the pixel values in a native 32 bit radiance format in RAM.
+If you make the rview windows smaller and rview goes to
+completion without an error, then this is definately the
+problem.
+
+For final renderings, edit the rif file to reflect the
+desired quality and resolution, and execute:
+
+rad office.rif
+
+Look at the man pages for rad to learn about the other options
+for controlling accuracy, quality, etc.
+
+-Chas
+
+------
+
+&gt;From mkli@netway.at  Sun Aug 10 12:27:56 1997
+From: Martin Klingler &lt;mkli@netway.at&gt;
+To: &quot;'Radiance Account'&quot; &lt;radiance&gt;
+Subject: AW: AW: Problems with radiance and LINUX
+Date: Sun, 10 Aug 1997 21:23:52 +0200
+
+Hi Chas,
+
+thanks a lot for your answer. You are right RAM seems to be the problem. =
+I have played around a little bit. I am not very clear about what =
+happens with the RAM. Is there somewhere information about how much RAM =
+is needed for what  kind of models?=20
+Is there also a restriction in resolution, quality ... if I use the =
+recommended rpict?
+
+Thanks
+
+Martin
+
+-------
+
+&gt;From radiance  Sun Aug 10 22:53:46 1997
+Date: Sun, 10 Aug 1997 22:53:46 -0700
+From: radiance (Radiance Account)
+To: Martin Klingler &lt;mkli@netway.at&gt;
+Subject: Re:  AW: AW: Problems with radiance and LINUX
+
+Rpict is not limited by RAM as rview is because rpict does not
+store the final image in RAM.  It processes the image line-by-line
+and send the output to a file.
+
+I highly, strongly reccommend (insist) that you read the Radiance
+digests for more information.  A keyword search will 'net' much
+valuable information.
+
+-Chas
+
+<A NAME="pcond">---------------------------------------------------------------</A>
+PCOND -H VERSUS XIMAGE -E HUMAN
+
+&gt;From jedev@visarc.com  Mon Aug  4 09:32:31 1997
+Date: Mon, 4 Aug 1997 12:27:59 -0400 (EDT)
+To: radiance
+From: jedev@visarc.com (John E. de Valpine)
+Subject: pcond -h vs ximage -e human
+
+Hi Chas:
+
+We are trying to get &quot;pcond&quot; to produce results similar to those from
+&quot;ximage -e human.&quot; The problem is that in some cases we get results that are
+distinctly different. We are using &quot;pcond -h&quot; on the images. In some cases
+the results are quite similar to those from &quot;ximage -e human&quot; in other cases
+they are distincly different. The images are all based on the same scene and
+have been filtered in to the same exposure with &quot;pfilt.&quot; Using &quot;ximage -e
+human&quot; on the set of images produces contrasts levels that appear consistent
+from image to image, whereas using &quot;pcond -h&quot; on the images produce some
+images that have contrast levels distinctly different from the others. What
+are we missing?
+
+-Jack de Valpine
+
+&gt;From greg@pink  Sat Aug  9 22:00:50 1997
+Date: Sat, 9 Aug 1997 21:57:57 -0700
+From: greg@pink (Gregory W. Larson)
+To: jedev@visarc.com, radiance (Radiance Account)
+Subject: Re:  PCOND ...
+
+Hi Jack (and Chas),
+
+Ximage -e human is roughly equivalent to pcond -c -s, not pcond -h.  The -h
+option includes the -v and -a options, which ximage does not reproduce for
+efficiency (time) reasons.  Also, ximage is not smart about foveal adaptation
+areas, so under certain circumstances, the histogram results can be
+(significantly) different, and the tone mapping therefore will also
+be different.  I have noticed myself that pcond sometimes does a WORSE
+job than ximage in the darkest regions of an image, and I have tried to
+fix this somewhat in the latest release.
+
+I didn't see you at Siggraph -- were you there?  I assume by the date on
+your e-mail that you either went late or had some deadlines or something
+and didn't go at all.
+
+-Greg
+
+
+<A NAME="machten">----------------------------------------------------------------------</A>
+RADIANCE ON MACHTEN (POWERMAC UNIX)
+
+&gt;From matthews@artifice.com  Fri Jul 18 12:57:23 1997
+Subject: Radiance on Power Mac
+Date: Fri, 18 Jul 97 12:54:48 -0700
+From: Kevin Matthews &lt;matthews@artifice.com&gt;
+To: &quot;Radiance Discussion List&quot; &lt;raydisc&gt;
+
+Hello,
+
+For anyone out there interested in installing Radiance on Power 
+Macintosh, we've updated the instructions provided at the Artifice web 
+site, at:
+
+    &lt;http://www.artifice.com/radiance/radMachTen.html&gt;
+
+I think you'll find these updated step-by-step instructions are pretty 
+complete and reliable.  Any feedback would be appreciated.  
+
+In related news, we've also posted a complete Radiance materials 
+substitution library for DesignWorkshop users, so tiling and properties 
+materials assigned in DesignWorkshop and previewed with QuickDraw 3D 
+rendering can now be automatically replaced with matching Radiance 
+textures.  You might also find this overall set of about 100 useful and 
+pre-scaled architectural materials to be useful in its own right.  It's 
+available in the DesignWorkshop owners-only area at 
+&lt;http://www.artifice.com/confidential/private_rad.html&gt;.  
+
+You can see example results of using this library, as applied to a simple 
+DW sample model, on our message board at:
+
+    &lt;http://www.artifice.com/support/messages/125.html&gt;
+
+(The Radiance treatment of the copper hood over the fireplace gives an 
+especially dramatic improvement over the QD3D version.)  
+
+Onward and upward,
+
+Kevin Matthews
+
+
+
++ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+   Artifice, Inc.
+   800.203.TECH
+   http://www.artifice.com
+   new tools and media for environment designers
+   541.345.7421 voice - 541.345.7438 fax - PO Box 1588, Eugene, OR 97440
++ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+
+<A NAME="oconv">-------------------------------------------------------------------</A>
+OPTIMIZING OCONV (DENSE OCTREES)
+
+&gt;From mlarch@ix.netcom.com  Thu Aug  7 15:22:33 1997
+Date: Thu, 07 Aug 1997 18:17:54 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance &lt;radiance-discuss&gt;
+Subject: &quot;oconv internal - set overflow in addobject&quot; and MAXSET
+
+Hello all
+
+       I have been working on a tiles and ran into the mentioned
+error message from oconv. Looking into the code I see that oconv
+will indeed fail if MAXSET is exceeded. Looking into object.h I
+found that MAXSET is defined as 127. Is there any problem with raising
+this to, say, 5120, or so ? Is there a better way to get around this?
+Is there a reason why it is set (low) ?
+
+Thanks much,
+mlarch@ix.netcom.com
+
+
+-----
+&gt;From radiance  Fri Aug  8 10:53:56 1997
+Date: Fri, 8 Aug 1997 10:53:56 -0700
+From: radiance (Radiance Account)
+To: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+Subject: Re:  &quot;oconv internal - set overflow in addobject&quot; and MAXSET
+Cc: radiance
+
+Morgan,
+
+You'll have to wait for Greg to come back from a vacation
+to answer this questions.  I have my limitations, as you
+are learning, about what I can confidently answer.
+
+Guessing:  If MAXSET controls the maximum number of objects
+per boundinb box, then you don't want this number to be very
+high or the ray tracing calculation will start to slow down
+a whole lot.  You could always try it and see.
+
+I suspect that if you are creating an octree of just one
+column and still having a problem with set overflow in
+addobject, that you'll need to break the column down even
+further.  I once modeled a corinthain column capital and
+had to model each quadrant of the capital in a separate
+octree and use mirroring to assemble the entire capital.
+These four pieces were then made into another instance and
+added to the rest of the column components.
+
+Good luck!
+-Chas
+
+--------
+
+&gt;From mlarch@ix.netcom.com  Sat Aug  9 10:46:23 1997
+Date: Sat, 09 Aug 1997 13:39:55 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance &lt;radiance-discuss&gt;
+Subject: fallowup, oconv and set overflow
+
+Thanks Chas for getting back to me. I read through the
+digests again for other dissucions about this. Greg has a 
+lot to say there. What I did instead of playing with
+MAXSET (in object.h) was to re-work my tiles algorithm.
+Because the tiles are short, I can exclude all non-visible
+polygons from the rad file (based on camera position). That
+coupled with ramping up the octree resolution to 20000 
+seems to have fixed the problem. 
+
+The one question I have though is is that TOO high an octree
+resolution and should I be trying to reduce this more? By
+too far I mean out side of oconv's the normal operational 
+range. Or does it not really matter -- a `whatever works works'.
+
+
+Thanks
+
+mlarch@ix.netcom
+
+------
+&gt;From radiance  Sun Aug 10 22:48:18 1997
+Date: Sun, 10 Aug 1997 22:48:18 -0700
+From: radiance (Radiance Account)
+To: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+Subject: Re:  fallowup, oconv and set overflow
+Cc: radiance
+
+
+I think an octree resolution of around 5000 is not too
+uncommon.  I also don't think a resolution of 20000 is
+unreasonable either.  I've used 5000 with terrrain data quite
+successfully.  Terrain data is a good example where the
+specific &quot;granularity&quot; of the  geometry affects how to 
+optimize the oconv process.  A terrain field is made up 
+of a mesh of triangles.  What size should the &quot;-n objlim&quot; be?  
+Well, how many triangles fit conveniently into a cube that is 
+greater than four (the lower limit of speed optomization for 
+ray-tracing) but not much greater than 5 (the optimum value 
+as per the man page)?  Answer: 16.  
+
+    .------.------.------.------.
+    |     /|\     |     /|\     | 
+    |    / | \    |    / | \    | 
+    |   /  |  \   |   /  |  \   | 
+    |  /   |   \  |  /   |   \  | 
+    | /    |    \ | /    |    \ | 
+    |/     |     \|/     |     \| 
+    .------.------.------.------.
+    |     /|\     |     /|\     | 
+    |    / | \    |    / | \    | 
+    |   /  |  \   |   /  |  \   | 
+    |  /   |   \  |  /   |   \  | 
+    | /    |    \ | /    |    \ | 
+    |/     |     \|/     |     \| 
+    .------.------.------.------.
+
+The more conveniently the geometry fits into the basic
+shape of the voxel (a cube), the fewer voxels and the fewer 
+sub-voxels needed to complete the octree process.  An &quot;objlim&quot; 
+of four would also help because oconv will not fruitlessly 
+attempt to find a fifth object to squeeze into each and every 
+voxel, but this does not reduce the number of voxels or sub-
+voxels needed to get the job done as compared with the default
+value of five.
+
+Did I already mention that one can save a lot of voxel 
+space by creating the octree *before* applying any rotation to 
+the geometry?  In the case of terrain data, this is especially
+important.  If your geometry was originally axis-aligned when
+you created it, this is the best time to create an octree of
+it for use as an instance.
+
+Lastly, you're using the -f option of oconv, right?  This
+reduces the time required to load in the first occurrance of
+each &quot;instance&quot; entity.  The downside is that the octree has
+to be re-created if the materials change.
+
+Please share with me some renderings of your model when you
+are satisfied with your model.
+
+-Chas
+
+<A NAME="beginners">------------------------------------------------------------------</A>
+HINTS FOR BEGINNERS #1
+
+&gt;From tw45070@vub.ac.be  Tue Aug  5 02:28:41 1997
+Date: Tue, 05 Aug 1997 11:26:47 +0200
+To: gregl@asd.sgi.com
+From: Alick =?iso-8859-1?Q?Geren=E9?= &lt;tw45070@vub.ac.be&gt;
+Subject: Questions concerning Radiance
+
+I'm a student in Applied Sciences, Department Architecture, from the Free
+University of Brussels, Belgium. I've mailed you behofe but now I have some
+rather specific questions
+
+I'm working on a daylight simulation using the Radiance program on a HP
+station. Since I'm relatively new to the program and UNIX, I'm encountering
+some problems, I have gone through to manual and the tutorials but still
+can't solve them.
+
+Here they are :
+
+1/ The scene I'm simulating is the interior of an old storehouse (about
+100m x 30m) which use a central skylight to get light in (a strip running
+along the longest axis). The roof is supported by colums and girders (made
+up of I-beams &gt; many faces !!). It's made up of simple materials:
+
+               floor : concrete
+               walls : brick (painted whitish)
+               roof : wooden panels
+               colums/girders : steel
+
+I'm having trouble getting the material definition right (texture and
+roughness ??), especially the steel and the brick.
+Also when I do a simulation using the interreflection calculation the floor
+seems to go white instead of looking like concrete. Probably because I do
+something wrong with the definitions.
+Could you please give me some suggestions concerning this problem ?
+
+2/ Since the only light is coming from the skylight, the interior is mostly
+illuminated by reflection on the floor.=20
+To get the light right I'm using the gensky command to simulate the CIE
+skies. Now, to do the interior do I use illum for the glass of the skylight
+or for the floor ? Also do I define it with the material or can I use the
+mkillum option in rad to turn to floor into illum?
+How do I get a good image, the ones I seem to get don't look very real to=
+ me?
+
+I hope I didn't put in to many questions at a time and I hope you will be
+able to help me out.
+
+Many thanks,
+
+
+Alick Geren=E9
+tw45070@vub.ac.be
+
+---------
+
+&gt;From greg  Sat Aug  9 22:22:30 1997
+Date: Sat, 9 Aug 1997 22:22:29 -0700
+From: greg (Gregory W. Larson)
+To: Alick  &lt;tw45070@vub.ac.be&gt;
+Subject: Re:  Questions concerning Radiance
+
+Hi Alick,
+
+I'm going to take a really quick stab at this as I have a week's worth of
+mail to catch up with, and hope that Chas fills in with some details.
+
+Materials:
+
+                floor : concrete
+                walls : brick (painted whitish)
+                roof : wooden panels
+                colums/girders : steel
+
+Here's some guesses to start with:
+
+void plastic concrete
+0
+0
+5 .25 .23 .2 0 0
+
+void plastic white_painted_brick
+0
+0
+5 .4 .4 .4 .02 .1
+
+void plastic wood_panel
+0
+0
+5 .5 .2 .08 .01 .15
+
+void metal steel
+0
+0
+5 .3 .2 .1 .1 .1
+
+I'm assuming in the above that your steel beams are pretty dirty, since
+it's a warehouse.
+
+My best advice is to use an illum type for the skylights, with the skyfunc
+distribution as its modifier, i.e.:
+
+void glass sky_glass
+0
+0
+3 .6 .6 .6
+
+skyfunc illum sky_window
+1 sky_glass
+0
+3 .55 .55 .55
+
+Here again, I'm assuming that your windows are a bit dirty, which is very
+likely for skylights.
+
+To generate your results, you don't have to run mkillum on your floor, but
+you should set the INDIRECT variable in rad to 2 and VARIABILITY to High.
+This will make your renderings take longer, but this is needed to properly
+integrate the contribution from the floor.  If you aren't using rad or trad,
+DO!!
+
+Good luck!
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Alick,
+
+The only thing I'd add to Greg's reply is...
+
+Have you defined your &quot;ZONE=&quot; varriable in your .rif file?
+Assuming you are using RAD at all, the default is that your
+are rendering an &quot;Exterior&quot; space, ie: ZONE= E ....
+This causes the &quot;ambient value&quot; to be set much too high for
+interior renderings.
+
+Don't use mkillum unless you have to.  The Ambient calculation
+works well and you avoid other potential pitfalls of the
+simplifications implied with mkillum.
+
+Did I mention that ambient calculation parameters have been talked about 
+at length in the Radiance digests?  You can find the archives on the 
+Radiance ftp site:
+
+     ftp://radsite.lbl.gov/radiance/rad/pub/digest
+     ftp://radsite.lbl.gov/radiance/rad/pub/discuss
+
+
+-Chas
++---------------------------------------------------------------------------+
+| Charles Ehrlich                                     Phone: (510) 486-7916 |
+| Principal Research Associate                        Fax:   (510) 486-4089 |
+| UC Lawrence Berkeley National Laboratory            Contact person for:   |
+| 1 Cyclotron Road MS: 90-3111, Berkeley, CA 94720    RADIANCE and ADELINE  |
++---------------------------------------------------------------------------+
+
+
+
+<A NAME="perspective">-------------------------------------------------------------</A>
+PERSPECTIVE AND PARALELL VIEW CORRESPONDENCE
+
+&gt;From nhsadika@barrow.uwaterloo.ca  Fri Aug 15 22:05:11 1997
+Date: Sat, 16 Aug 1997 01:03:24 -0400 (EDT)
+From: Navid Sadikali &lt;nhsadika@barrow.uwaterloo.ca&gt;
+To: &quot;Gregory J. Ward&quot; &lt;greg&gt;
+Subject: Radiance question: Perspective and Parallel corresponence
+
+Hi.  I have a simple scene with a sphere in the left center and a box 
+to the right of the sphere.
+
+My question is this: 
+If I take a perspective view with a 45 degree view angle (both h&amp;v),
+what size parallel view (in world coordinates) would I use  
+so the images of the sphere would appear of similar size in both
+perspective and parallel views?  Do I need to calculate the distance to 
+the sphere and figure out the width of a projection plane at that point?
+
+
+(* sphere)
+
+       |--------|   is this the width of the corresponding parallel
+                    view I need?
+     
+       \         /
+       \    *   / &lt;-- width of plane at intersection |--------|
+        \      /
+         \ 45d/        
+          \  / 
+           \/
+       perspective view
+
+-----
+&gt;From greg  Sun Aug 17 11:42:46 1997
+Date: Sun, 17 Aug 1997 11:42:45 -0700
+From: greg (Gregory W. Larson)
+To: Navid Sadikali &lt;nhsadika@barrow.uwaterloo.ca&gt;
+Subject: Re:  Radiance question: Perspective and Parallel corresponence
+
+Hi Navid,
+
+The short answer to your question is &quot;yes.&quot;  You need to compute the width
+of a projection plane at the distance of your viewpoint.  For a 45 degree
+view, the width of the projection plane is 2*Distance*tan(45/2), where
+tangent computes from degrees.
+
+Hope this helps.
+-Greg
+
+<A NAME="penumbras">--------------------------------------------------------</A>
+PROBLEM WITH PENUMBRAS
+
+
+&gt;From mlarch@ix.netcom.com  Fri Aug 15 07:44:43 1997
+Date: Fri, 15 Aug 1997 10:40:08 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance &lt;radiance-discuss&gt;
+Subject: anti-aliasing, penumbera
+
+Hi all, I'm having a hard time getting familiar with all the
+rendering command line switches ( a pentium 133 is not the
+best platform on which to run multiple trial and error 
+sessions), so I have put up a simple image:
+
+       http://pw1.netcom.com/~mlarch/house/index.html 
+
+and would really appreciate anyone describing how which swtiches 
+would help where in cleaning up the image. The image shows 
+best what I am talking about, and whatever advice you might 
+have will be welcomed.
+
+thanks,
+mlarch@ix.netcom.com
+
+
+&gt;From radiance  Fri Aug 22 13:21:33 1997
+Date: Fri, 22 Aug 1997 13:21:33 -0700
+From: radiance (Radiance Account)
+To: mlarch@ix.netcom.com
+Subject: penumbras #2
+
+Morgan,
+
+I finally saw your comments at the bottom of the page
+that contains the big image.  You are using RAD and you have PEN= T.
+Good.  Here's my next question.  I notice that the shadows all seem
+to be diverging.  Do you mean to be simulating light from the
+sun?  If so, then you should be using gensky.  This creates an
+infinately distant &quot;source&quot; type with the proper brightness and
+subtended angle, and also creates the diffuse skylight component.  
+The shadows will also all be paralell. See the gensky man page for 
+more information.
+
+Using an infinate source may not eliminate the banding effect.  Next clue.
+Rad automatically does a pfilt on the intermediate image, usually
+called .unf, before coming up with the .pic file.  When you subsequently
+did a pfilt, what options to pfilt did you use?  Did you use &quot;-r 1&quot;?  
+This enables gaussian filtering instead of the default box filtering.  
+This will definately reduce the banding effect.  You can also put this 
+pfilt command line option in the .rif file like:
+
+pfilt= -r 1
+
+And if you need the image to be reduced in size again, then be
+sure to use -r 1 on the command line.
+
+That should take care of the problem.  If not, let me know and I'll
+open the discussion up to the discussion list.
+
+-Chas
+
+----------
+&gt;From mlarch@ix.netcom.com  Sun Aug 24 07:13:39 1997
+Date: Sun, 24 Aug 1997 10:11:03 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance-discuss
+Subject: Re: penumbras #2
+
+Thanks *again* Chas for getting back, hope the vacation is a Vacation.
+&lt;not&gt; -cke
+
+The shadows are diverging here because of a local light source not
+to far above the roof. Sky light is a little farther down the road
+yet, after I workout the skylight filtering. Working with pfilt as
+you describe helps, yes. But what I ended up doing was recompiling
+the radiance package with the -DMC switch (Monte Carlo). This had
+a positive effect. I updated the web page:
+http://pw1.netcom.com/~mlarch/house/index.html
+there is a little more discription there.
+
+--------
+&lt;in answer to where the -DMC flag is documented&gt; -cke
+
+&gt;From mlarch@ix.netcom.com  Mon Aug 25 03:01:17 1997
+Date: Mon, 25 Aug 1997 05:58:39 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance-discuss
+Subject: Penumbras and -DMC
+
+I'm not sure just where this file came from, but it was with a lot of
+other html file buried in a ../Notes/ directory. Because it is 
+short, I went ahead and included it below.
+
+mkarch@ix.netcom.com
+
+&gt;SNIP&lt;
+
+RADIANCE Compile Switches
+
+Here is a list of compile switches, used to customize Radiance code for
+specific machines and
+users: 
+
+-DMC 
+      If set, switches from default low-discrepency sequence sampling to 
+      true (pseudorandom) Monte Carlo. Use if the &quot;brushed&quot; appearance 
+      of specular highlights and penumbras bothers you. 
+
+&lt;snip&gt;
+
+
+<A NAME="rpiece">--------------------------------------------------------------</A>
+RPIECE AND PARALELL PROCESSING
+
+&gt;From pedelty@ltpmail.gsfc.nasa.gov  Wed Aug 13 08:58:51 1997
+From: Jeff Pedelty &lt;pedelty@ltpmail.gsfc.nasa.gov&gt;
+Subject: rpiece question
+To: radiance-discuss
+Date: Wed, 13 Aug 1997 11:54:15 -0400 (EDT)
+
+Radiance users:
+
+We're trying to gear up to do large renderings on a Cray T3E here at
+NASA Goddard.  It appears that the NFS file locking mechanism works on
+the T3E, and so rpiece seems to work 'out of the box'.  However, we
+will evaluate the performance on the T3E, and consider implementing an
+MPI version if the NFS overhead seems excessive.
+
+Before we get to that point, however, we want to understand the
+current behavior of rpiece.  To simplify things, we are running it on
+just a single workstation.  We find that we do not get the same .pic
+file when we ask rpiece to render the scene in a single chunk (i.e. -X
+1 -Y 1) or when we break it into 4 pieces (i.e. -X 2 -Y 2).  We are
+seeing the same results whether we run on an SGI Indy, a Sun
+Sparcstation, or on a single processor of the T3E.
+
+The rendered images are qualitatively the same in appearance, and have
+the same min and max values, but many of the pixels have very
+different values when rendered in the two different ways.  My
+expectation is that a parallel rendering should give very nearly the
+same output as a serial one, but perhaps I'm not understanding
+something fundamental about the way the way rpiece/rpict work.
+However, I've not seen any earlier discussion on this topic.
+
+Any enlightenment would be most appreciated.  I can send anyone my
+scripts, input files, results, etc., if appropriate.
+
+Thanks!
+
+Jeff Pedelty
+
+----
+Jeffrey Pedelty                    | jeffrey.pedelty@gsfc.nasa.gov
+Biospheric Sciences Branch         | Phone: 301-286-3065
+Code 923                           | Fax:   301-286-0239
+NASA's Goddard Space Flight Center |
+Greenbelt, MD  20771       USA     | Heart, hearth, and earth
+
+---------
+
+Jeff,
+
+It sounds like you have made rapid progress since your last e-mail
+message!  Joe Klems and I have been talking about the T3E and
+wondering if something like MPI is going to be necessary.
+It sounds like it won't, but we are also holding final judgement
+until we solve the entire problem of making a real-time renderer
+out of Radiance.
+
+Regarding the comparison of the output between rpiece and rpict.
+Rpiece saves its images as non-run-length-encoded image files,
+the &quot;old&quot; behavior of Radiance back before version 2.3.  So if
+you're doing a binary comparison of the file bits and/or file
+sizes, there will not be a 1 to 1 match.  To convert the output
+from rpiece to the standard RLE version, just pass the image
+through pfilt.  The last switch you need to toggle to make sure 
+that you can compare any two images on a pixel-by-pixel basis is 
+the rpict/rpiece &quot;-pj 0&quot; option.  As per the man page, this turns 
+off pixel jittering, one of Radiance's anti-aliasing features.  
+When using -pj &gt; 0, every radiance image of the same scene will be 
+somewhat different each time it is rendered.  With -pj = 0, it 
+samples pixel centers only, eliminating the randomness in where
+the pixel will actually fall.  If then, by using pvalue, you come 
+up with very different pixel values and/or file sizes, we might 
+have an internal logic problem with the T3E compiled version.
+
+Also, be sure not to miss &quot;ranimate&quot;.  It is a very powerful tool
+for managing the rendering of animation sequences.  It deals with
+tape device(s) for storing image files, knows about file storage
+space limits and maintains them, figures out which frames to render
+and which frames to &quot;tween&quot; with pinterp, knows about multiple CPU's,
+and many more features.  Unfortunately, it doesn't work with rpiece.
+If you don't have a way of creating animation paths, I reccommend
+Peter Apian-Benowitz's utility which is linked to the main Radiance
+WWW site.
+
+Also note the latest bug report/patch.  Be sure you have the very
+latest version of Radiance (3.1.2) because a long-standing but in
+rpiece was fixed.  This minor bug disabled the use of the &quot;-pa 0&quot;
+option for rendering views without regard to pixel squareness.
+
+I was having some file-locking problems with Linux until I compiled into 
+the Linux kernal a special driver for &quot;mandatory file locking&quot;.  It is 
+a package by Andy Walker &lt;andy@lysaker.kvaerner.no&gt; last updated April 
+15, 1996.  
+
+Also, I'd be happy to create a repository on the radsite for parallel
+processing scripts, codes, etc.  Perhaps this is the beginnings of
+a Radiance Parallel rendering User Group?
+
+Ciao,
+-Chas
+Charles Ehrlich
++--------------------------------------------------+-----------------------+
+| Charles Ehrlich                                  | Phone: (510) 486-7916 |
+| Principal Research Associate                     | Fax:   (510) 486-4089 |
+| UC Lawrence Berkeley National Laboratory         | Contact person for:   |
+| 1 Cyclotron Road MS: 90-3111, Berkeley, CA 94720 | RADIANCE and ADELINE  |
++--------------------------------------------------+-----------------------+
+
+&gt;From greg@pink  Fri Aug 22 15:02:35 1997
+Date: Fri, 22 Aug 1997 14:59:44 -0700
+From: greg@pink (Gregory W. Larson)
+To: radiance (Radiance Account)
+Subject: Re: rpiece question
+
+The reason you don't get the same result when you break up the image
+differently is because each chunk gets sent to a separate rpict
+process, which uses some logic to determine sampling parameters on
+the pixels.  The sampling parameters for four separate chunks will
+always be different than those for one big chunk.  These sampling
+parameters then go on to feed the various stochastic processes during
+rendering, which results in variance at each pixel.  The best you
+can hope for is the same overall average.
+
+In short, your pixels may vary.  The same effect is sometimes evident
+between identical renderings on different machines, which may have
+different implementations of the library pseudorandom number generator.
+
+If you want to arrive at identical images, you can use the following settings
+to turn all stochastic sampling off:
+
+       -pj 0 -dj 0 -dp 0 -sj 0 -ab 0
+
+You won't get indirect contributions or proper specular highlights, but you
+should get reasonably consistent pixels from one rendering to the next.
+
+The only other thing that occurs to me is that when you break your image into
+chunks, you must make sure that the horizontal and vertical resolutions are
+exact multiples of the specified divisors.  If they are not, then slight
+registration differences in the pixels will cause different rays to be
+sample depending on how the image is broken up.  To avoid this problem,
+use a square view (i.e., -vh and -vv the same) and use multiples of two
+for your divisors (-X and -Y parameters).
+
+I hope this helps.
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+&gt;From darkwing@bsdd.regensburg.com  Fri Aug 22 15:50:14 1997
+To: Jeff Pedelty &lt;pedelty@ltpmail.gsfc.nasa.gov&gt;
+Subject: Re: rpiece question 
+Date: Fri, 22 Aug 1997 15:45:26 -0700
+From: Christoph Hoegl &lt;darkwing@bsdd.regensburg.com&gt;
+
+&lt;disclaimer&gt;I'm probably not the right one to answer this to full extent but 
+i ran across the same problem some time ago and try to explain 
+the magic behind the parallel usage of Radiance&lt;/disclaimer&gt;
+
+&gt; We're trying to gear up to do large renderings on a Cray T3E here at
+&gt; NASA Goddard.  It appears that the NFS file locking mechanism works on
+&gt; the T3E, and so rpiece seems to work 'out of the box'.  However, we
+&gt; will evaluate the performance on the T3E, and consider implementing an
+&gt; MPI version if the NFS overhead seems excessive.
+
+MPI is more or less useless (s/MGF/PVM if you like:-) )
+I tried it already but at best it got about 5% faster (average)
+The simpler and more effective way is to optimize the the size 
+and shape of the slices to reduce empty loops. and hand it to
+some scheduler (NQS).
+Always keep in mind that communication (locking, data 
+turnaround, ...) kill effectiveness of parallelism.
+
+Best is to do this by giving each CPU as big slices as possible
+and spend some time on cutting more equal slices (in the sense of 
+CPUcycles).
+
+(I do this by cutting small at very consuming regions (glass/metal/...)
+and enlarging &quot;boring&quot; regions in the background
+(you may find the emboss 
+function of programs like the GIMP!!! 
+( http://www.xcf.berkeley.edu/~gimp/ )
+and its scheme interface (to do this cutting automatic) very convenient)
+
+&gt; 
+&gt; Before we get to that point, however, we want to understand the
+&gt; current behavior of rpiece.  To simplify things, we are running it on
+&gt; just a single workstation.  We find that we do not get the same .pic
+&gt; file when we ask rpiece to render the scene in a single chunk (i.e. -X
+&gt; 1 -Y 1) or when we break it into 4 pieces (i.e. -X 2 -Y 2).  We are
+&gt; seeing the same results whether we run on an SGI Indy, a Sun
+&gt; Sparcstation, or on a single processor of the T3E.
+&gt; 
+
+Be sure to disable all &quot;speed&quot; optimizing flags to r* as they 
+may cause loss of rays in the calculation.
+
+Test your setup with a simple scene
+light at 0 0 0
+view from 10 0 0
+vd 1 0 0
+prism located with main axis equal to vd at 10+ 0 0 
+
+render the whole thing with one view and render a quarter (upper 
+left) and compare the parts they must be identical or you lost 
+rays due to some wrong or unset flags to the renderer!  
+
+&gt; The rendered images are qualitatively the same in appearance, and have
+&gt; the same min and max values, but many of the pixels have very
+&gt; different values when rendered in the two different ways.  My
+&gt; expectation is that a parallel rendering should give very nearly the
+&gt; same output as a serial one, but perhaps I'm not understanding
+&gt; something fundamental about the way the way rpiece/rpict work.
+&gt; However, I've not seen any earlier discussion on this topic.
+&gt; 
+&gt; Any enlightenment would be most appreciated.  I can send anyone my
+&gt; scripts, input files, results, etc., if appropriate.
+&gt; 
+Make them available by FTP or HTTP and i will peek at it.
+(best if tared and gzipped)
+
+regards,
+Christoph
+-- 
+Christoph Hoegl / darkwing@bsdd.regensburg.com / (Darkwing@berkeley.edu)
+Siedlungsstr. 18 93128 Regenstauf Germany  Fax:+49 940270611
+12a Tellerrd. 93720 Berkeley CA USA        Fax:+1 (510) 642 1043
+=&gt; OOOOOOOOOOOOOO = Now in the &quot;TUNNEL IN NO TIME&quot;-team = OOOOOOOOOOOOOOO =&gt;
+
+-----------
+
+&gt;From tcvc@falstaff.ucs.indiana.edu  Fri Aug 22 21:43:57 1997
+Date: Fri, 22 Aug 1997 23:39:17 -0500 (EST)
+From: &quot;robert a. shakespeare&quot; &lt;tcvc@indiana.edu&gt;
+To: Radiance Account &lt;radiance&gt;
+Subject: Re: rpiece question
+
+I am just beginning to accumulate images rendered on a 64 processor SGI 
+Origin 2000 using rpieces. In a week or so I might be able to contribute 
+to this discussion with examples which have also been run on a single 
+workstation, a 4 processor box and the supercomputer.. so far I cannot 
+find differences between the results. Perhaps pcomb can show what the eye 
+might not perceive... more later.
+
+Rob Shakespeare
+Theatre Computer Visualization Center
+Indiana University
+Bloomington, IN 47405
+
+shakespe@indiana.edu, tcvc@indiana.edu
+
+<A NAME="groundplane">------------------------------------------------------------</A>
+GROUND PLANE ILLUMINANCE (AND AN ERRATA)
+
+
+&gt;From chris_hillsdon@hotmail.com  Wed Aug  6 11:15:41 1997
+From: &quot;Chris Hillsdon&quot; &lt;chris_hillsdon@hotmail.com&gt;
+To: radiance
+Subject: ground plane illuminance
+Date: Wed, 06 Aug 1997 11:11:05 PDT
+
+Howdy Charles,
+
+I have been using RADIANCE for a short while modelling daylit office 
+spaces (light shelves etc). I have some relatively simple questions for 
+you (I hope) regarding gensky and calculating ground illuminances.
+
+Good to see that the book &quot;Rendering with Radiance&quot; is finally finished, 
+I await its publication.
+
+I have waded through almost all the digests that I have (V1N1 .. V2N10) 
+but still don&#146;t quite understand some things and want to make sure I&#146;m 
+on the right track.
+
+I have a sky desciption as follows :
+
+# gensky 7 15 12 -c -a 51.7 -o 0 -m 0
+# Solar altitude and azimuth: 59.9 -2.6
+# Ground ambient level: 29.0
+
+void brightfunc skyfunc
+2 skybr skybright.cal
+0
+3 2 3.73e+001 5.80e+000
+
+# my additions for sky and ground
+
+skyfunc glow sky_glow
+0
+0
+4      0.986   0.986   1.205   0
+
+sky_glow source sky
+0
+0
+4      0       0       1       180
+
+skyfunc glow ground_glow
+0
+0
+4      1.6     0.8     .25     0
+
+ground_glow source ground
+0
+0
+4      0       0       -1      180
+
+This sky is supposed to describe a CIE overcast sky (I&#146;m pretty sure 
+this is correct, the glow materials are calculated using l = 0.265*r + 
+0.670*g + 0.065*b so the luminosity is unaffected - digest V2N10)
+
+My questions are as follows :
+
+[1] Skyfunc describes the CIE overcast sky (varying to 1/3 zenith 
+brightness at horizon). But what are the values passed to skyfunc on the 
+last line :
+
+       void brightfunc skyfunc
+       2 skybr skybright.cal
+       0
+**     3 2 3.73e+001 5.80e+000 **
+
+Is this the zenith brightness? (I know this has been asked before but I 
+couldn&#146;t find an answer - V2N5).
+
+[2] The &quot;Ground ambient level&quot; as I understand it is irradiance/PI. So 
+in order to calculate the external ground illuminance level it would be 
+:
+
+       &quot;ground ambient level&quot; * PI * 179
+
+I am confused about this because there seems to be conflicting advice in 
+the digests. Earlier digests suggest as above but the later digests (eg 
+V2N9 p26 of  35) show the calc to be :
+
+       &quot;ground ambient level&quot; / PI * 179
+
+[3] With an overcast sky is the above the only contribution to 
+horizontal ground illuminance (ie used for daylight factor calcs).
+
+[4] Where does the value of PI originate in the calculation. Is it 
+because the projected area of the sky hemisphere is PI, as defined for 
+source in the sky model. A hemisphere would have 2*PI steradians? 
+
+[5] Are then the units for &quot;ground ambient level&quot; the watts/m^2.
+
+[6] As the ground is described as a glow and there is no ground plane 
+(as such) then the ratio of biggest to smallest objects within the model 
+should be unaffected by the ground.
+
+Sorry to bother you with such trivial questions but having looked 
+through all my sources of information I still remain unsure. Any help 
+you can provide in answering these questions would be greatly 
+appreciated.
+
+Actually one final generic daylighting question. As I mentioned earlier 
+I am trying to use RADIANCE for simulating office spaces with light 
+shelves. I think I remember reading somewhere mkillum is not appropriate 
+for daylighting where the daylight is penetrating the space, is this 
+correct as I cannot find where I read this. Also should -av remain at 
+the defaults for an interior space of -av 0.01 0.01 0.01 provided the 
+-ab is set to a sensible level, (say -ab 4).
+
+Thanks alot
+
+Chris Hillsdon
+
+
+______________________________________________________
+Get Your Private, Free Email at http://www.hotmail.com
+
+&gt;From greg@pink  Fri Aug 22 15:21:18 1997
+Date: Fri, 22 Aug 1997 15:18:28 -0700
+From: greg@pink (Gregory W. Larson)
+To: radiance-discuss, chris_hillsdon@hotmail.com, radiance (Radiance Account)
+Subject: Re: ground plane illuminance
+
+&gt; From: &quot;Chris Hillsdon&quot; &lt;chris_hillsdon@hotmail.com&gt;
+&gt; To: radiance
+&gt; Subject: ground plane illuminance
+&gt; Date: Wed, 06 Aug 1997 11:11:05 PDT
+&gt; 
+&gt; My questions are as follows :
+&gt; 
+&gt; [1] Skyfunc describes the CIE overcast sky (varying to 1/3 zenith 
+&gt; brightness at horizon). But what are the values passed to skyfunc on the 
+&gt; last line :
+&gt; 
+&gt;      void brightfunc skyfunc
+&gt;      2 skybr skybright.cal
+&gt;      0
+&gt; **   3 2 3.73e+001 5.80e+000 **
+&gt; 
+&gt; Is this the zenith brightness? (I know this has been asked before but I 
+&gt; couldn&#146;t find an answer - V2N5).
+
+The answer may be found in the library function &quot;skybright.cal&quot; (In the
+src/gen directory in the distribution).  Yes, the second real argument
+is the zenith brightness, in watts/sr/sq.meter.
+
+&gt; 
+&gt; [2] The &quot;Ground ambient level&quot; as I understand it is irradiance/PI. So 
+&gt; in order to calculate the external ground illuminance level it would be:
+&gt; 
+&gt;      &quot;ground ambient level&quot; * PI * 179
+&gt; 
+&gt; I am confused about this because there seems to be conflicting advice in 
+&gt; the digests. Earlier digests suggest as above but the later digests (eg 
+&gt; V2N9 p26 of  35) show the calc to be :
+&gt; 
+&gt;      &quot;ground ambient level&quot; / PI * 179
+
+I am embarrassed to say that this is a mistake in that particular digest.
+The ground ambient level should be multiplied, not divided by PI.  Thanks
+for point it out.  I just changed history by fixing my answer to that
+question....
+
+&gt; 
+&gt; [3] With an overcast sky is the above the only contribution to 
+&gt; horizontal ground illuminance (ie used for daylight factor calcs).
+
+Yes.  In fact, daylight factor is not really defined for sunny skies.
+
+&gt; 
+&gt; [4] Where does the value of PI originate in the calculation. Is it 
+&gt; because the projected area of the sky hemisphere is PI, as defined for 
+&gt; source in the sky model. A hemisphere would have 2*PI steradians? 
+
+A hemisphere has 2*PI steradians, but only PI PROJECTED steradians.  The
+difference is a cosine in the integral.  PI is the correct factor --
+just don't forget to multiply rather than divide.  (Sheesh!)
+
+&gt; 
+&gt; [5] Are then the units for &quot;ground ambient level&quot; the watts/m^2.
+
+Yes.
+
+&gt; 
+&gt; [6] As the ground is described as a glow and there is no ground plane 
+&gt; (as such) then the ratio of biggest to smallest objects within the model 
+&gt; should be unaffected by the ground.
+
+Correct.
+
+&gt; 
+&gt; Sorry to bother you with such trivial questions but having looked 
+&gt; through all my sources of information I still remain unsure. Any help 
+&gt; you can provide in answering these questions would be greatly 
+&gt; appreciated.
+&gt; 
+&gt; Actually one final generic daylighting question. As I mentioned earlier 
+&gt; I am trying to use RADIANCE for simulating office spaces with light 
+&gt; shelves. I think I remember reading somewhere mkillum is not appropriate 
+&gt; for daylighting where the daylight is penetrating the space, is this 
+&gt; correct as I cannot find where I read this. Also should -av remain at 
+&gt; the defaults for an interior space of -av 0.01 0.01 0.01 provided the 
+&gt; -ab is set to a sensible level, (say -ab 4).
+
+I don't know where you may have read this, but it is not true.  Mkillum
+works fine for spaces with penetrating daylight.
+
+Your value for the -av parameter should correspond to the light level
+in the space.  The best trick I've found for setting it is to use
+0.5/exposure_value, where exposure_value is the multiplier needed to
+get a good exposure for displaying the resulting picture.  It is a
+slight chicken-and-egg problem in the sense that the ambient level
+affects the overall image brightness, but if you start with a too-small
+-av setting (and .01 is almost certainly too small unless your windows
+are tiny), then you can use this technique to arrive at a better value.
+
+&gt; 
+&gt; Thanks alot
+&gt; 
+&gt; Chris Hillsdon
+
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+----------------------------------------------------------
+<A NAME="pcond">PCOND PROBLEMS (ERRATA AND PATCH AVAILABLE)</A>
+
+
+&gt;From rjrc2@cus.cam.ac.uk  Tue Aug  5 09:00:26 1997
+Date: Tue, 5 Aug 1997 17:01:38 +0100
+To: radiance@radsite
+From: rjrc2@cam.ac.uk (Raphael Compagnon)
+Subject: pcond man page
+
+Hello,
+
+I just installed the latest version of Radiance and had a close look to the
+new pcond program. I find it very useful and well documented (I also
+downloaded its associated paper). It seems that the man page for pcond
+contains little errors in the EXAMPLES section:
+
+I read:
+
+     To prepare a picture to be sent to a film recorder  destined
+     eventually  for a slide projector with a minimum and maximum
+     screen luminance of 0.2 and 125 candelas/m^2, respectively:
+
+       pcond -b 0.2 -t 125 final.pic &gt; film.pic
+
+     To do the same if the output colors of  the  standard  image
+     &quot;ray/lib/lib/macbeth_spec.pic&quot; have been measured:
+
+       macbethcal -c mbfilm.xyY &gt; film.cal
+       pcond -b 0.2 -t 125 -f film.cal final.pic &gt; film.pic
+
+     To further tweak the exposure to  bring  out  certain  areas
+     indicated  by  dragging  the right mouse button over them in
+     ximage:
+
+       ximage -op -t 75 final.pic | pcond -i .5 -b 0.2 -t 125  -f
+       film.cal final.pic &gt; film.pic
+
+But I realised that the -b and -t options are not supported by the program!
+If I am right, they should be replaced in then above examples by: -u 125 -d
+625
+
+Best regards,
+
+Raphael Compagnon
+
+-------------
+
+&gt;From rjrc2@cus.cam.ac.uk  Tue Aug  5 09:54:04 1997
+Date: Tue, 5 Aug 1997 17:55:13 +0100
+To: radiance@radsite
+From: rjrc2@cam.ac.uk (Raphael Compagnon)
+Subject: pcond on hemispherical picture
+
+Hello again,
+
+I applied pcond -h+ on an hemispherical picture (-vth -vh 180 -vv 180) and
+I observed that the black frame that circles the original picture have been
+mapped to a white colour. In addition, the periphery of the picture appears
+with large square steps. Turning on the various options in turn, I realised
+that both these strange effects appear inside the veiling part of the
+calculation only (pcond -v+). What is going wrong ?
+
+Regards,
+
+R. Compagnon
+
+_____________________________________________________
+Dr. Raphael Compagnon
+The Martin Centre for Architectural and Urban Studies
+University of Cambridge Department of Architecture
+6 Chaucer Road, Cambridge CB2 2EB, England
+
+Tel: +44 1223 331719   Fax: +44 1223 331701
+
+E-Mail: rjrc2@cam.ac.uk
+WWW:    http://www.arct.cam.ac.uk/mc/index.html
+
+----------------
+
+&gt;From greg@pink  Wed Aug 13 11:22:37 1997
+Date: Wed, 13 Aug 1997 11:19:46 -0700
+From: greg@pink (Gregory W. Larson)
+To: rjrc2@cam.ac.uk (Raphael Compagnon)
+Subject: Re:  various
+Cc: radiance
+
+Hello Raphael,
+
+Good to hear from you!  I just returned from Siggraph, and it's taking me a
+while to catch up with e-mails.  I'm happy that you'll still be working with
+Radiance after your return.  I'm glad that your tutorial course went well,
+also.  Any notes you can provide would be very much appreciated.  We are
+trying to assemble the book CD-ROM this month (duplicated on the web site),
+and course notes are a great thing to include, with your permission.
+
+As for &quot;Applications of RADIANCE to Architecture and Lighting Design,&quot;
+this article was never properly published.  It appeared in the 1994
+IES conference proceedings, then again in the course notes from Ian
+Ashdown's 1996 course on Global Illumination in Architecture and Theater,
+but nowhere else.  With some effort, I could put it on our web site, but
+I'm not sure the article has much value, aside from being an excuse to
+show off some nice Radiance images.
+
+Thank you for pointing out the inconsistencies in the pcond(1) man page.
+In fact, I noticed these myself, and corrected them after the 3.1 release.
+The other error with the hemispherical view is a divide-by-zero fault
+I hadn't run across since I hadn't tested this image type.  Thanks for
+bringing this to my attention.  I'll put together a patch, and include
+this with the revised man page.
+
+-Greg
+
++---------------------------------------------------------------------------+
+| PLEASE AVOID THE EVIL REPLY COMMAND, AND ADDRESS YOUR E-MAIL EXPLICITYLY! |
++---------------------------------------------------------------------------+
+| Radiance Discussion list (unmoderated):  radiance-discuss@radsite.lbl.gov |
+|*Radiance Digest mailing list (moderated):        radiance@radsite.lbl.gov |
+| Radiance Modeling list (unmoderated):      radiance-model@radsite.lbl.gov |
+| Requests to subscribe/cancel:            radiance-request@radsite.lbl.gov |
+| Archives available from:             ftp://radsite.lbl.gov/rad/pub/digest |
+| Radiance world-wide web site:            http://radsite.lbl.gov/radiance/ |
++---------------------------------------------------------------------------+
+
+</PRE>
+<HR>
+<P>
+<STRONG>Back to <A HREF="#top">Top of Digest Volume 3, Number 2</A></STRONG><A
+ HREF="#top"></A><BR>
+ <STRONG><FONT SIZE="3">Return to <I><A HREF="../HOME.html">RADIANCE</A></I><A
+ HREF="../HOME.html"> Home Page</A></FONT></STRONG><A
+ HREF="../HOME.html"></A><BR>
+ <STRONG>Return to <I><A HREF="rad_dig_HOME.html">RADIANCE</A></I><A
+ HREF="rad_dig_HOME.html"> Digests Overview</A></STRONG><A
+ HREF="rad_dig_HOME.html"></A></P>
+<HR>
+<H5>
+All trademarks and product names mentioned herein are the property of 
+their registered owners.<BR>
+ All written material is the property of its respective contributor.<BR>
+ Neither the contributors nor their employers are responsible for 
+consequences arising from any use or misuse of this information.<BR>
+ We make no guarantee that any of this information is correct. </H5>
+</BODY>
+</HTML>

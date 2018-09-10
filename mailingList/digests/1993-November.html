@@ -1,0 +1,1367 @@
+<TITLE>
+Radiance Digest, v2n5, Part 1 of 2
+</TITLE>
+<html>
+<a name="top"><h2>RADIANCE Digest Volume 2, Number 5, Part 1</h2></a>
+<hr>
+<pre><body>
+Dear Radiance Users,
+
+It has been nearly a year since I've sent out a Radiance Digest,
+so there's rather a lot of material to sift through here.  As
+usual, I've tried to break things up into somewhat coherent subjects,
+but in the process I've collected e-mails that were originally
+separated by many months.  I hope this doesn't cause any undue
+confusion, and cronology is at least maintained within each section.
+
+A good part of the delay in this edition is the delay in a release
+of Radiance itself.  Since I was discussing in some cases as-yet-
+unreleased features, I didn't want to taunt the greater
+user population with things they couldn't even try.  Now that 2.3
+is out, there's nothing to stop us...
+
+Since there is so much here, I've broken it into two parts to avoid
+the 100K limit of some mailers.
+
+These are the topics covered in this mailing:
+
+	<A HREF="#SKY">SKY SOURCES AND RGB</A>	- Dealing with the sky and what is RGB, anyway?
+	<A HREF="#TRANSLATORS">CAD TRANSLATORS</A>		- How to get to Radiance from CAD systems
+	<A HREF="#WIREFRAME">WIREFRAME</A>		- Generating wireframe renderings w/o CAD
+	<A HREF="#IMAGES">SHARED IMAGES</A>		- Some pictures to share by J. Mardaljevic
+	<A HREF="#SENSITIVITY">SENSITIVITY RUNS</A>	- Ambient (-a*) parameters and accuracy
+	<A HREF="#BRDF">USING BRDF DATA</A>		- How to apply BRDF data in Radiance
+	<A HREF="#IES">IES SOURCES</A>		- The standard IES format and source library
+
+Enjoy!
+-Greg
+
+<A NAME="SKY">===============================================================</A>
+SKY SOURCES AND RGB
+
+From: georg@ise.fhg.de
+Subject: light and glow
+To: GJWard@lbl.gov
+Date: Wed, 6 Jan 93 19:12:24 MEZ
+
+Hi Greg!
+The third mail this day, but there is something, I don't understand:
+glow and light give different results with rtrace ( light is two times
+ the glow). Is this the case in general, or do I have to take care which 
+of both I use ?
+Here is a small test ( the camera looking upwards) :
+
+#glow:
+
+void glow sky_glow
+0
+0
+4  1  1  1 0
+
+sky_glow source sky
+0
+0
+4 0 0 1 180
+
+  gives:
+ 
+oconv test.rad 
+rtrace -x 1 -I -ab 1 
+SOFTWARE= RADIANCE 2.1 official release May 20, 1992
+FORMAT=ascii
+
+3.141593e+00	3.141593e+00	3.141593e+00	
+
+-----------------------------------------------------
+
+#light:
+
+void light sky_glow
+0
+0
+3  1  1  1 
+
+sky_glow source sky
+0
+0
+4 0 0 1 180
+
+    gives:
+
+oconv test.rad 
+rtrace -x 1 -I -ab 1 
+SOFTWARE= RADIANCE 2.1 official release May 20, 1992
+FORMAT=ascii
+
+6.283185e+00	6.283185e+00	6.283185e+00	
+
+Date: Wed, 6 Jan 93 11:40:38 PST
+From: greg (Gregory J. Ward)
+To: georg@ise.fhg.de
+Subject: Re:  light and glow
+
+Dear Georg,
+
+The value for glow is more accurate.  You simply cannot use a light source
+that takes up the whole sky, because it will not be calculated correctly.
+
+In order for the source calculation to work for the sky, it would have to
+subdivide it into many pieces.  Although this is theoretically possible
+and even feasible within Radiance, it is preferable to treat such large
+sources as part of the indirect calculation, since they do not cast
+strong shadows.
+
+I hope this answers your question.
+-Greg
+
+From: mcardle@eol.ists.ca (Steve McArdle)
+Subject: Radiance Package
+To: gjward@lbl.gov
+Date: 	Wed, 4 Aug 1993 12:43:38 -0400
+
+Greg Ward
+
+I'm trying to get specific information regarding the radiance programs.
+I'm in the process of trying to simulate data for a forest scene in
+clear sky's and under cloud to determine the apparent reflectance of a
+given area. However, because of limited documentation on not sure if the
+program is capable of performing these tasks. I was wondering if you had
+technical information on formulas, specific wavelengths used for RGB, or
+any assumptions. If you do not maybe you could direct me to where I
+might find this information out. The work I'm doing is related to part
+of M Sc. thesis work studing effects on reflectance under varying
+illumination conditions any help would be much appreciated.
+
+Thank
+
+Steven McArdle
+York University
+Toronto, Ont Canada 
+mcardle@eol.ists.ca
+-- 
+
+Date: Wed, 4 Aug 93 10:05:32 PDT
+From: greg (Gregory J. Ward)
+To: mcardle@eol.ists.ca
+Subject: Re:  Radiance Package
+
+Hi Steven,
+
+There is a document in the Radiance distribution called "materials.1" in the
+ray/doc directory that gives the formulas used for lighting calculations.
+I suggest you look there first.  I make no assumptions about what exactly
+is meant by the red, green and blue components, except that these are the
+components given to the display device.  For the purposes of calculation,
+you may assume that they correspond to total energy (and are equal) or
+represent parts of the infrared spectrum.  Radiance really doesn't care
+as it contains no spectrum-specific computations.
+
+-Greg
+
+From: mcardle@eol.ists.ca (Steve McArdle)
+Subject: Radiance help
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: 	Wed, 25 Aug 1993 20:28:03 -0400
+
+Hi Greg
+
+I am running into a slight problem using gensky command and I don't
+really have anybody to turn to for help. We here have version 2.1 which
+has been ported to Hp Apollo 9000 series 700, I have some documentation
+but the information describing the features are limited. I need your
+help to verfy that I'm on the right track and if I understand what's going on.
+
+To refresh, I am creating a simple forest scene of cone shape trees for
+clear sky and a cloudy sky. I am using gensky commmand to describe the
+distribution of the light but I am not sure if I am using it right. Here
+is the file
+
+!gensky 7 23 8 +s -a 45.5 -o 79.8 -m 75
+
+skyfunc light sky
+0 
+0
+3 305 331 291
+
+sky source skylight
+0
+0
+3 0 0 1000 180
+
+this is the file I used to create a clear sunny day on july 23 8 am at that
+lat/long with radiance value given by skyfunc. I have separate files for
+the ground and the trees. Now my questions to you are;
+
+[1] what does skyfunc describe is it the radiance value of the light
+source or is it suppose to define the sky radiance.
+
+[2]also is the radiance value at the top of the atmosphere or at the
+ground or where the source is defined (z=1000)
+
+[3] does gensky work out the radiance value for that position or just the
+distribution pattern and I am  suppose to input the radiance value
+
+[4] is the source describing the surface of the sky and does it matter
+if set the z component to 1 or 1000
+
+[5] should I be using light or glow?
+
+I used the same command to create a cloudy sky except instead of +s I
+used -c for CIE distribution. How ever I got some pretty high radiance
+values.
+
+[6] For the cloudy sky I take it that I am suppose to adjust the light source
+for radiance values for light coming beneath the cloud.
+
+[7] how do I define the suface of cloud
+
+some other questions
+
+[8] I asume that the RGB wavelengths are the CIE wavelengths
+
+[9] in using rview and rpict there is an option for ambient light -av.
+Is this option suppose to represent the sky radiance or the ambient
+light between the objects i.e cones
+
+[10] this is good one what would be the number of indirect light
+calculation for a real seen -ab 10 ,20 ,30 ?
+
+I guess you could say I'm a little confused and I would gladly
+appreciate any help you could give me.
+ 
+Steve
+-- 
+
+Date: Thu, 26 Aug 93 17:46:06 PDT
+From: greg (Gregory J. Ward)
+To: mcardle@eol.ists.ca
+Subject: Re:  Radiance help
+
+Hi Steve,
+
+The gensky call you gave as an example was fine, but what followed it was
+a little bit off.  You had:
+
+	skyfunc light sky
+	0 
+	0
+	3 305 331 291
+
+	sky source skylight
+	0
+	0
+	3 0 0 1000 180
+
+A more sensible description is:
+
+	skyfunc glow sky
+	0
+	0
+	4 .9 .9 1.2 0
+
+	sky source skylight
+	0
+	0
+	3 0 0 1 180
+
+A sky source should be of type glow rather than light (question 5), and
+the RGB values are actually modifying the sky radiance, as determined
+by the "skyfunc" description produced by gensky (question 3).  Gensky
+with the +s option (default) produces both a description of the sun and
+the sky radiance distribution, although the latter is not actually applied
+to anything in gensky (question 1).  To specify a zenith radiance other
+than the default determined by gensky from solar altitude, sky type and
+atmospheric turbidity, use the -b option of gensky (question 2).  The
+third real argument in the source descripiton is merely the z component of
+the direction vector, and has nothing to do with radiance values.  Since
+the direction vector gets normalized, it actually doesn't matter what positive
+value you give for z if x and y are zero (question 4).
+
+The CIE cloudy sky is actually full overcast, ie. there are not clouds visible
+and no "under cloud" radiance changes (question 6).  It is simply a smoothly
+varying function that peaks at the zenith and drops steadily to one third this
+value at the horizon.  There are no clouds and no cloud surfaces in a Radiance
+sky.  If you wish to add your own pattern to the skyfunc distribution given
+by gensky, you may use and of the brightfunc, colorfunc, brightdata, and
+colordata primitives to create a variation in radiance as a function of
+sky direction (question 7).
+
+Question 8:
+The RGB units are typical computer graphics monitor phosphors, not CIE XYZ
+If you want to convert from XYZ to RGB or vice versa, you may use the
+routines in src/common/spec_rgb.c.
+
+Question 9:
+For exterior scenes, use the value suggested by gensky for the -av parameter
+of rpict or rview.  For example, "gensky 7 23 8 +s -a 45.5 -o 79.8 -m 75"
+produces the following file:
+
+	# gensky 7 23 8 +s -a 45.5 -o 79.8 -m 75
+	# Solar altitude and azimuth: 30.687400 -88.286823
+	# Ground ambient level: 15.379269
+
+	void light solar
+	0
+	0
+	3 6.19e+06 6.19e+06 6.19e+06
+
+	solar source sun
+	0
+	0
+	4 0.859580 -0.025710 0.510354 0.5
+
+	void brightfunc skyfunc
+	2 skybright skybright.cal
+	0
+	7 -1 7.64e+00 1.52e+01 4.04e-01 0.859580 -0.025710 0.510354
+
+The suggested ambient level is 15.379heyaretherereallythismanydigits, so
+you might run rview with:
+
+	rview -av 15.4 15.4 15.4 ... octree
+
+Question 10:
+I don't think I've ever needed a value for -ab above 4, and for exterior
+scenes, -ab 1 is perfectly adequate.
+
+What documenation do you have, by the way?
+
+-Greg
+
+From: apian@ise.fhg.de
+Subject: RGB nm values ?
+To: gjward@lbl.gov (Greg Ward)
+Date: Fri, 12 Nov 1993 15:36:18 +0100 (MEZ)
+
+Hi,
+
+Have I overlooked something or are there any hints where (in terms of
+nanometer) the 3 channels (RGB) should be ?
+The raytracing itself is probably independent, how about gensky, ximage,
+conversion watt->luminance ?
+
+(probably a very naive beginner's question) :-)
+Peter
+-- 
+
+----------------------------------------------------------------------
+ Peter Apian-Bennewitz				apian@ise.fhg.de
+ Fraunhofer Institute for Solar Energy Systems	   Tel +49-761-4588-123
+ (Germany) D-79100 Freiburg, Oltmannsstrasse 5,    Fax +49-761-4588-302
+----------------------------------------------------------------------
+
+Date: Fri, 12 Nov 93 08:00:14 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  RGB nm values ?
+
+Hi Peter,
+
+This is not really a naive question, and I'm afraid I don't have a very
+good answer for you.  The RGB values are defined in terms of average
+chromaticity coordinates of a computer monitor, and I don't have any
+corresponding spectral curves.  The conversion between watts and lumens
+is simply a constant, 179 lumens/watt.  This constant was derived by
+integrating white light over the visible spectrum, but if you try to
+reproduce this result yourself, you're likely to get a slightly different
+answer because it depends keenly on what is considered visible (ie. the
+limits of integration).
+
+In the end, the constant is not terribly important because it gets applied
+at the beginning to get radiance from luminance, then inversly at the end
+to get lumiance from radiance.  As long as the same value is used, the
+result is independent of the constant chosen.
+
+This is the short answer.  The long answer would require more space and
+more thought on my part!
+
+-Greg
+
+<A NAME="TRANSLATORS">==============================================================</A>
+CAD TRANSLATORS
+
+Date: Mon, 11 Jan 93 10:08:44 PST
+From: greg (Gregory J. Ward)
+To: raydist, raylocal
+Subject: Radiance CAD translators
+
+Mark Wright of the Speech, Vision and Robotics Group at Cambridge writes:
+
+Hello,
+      Do you know a path from the IGES or VDA-FS CAD data 
+formats into the radiance raytrace?
+
+I want to construct a number of fairly complex 3D models
+from HP's ME30 3D CAD system to rayshade or Radiance ray tracers.
+The ME30 package outputs IGES or VDA-FS. 
+I know packages that will take nff, off files and output to the
+the raytracer. I am looking for a public domain/shareware filter
+or package that has this ability built in.
+
+--------------------
+If you know of any such translator, or have written a translator yourself
+from any popular CAD format to Radiance, I think we'd all like to know.
+Please send mail to me (GJWard@lbl.gov) if you have a translator that you
+would be willing to make available for free or for a price, with or without
+support, to a larger audience.
+
+Thanks!
+-Greg
+
+Date: 11 Jan 1993 16:13:21 -0800
+From: "Matthews, Kevin" <matthews@aaa.uoregon.edu>
+Subject: RE: Radiance CAD translators
+To: "Gregory J. Ward" <greg@hobbes.lbl.gov>
+
+Greg,
+
+Regarding your inquiry about CAD translators to Radiance, our software
+DesignWorkshop(tm) will be capable of supporting Architrion text and DXF to
+Radiance, with WYSIWYG view specification transfer from the DesignWorkshop
+dynamic viewing environment (along with the geometry file we export canned
+shell scripts for rview and rpict with default parameters-actually you might
+like to comment on the params we've come up with so far).
+
+DesignWorkshop definately falls into the "for a price" and "supported"
+categories, although our academic price is $145 per single user license.  At
+the academic price DW might be cheap enough for someone to get it just to use
+for translation, although it would be a little funny, and it mostly duplicates
+capabilities you already support.  DW makes the translation more interactive
+(as well as being a great modeler in its own right).
+
+Information on DesignWorkshop follows in case you or your correspondents are
+interested.  Additional info on request...
+
+Regards,
+
+Kevin
+
+______________________________________________________________________________
+
+DesignWorkshop(tm)  
+... three-dimensional modeling for conceptual design and design development
+
+DesignWorkshop(tm) brings the simplicity of the classic Macintosh drawing
+interface for the first time to architectural design modeling and spatial
+visualization.  Solid objects are created in live perspective or orthographic
+views by simple three-dimensional dragging with the mouse, and moving,
+resizing, and extruding are all accomplished in the normal selection mode
+without any special tools.  It's the fastest legal way to model your building!
+
+Modeling
+
+o fully three-dimensional direct-manipulation Mac-style interface
+o graphically create and reshape cuboids, cylindrical columns, extruded arches
+and mouldings, contour site models, etc.
+o click-and-drag in any view to create and resize openings in solid-object
+walls
+o sophisticated internal technology- feature-based solid-modeling with
+intelligent polygonal BREP objects and floating-point coordinate accuracy
+o 3D object snaps, paste PICT image onto face of 3D object, etc.
+
+Viewing
+
+o drag with the "eye" and "look" tools for fully dynamic design-oriented view
+adjustment
+o two-dimensional and three-dimensional zoom
+o plan, section, elevation, perspective, and axonometric views, all fully
+editable
+o shaded sections without cutting model, poched automatically 
+o open multiple documents with multiple windows for each document
+
+Rendering
+
+o wireframe, hidden-line, flat shaded, and shadow-cast in 32-bit color
+o sun studies rendered in parallel and recorded directly as QuickTime movies
+o walkthroughs by view list with variable interpolation, saved as QuickTime
+Interchange
+o full clipboard support-copy and paste from 3D to 3D, 3D to 2D, or 2D to 3D
+o import and export Claris CAD, PICT, Architrion, DXF, Radiance formats
+o publish views from 3D to 2D for drafting, images for presentation, data for
+analysis
+
+Output
+
+o print current window at any time with any standard Mac QuickDraw or
+PostScript printer
+o save current window at any time as an object or bit-map PICT file.
+Objects and Data
+o read and edit object dimensions, parameters, materials in Object Info windoid
+o create live data links to external applications
+
+General
+
+o built-in designer's markup pencil and eraser-markups print and save with
+image
+o straightforward site modeling and contour editing
+
+Available
+
+o First release shipping 2-93.  List price $895.  (Quantity and academic
+pricing available).
+o Money-back satisfaction guarantee, 90 days
+o Special Pre-Release Price, $295, available through 1-31-93  
+o A pre-release purchase gets you software now, and includes the full release
+version as soon as it's available.
+
+For more information on DesignWorkshop(tm), or to order, contact Artifice:
+
+Artifice, Inc.  P.O. Box 1588, Eugene, OR 97440.  503-345-7421 voice,
+503-346-3626 fax, AppleLink D3624, Internet dmatthew@oregon.uoregon.edu
+
+Date: Mon, 11 Jan 93 21:46:01 PST
+From: chas (Charles Ehrlich)
+To: greg
+Subject: Re:  Radiance CAD translators
+
+Greg,
+
+Just about any 3D CAD format can be used by Radiance...in one form or
+another.  My favorite way to translate data from out-of-the-ordinary 
+sources is to use the Macintosh software called CADMover by Kandu
+software.  An IGES file, for example, can be translated into a DXF
+file, and then the DXF file translated into Radiance with DXFCVT.  I
+have had good success with this process.  I reccommend that Radiance
+users separate their 3D geometry files by material type thereby 
+facilitating the process of defining surface material properties.
+
+Any questions, call 415 882-4497.  Leave a message telling me when
+and where I can call you, collect.
+
+Chas
+
+Date: Wed, 13 Jan 93 14:32:28 +1100
+From: angus@cgl.citri.edu.au
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re:  Radiance CAD translators
+
+to the best of my knowledge, there are no public-domain implementations
+of IGES readers, probably because the standard is the size of a telephone-
+book (it was written by committee - need i say more).
+
+i wrote the beginnings of an IGES reader a couple of years ago for my boss,
+but the project was shelved.
+
+_any_ implementations of IGES readers are likely to be incomplete due to the
+number of different primitives & cases in the standard.
+
+i have recently seen a number of postings on the net looking for public-
+domain IGES readers, and they have all resulted in failure.
+
+.angus.
+angus@cgl.citri.edu.au
+
+Date: Sun, 22 Aug 93 16:34:52 EDT
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: gjward@lbl.gov
+Subject: radiance
+
+greg - how's it going?  you can add to your list of appearances a slide in
+the 1992 SIGGRAPH Educator's Slide Set -- we did use the conference room
+slide and image pair.
+
+what do you use for modeling/scene building?  we've found the steps needed
+to do even simple texture mapping real difficult.  hate to say this, but
+it's just not very intuitive.  have others commented on this?  is there
+any relief/tips/etc?  has there been any further development of RADIANCE
+since v2r1 in may 1992?
+
+thanks!
+
+steve spencer
+
+Date: Sun, 22 Aug 93 19:01:26 PDT
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  radiance
+
+Hi Steve,
+
+I still rely heavily on vi for scene building myself, though others working
+closely with me use Vision3D or Architrion on the Mac, or AutoCAD.  Vision3D
+is by Paul Bourke and has a Radiance file output option.  The software is
+available in the pub/mac directory on hobbes.lbl.gov.  The text output format
+of Architrion is translated by arch2rad, but unfortunately, the text format
+has been abandoned in favor of DXF in more recent releases of the software.
+Someone in Zurich has written a highly-touted translator that runs within
+AutoCAD, and is available in the pub/translators directory on hobbes.  I've
+heard many good things about this translator from folks who've used it, but
+I haven't had much chance to apply it myself.  I'm not much of a CAD user,
+I'm afraid.
+
+I agree that adding textures and patterns to a Radiance description is far
+from intuitive.  In an effort to be general, I made things a bit too cryptic.
+On the other hand, the input language was not really meant to be the interface
+to average users.  It has ended up that way, though, due largely to a lack
+of funding for a front end.  It wouldn't be so bad if I'd at least managed
+to document stuff, but I haven't even gotten enough money for that.  (As
+an alternative to the Department of Energy, I've been trying to interest a
+publisher in doing a Radiance book.  So far, I haven't had much luck.)  I'm
+amazed that despite all the obstacles, there are still some users who manage
+to figure out how to do most things with little or no help from me.
+
+If you give me an example picture or something you want to apply and the
+surface you want it applied to, I'd be happy to whip it out for you.
+
+Regarding new Radiance developments, I haven't just been sitting on my
+thumbs over here.  In fact, I've been ready to go with release 2.2 for
+over six months, but the DOE won't let me release it.  They're in the
+process of deciding how to "market" Radiance, and are concerned about
+the large public distribution we've had to date.  Version 2.2 will
+have two significant and many minor improvements over 2.1.  The first
+important change is the addition of techniques for parallel and network
+distributed rendering.  The second change is the addition of a new
+executive program for running oconv, rpict, pfilt and rview that sets
+options more intelligently based on user input of qualitative information.
+
+Hopefully, the DOE will come to their senses in the next few months and
+we'll make a new release available.  In the long run, I'm looking for
+some way to completely redesign the Radiance input format to clear up
+a lot of the confusing and irrelevant aspects of the current format
+in favor of something more general and "programmable".  Still, I don't
+expect vi to be the input modeler of choice for most people...
+
+-Greg
+
+Date: Mon, 23 Aug 93 09:48:43 EDT
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject:  radiance
+
+Thanks for the lengthy and speedy reply, Greg.  
+
+Sorry to hear that DOE is wondering about what to do about all the happy
+RADIANCE users out there.  Can we write letters to someone?
+
+We don't have AutoCAD here, unfortunately, so can't use that translator.
+I do recall, though, you touting it as a really cool filter.
+
+> I agree that adding textures and patterns to a Radiance description is far
+> from intuitive.  In an effort to be general, I made things a bit too cryptic.
+
+Ahhh, the 'general-purpose-solution-makes-no-one-really-happy' thing. 
+As you may recall, we use our own scene-description program, and send the
+output of it through a program "ani2rad" which generates a ".rad" file.
+I'm probably going to rewrite that stuff, though, since we're using a new
+scene-description (keyframe animation, actually) program here these days, 
+and having *that* program write a ".rad" file directly.  There is a bit of
+"vi" or "emacs" being used as a front end to Radiance, though, to massage
+the ".rad" file before Radiance uses it, for two reasons: (a) lining up the
+texture maps, and (b) adding in Radiance features that my program doesn't
+handle (like spotlights, though that will change in this new program).
+
+I'm sure you'll let us all know when 2.2 is allowed to be released.  Let 
+me know if there's letter-writing that could help the situation.  Agreed,
+a new interface would be wonderful.  Have you considered having Radiance
+read RIB (Pixar's RenderMan) files as input?
+
+Stephen N. Spencer        Graphics Research Specialist               ,__o
+spencer@cgrg.ohio-state.edu       spencer@siggraph.org      ----   _-\_<, 
+(614) 292-3416                                             ----   (*)/'(*)
+"and the things we need the most to say are the things we never mention" - E.S.
+
+Date: Mon, 23 Aug 93 08:44:37 PDT
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  radiance
+
+Hi Steve,
+
+Yes, I have had a look at RenderMan.  It's a very advanced interface when
+it comes to geometry, and the shading offers many advanced features, but
+it's completely non-physical.  In fact, it is very difficult to produce
+a physically correct model with RenderMan, as the parameters used in its
+reflectance model have no physical meaning.  RIB is just a sequence of
+specialized subroutine calls, so being fully RIB compliant means adopting
+the RenderMan renderer (or at least their methods).
+
+-Greg
+
+Date: Mon, 23 Aug 93 11:49:47 EDT
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject:  radiance
+
+Agreed -- RenderMan's not physically based at all.  Still spits out neat 
+pictures, though, if that's what you want.  I was suggesting it more for the 
+scene description format, but if it's not able to describe a scene sufficiently
+then that's not an option.
+
+steve
+
+Date: Mon, 23 Aug 93 08:56:10 PDT
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  radiance
+
+The scene geometry is very well-defined in RenderMan.  Better, in fact, than
+can be understood by Radiance.  (More higher order primitives, etc.)  Others
+have used the RIB exporters of ArchiCAD, for example, to produce Radiance
+input.  Writing a completely general RIB translator is much more difficult,
+however.
+
+Date: Sat, 30 Oct 93 18:01:19 GMT
+From: jon@esru.strathclyde.ac.uk (jon)
+To: greg <greg@hobbes.lbl.gov>, mike.donn@vuw.ac.nz
+Subject: availibility of esp-radiance translator
+
+
+                  ESP-r - Radiance Desktop
+
+
+                          Jon Hand
+
+
+
+     A recent enhancement of the ESP-r system has been the
+creation of a link to the Radiance lighting simulation pack-
+age authored by Greg Ward of LBL.  This takes the form of a
+program called "rad" which is able to take an ESP-r problem
+configuration file and to generate not only the sky, outside
+and room descriptive files used by Radiance but to act as a
+desk-top which drives many of the Radiance executables.
+
+     At present rad picks up the surface properties (reflec-
+tion is greyscale at present) from the ESP-r definition and
+creates colours for each surface while building the files.
+It executes several of the radiance executables to build the
+sky definition, octrees etc.
+
+     Only in the case of not quite planer surfaces (radiance
+is much tighter on this than ESP-r) have we had to resort to
+editing the descriptive files.  Currently we have generated
+external views of a number of our thermal simulation prob-
+lems and getting to the point of starting up rpict usually
+requires about five minutes.  Of course if non-grey images
+or surface textures are required there would be additional
+user intervention required.
+
+     On the todo list are:
+
+1)   picking up glazing transmission characteristics from
+     our optical database (a general default transmission is
+     used currently),
+
+2)   facilities related to describing lighting fixtures,
+     furniture and the like (as this sort of clutter does
+     not often get described for thermal simulations)
+
+sorting out interior views that have adjacent rooms which
+see each other (case of picking up more topology information
+from esp-r).
+
+     In order that others might test and comment on the
+facilities I have placed on the Strathclyde ftp server the
+rad executable (Sun4 requires X11R5) and two radiance file
+sets and a few pic files. If you are interested please email
+esru@strathclyde.ac.uk for instructions on picking up the
+files.
+
+Regards,
+
+Jon Hand
+
+
+                      October 30, 1993
+
+
+Date: Sun, 31 Oct 93 08:28:07 PST
+From: greg (Gregory J. Ward)
+To: jon@esru.strathclyde.ac.uk
+Subject: Re:  availibility of esp-radiance translator
+
+Great, Jon!
+
+Now, I just have to get you to change the name!  The next release of Radiance,
+due in a week or two, has a new executive program called "rad" also.  I expect
+that you will want to use this at least a little in your own interface, as
+it has some built-in intelligence for setting rendering parameters, using
+ambient files, recovering aborted images, etc.
+
+-Greg
+
+Date: Sun, 31 Oct 93 16:37:16 GMT
+From: jon@esru.strathclyde.ac.uk (jon)
+To: greg <greg@hobbes.lbl.gov>
+Subject: rename and new version of radiance
+
+Greg,
+
+I would be happy to change the name - perhaps
+e2r or something. Keep me posted on when
+the new version comes out and how to access
+it.
+
+Jon Hand
+
+<A NAME="WIREFRAME">==================================================================</A>
+WIREFRAME
+
+Date: Thu, 28 Jan 93 16:27:00 NDT
+From: pdbourke@ccu1.aukuni.ac.nz (Paul David Bourke)
+Subject: wireframe from Radiance
+To: GJWard@lbl.gov (GJWard@Lbl.GOV)
+
+I've uploaded a little something which may be of interest to some people,
+who knows. The following is the README file in the tar archive wireframe.tar
+located in the xfer directory. You can decide where it should go if anywhere.
+
+
+Creating wireframe hiddenline images with Radiance
+
+One problem we have encountered is that if we create a model "by hand"
+with Radiance (as opposed to using a 3D modelling package and then a
+translator) then we are often disappointed that there is no way of
+creating a wireframe hiddenline version, plans, elevations, perspectives etc.
+
+After a little playing I have found a way of doing this, the procedure is
+explained below.
+
+1) xform -e the model so that you have a file consisting only of
+   Radiance primitives.
+
+2) Run the short (and messy) program supplied with this archive. It
+   creates a new Radiance file where each primitive has a separate
+   colour (color for the US) and there are no light sources, textures, etc.
+
+3) Render the model as usual with typically high values of ambient light,
+   0.5 say. The image should also be rendered to a large size bitmap. This
+   will result in an image with flat shading on each primitive, and each
+   one will be a different colour. In other words there is a transition
+   or edge between each primitive.
+
+4) Run some edge detection over the resulting image. We use PhotoShops
+   "find edges"
+
+5) Convert to grey scale, possibly invert and adjust the levels of the
+   image (depends on the edge detection used) and then when a suitably
+   high contrast image is obtained convert to a black and white bitmap.
+
+I have enclosed
+wirerad.c    source to colour primitives
+bill.rad     example scene
+wire.rad     output of bill.rad after colourization
+wire.tif     run this for image generation
+wire.tif     example wireframe image from above example
+
+Oh well, it was fun and someone else may find it useful.
+------------------------------------------------------------------------------
+Paul D. Bourke                      School of Architecture, Property, Planning
+pdbourke@ccu1.auckland.ac.nz        The University of Auckland
+                                    Private Bag 92019
+Ph:  +64 -9 373 7999 x7367          Auckland
+Fax: +64 -9 373 7410                New Zealand
+
+<A NAME="IMAGES">===============================================================</A>
+SHARED IMAGES
+
+Date: Wed, 10 Feb 93 16:29:31 -0800
+From: greg@pink.lbl.gov (Gregory J. Ward)
+To: greg@hobbes
+Subject: New images for archive
+
+          ===========================================
+          =                                         =
+          =    Images Created by the ECADAP Group,  =
+          =       De Montfort University, UK,       =
+          =     Using the RADIANCE Synthetic        =
+          =            Imaging Software.            =
+          =                                         =
+          ===========================================
+
+
+
+The Scenes
+----------
+
+
+	Visualisations of a low-energy urban
+	office scheme (following a detailed
+	daylighting analysis)
+FOGGO_DOWN.pic	:	Outside view down
+FOGGO_LIFT.pic	:	View to lifts
+FOGGO_NITE.pic	:	Nightime view, using 'light' (main) and 'glow' (offices)
+FOGGO_POOL.pic	:	"Fisheye" view up to lifts from just below water surface
+FOGGO_UP1.pic	:	Main view of atrium
+FOGGO_UP2.pic	:	Detail of main view
+
+	Design for daylit art gallery - rooflight design
+	with shading devices
+GALLERY.pic 	:	View to paintings
+GALLERY_LUX.pic	:	Illuminance map of view
+
+	Hi-tech atrium building
+ROPE_ATRIUM.pic	:	Main view of atrium
+ROPE_OFFICE.pic	:	Office adjacent to atrium
+
+	Scene loosely modelled on Vancoover Law Courts atrium
+VANC_DAY.pic	:	Sunny day
+VANC_NITE.pic	:	Nightime with lights
+
+
+Images are copyright ECADAP, De Montfort University, UK.  They must not be
+used for any publication etc. without prior authorisation.
+
+No CAD modeller was used for any of the scenes.
+
+J. Mardaljevic greatfully acknowledges the excellent support provided
+by Greg Ward in helping to understand RADIANCE and to use it to the best effect.
+
+Address any queries etc. to John Mardaljevic.
+
+---------------------------------------------------------------------
+
+Environmental Computer Aided Design And Performance - ECADAP
+
+---------------------------------------------------------------------
+ John Mardaljevic    ECADAP Group        E-mail(int):  edu@dmu.ac.uk
+ School of the Built Environment         E-mail (UK):  edu@uk.ac.dmu
+ De Montfort University                       
+ The Gateway                                   Tel: +44-533-577417
+ Leicester   LE1 9BH   U.K.                    Fax: +44-533-577440 
+---------------------------------------------------------------------
+
+<A NAME="SENSITIVITY">==========================================================</A>
+SENSITIVITY RUNS
+
+Date: Wed, 17 Feb 1993 08:50:59 -0800
+From: "(Raphael Compagnon)" <compag@lesosun2.epfl.ch>
+To: greg@hobbes.lbl.gov
+Subject: Sensitivity analysis
+
+Hello Greg !
+
+I did some sensitivity analysis on the ambiant calculation parameters.
+Here are some first results :
+
+The goal of this sensitivity analysis is to give some help
+how good intereflection calculation can be performed by Radiance
+without spending an enormous CPU time. 
+
+The idea is to perform many simulations of the same scene with
+different values for the parameters controlling the ambiant
+calculation. Then all resulting pictures are compared to a
+"reference picture". Then the effect of each parameters can be
+estimated.
+
+The scene that has been used is a closed room with a small window
+in the center of the ceiling. (it is exactly the same scene proposed
+by H. Rushmeyer that made some inter-program comparison last december)
+The reference picture is the final picture received from H. Rushmeyer:
+it is in fact a mean picture calculated from results of at least 3 different
+programs. The good accordance between the results of those 3 programs
+insure that the "mean picture" is a good estimate of the "reality".
+
+Each picture that has been computed during this study has been compared
+to the refernece picture by calculating its root mean square difference.
+
+RMS = sqrt( Sum_on_all_pixels( (Picture_pixel(i) - Ref_pixel(i))^2 )/Npixels )
+
+RMS is then a measure of the accuracy of the calculated picture compared
+to the reference picture.
+
+The parameters that have been tested are the following (with their minimal
+and maximal values):
+
+parameter	Level -		Level +
+-aa		0.2		0.1	
+-ar		32		64
+-ad		256		512
+-as		128		256
+-ab		1		2
+-av		0.0169		0
+
+All combinations of the two levels (-;+) of these six parameters have
+been computed using a factorial scheme 2^6 resulting in 64 simulations.
+
+>From the results of these simulations the following conclusions can be
+stated:
+
+The far most sensitive parameter affecting the accuracy
+is the ambiant bounce number (-ab) 
+The secondary most affecting parameters is the -av values.
+All the others parameters don't affect significantly the accuracy !
+
+The CPU time needed for computing the picture is proportional to the
+number of rays traced for each simulation. This number of rays is
+very sensitive to the value of the -ab and -aa parameters and is
+also sensitive to the value of the -ad parameter. Those sensitive
+parameters show also strong interactions between them: that means
+that setting two of those parameters at their upper level will
+increase the CPU time far more than just setting on of this
+parameter to its upper level.
+The three other parameters (-ar -as and -av) don't influence strongly the number
+of traced rays.
+
+Considering this we can see that good results can be archieved
+by increasing -ab from 1 to 2 but by fixing -aa and -ad to their lower
+levels so that the cpu time don't increase to much. A good estimate of
+the ambiant value -av is also something that will provide accuracy without
+increasing the cpu time but this estimate can not easily be found...
+
+Those conclusions are valid for this specific scene and for parameters
+lying in the same lower and upper levels that have been used for this
+sensitivity analysis !
+I must still insure that the conclusions I explained here are still valid
+for other scenes...
+
+I hope this first trial will help to find out some kind of "rules"
+to define best values for the ambiant parameters!
+
+Tell me if you have a better idea to compare the accuracy of one picture against
+a reference picture.
+
+Bye !
+Raphael
+ 
+Date: Wed, 17 Feb 93 15:46:55 PST
+From: greg (Gregory J. Ward)
+To: compag@lesosun2.epfl.ch
+Subject: Re:  Sensitivity analysis
+
+Hi Raphael,
+
+Your sensitivity analysis is interesting.  I will publish them in the
+Radiance user's digest, with your permission.  Unfortunately, I have
+some doubts that the results will extend to other environments.  I
+have found the setting of these parameters to be something of an art,
+and the lower values certainly do not work in all cases.  It would
+be very interesting, and very difficult, to determine just when they
+were needed.  I am thinking that there should be an "oracle" program
+that could examine the input files and the octree and so on and make
+a recommendation for viewpoints, parameter settings, etc.
+
+-Greg
+
+[This was the first germ of the idea for "rad"]
+
+<A NAME="BRDF">================================================================</A>
+USING BRDF DATA
+
+From: sick@ise.fhg.de
+Subject: Re: Question concerning BRTDfunc's
+To: greg@hobbes.lbl.gov (gregory ward)
+Date: Fri, 19 Feb 93 8:30:55 MEZ
+
+Hi Greg,
+thanks for your examples - they help. But as you assumed I have some questions
+still. I believe I could most easily work with the data, eg transdata
+material types. I do not see, however, so far the relationship between
+the datafile and the functions eg in your reflector example. In order to
+understand, it would be probably sufficient for me to know the meaning
+of the data in the sae_refl.dat file. I could then figure out the rest.
+
+How can I relate to the direction of the incident light? There is no pre-
+defined vector in rayinit.cal, is there? I read x,y,z in some places, but
+they seem to be general variables.
+
+What exactly are coordinate inices and coordinate index functions?
+
+I hope I do not take too much of your time. As feedback for you: There are more
+and more people working with RADIANCE here in teh department. And the more
+we find out about it and its proper use the better. I was just recently
+invited to give a talk and paper (for publication in a little book) on
+daylighting simulations. Ans as you can guess: RADIANCE and examples calculated
+using it will make up the major part of the talk. So there is spreading of
+the information.
+
+Best regards,
+		Fred
+----------------------------------------------------------------------------
+Friedrich Sick   MAIL : Fraunhofer Institute for Solar Energy Systems
+                        Oltmannsstr. 22
+                        D 7800 Freiburg, West Germany
+                 PHONE: +49 (761) 4014 133    FAX: +49 (761) 4014 132
+                 EMAIL: sick@ise.fhg.de
+----------------------------------------------------------------------------
+*** NOTE:               NEW FAX NUMBER: +49 (761) 4014 132               ***
+----------------------------------------------------------------------------
+
+Date: Fri, 19 Feb 93 09:06:12 PST
+From: greg (Gregory J. Ward)
+To: sick@ise.fhg.de
+Subject: Re: Question concerning BRTDfunc's
+
+Hi Fred,
+
+OK, working just with the reflector example, we defined sae_red thusly:
+
+void metdata sae_red
+5 sae_refl sae_refl.dat reflector.cal sae_theta sae_phi
+0
+5 1 .01 .01 .9 .00258
+
+The first string argument above is a function that modifies the data value
+in the file (correcting for the projected area of the object in this case).
+The fourth and fifth string arguments are functions that for a given
+(normalized) source ray direction, compute WHICH VALUES to look up in the
+data file.  This is a bit of a peculiar example, because we happen to have
+data that gives reflectance as a function of the angle to the surface normal
+(in degrees) and the angle between the reflected ray direction and the
+source incident direction.  Observe the definitions for these functions
+given in reflector.cal:
+
+                                { entrance angle (source to normal) }
+sae_theta(x,y,z) = acos(x*Nx+y*Ny+z*Nz)*180/PI;
+                                { observation angle (view to source) }
+sae_phi(x,y,z) = acos(-(x*Dx+y*Dy+z*Dz))*180/PI;
+
+Again, the x,y,z parameters to these functions, as supplied by the Radiance
+renderer, are the normalized source ray direction.  In sae_theta, this
+vector is used in a dot-product against the surface normal (Nx,Ny,Nz) to
+compute the polar angle.  In sae_phi, a dot product with the incident
+ray direction (Dx,Dy,Dz) (directed always towards the surface) to compute
+the "observation angle" (ie. the angle between source ray and incident ray).
+
+These two angles are then used in order to lookup values in the following
+data file (sae_refl.dat):
+
+2
+0 20 3
+.2 1.5 2
+
+1.67 .026
+1.12 .019
+.558 .011
+
+The first number (2) is the dimensionality of the data.  The second line
+gives the beginning and ending coordinate index of the data's first dimension
+and the number of points in that dimension, 0 to 20 degrees with 3 points
+(ie. 0, 10 and 20 degree points).  The second line gives the same information
+for the second dimension (ie. .2 and 1.5 degree points).  The total number
+of points must equal the product of each dimensions cardinality, 2*3 == 6.
+The ordering of the following data points is such that the last dimension
+is being run through the fastest, ie.
+
+	1.67 .026	corresponds to (theta,phi) of (0,.2) and (0,1.5)
+	1.12 .019	corresponds to (theta,phi) of (10,.2) and (10,1.5)
+	.558 .011	corresponds to (theta,phi) of (20,.2) and (20,1.5)
+
+Any values between these points is interpolated using a simple multi-
+dimensional linear interpolant.  Data outside the given domain is computed
+with using linear extrapolation for a distance less than or equal to the
+distance between adjacent values, and falls off harmonically to zero outside
+that range.  Thus, phi values up to 30 are extrapolated, and beyond that
+they fall off to zero.
+
+I hope this is clear enough.  I regret that it has never been adequately
+documented.  Perhaps one day we will get the funds we need to do a proper
+job of documenting the system.  Until then, only the most adventurous
+users (like you) will ever attempt to use some of Radiance's more advanced
+features.
+
+-Greg
+
+<A NAME="IES">==================================================================</A>
+IES SOURCES
+
+Date: Mon, 22 Feb 93 17:40:38 +1300
+From: Architecture Students <studs@arch.vuw.ac.nz>
+To: greg@hobbes.lbl.gov
+Subject: ies2rad output values
+
+Greg,
+
+Hi, I'm currently using the lighting simulation side of radiance to predict 
+actual light levels in buildings that are not yet built. I have been having 
+some problems with the modelling of luminaires from the ies library that you 
+may be able to shed some light on. The area that is causing me trouble is 
+matching the lumen output from ies2rad to realistic levels (or that which can 
+be expected from a hand calculation).
+
+I have set up a test room of dimensions 6 x 6 x 3.5m and tried various 
+configurations of light  fittings from a single luminaire through to an array 
+of nine fittings and measured the output. The luminance values gained by 
+pressing 'l' when viewing through ximage seem to be consistently low when 
+compared to expected values. The lumen output of ies2rad can of course be 
+increased by using the -m option so that the levels in the test room match the 
+expected value arrived at through a manual calculation, but to do this for 
+every fitting in the ies library would require more than a little work. My 
+question is, is it reasonable to expect ies2rad to produce realistic lumen 
+output without being 'fiddled' or was it intended that every fitting would 
+require 'manual calibration'?
+
+As a result of running several light fittings from the ies library through 
+this calibration procedure it seems there may be a relation between the 
+expected lumen output of the lamp and the value of the multiplication factor 
+-m used in ies2rad. If the expected lumen output of a luminaire (obtained from 
+a table in the ies handbook) is divided by 570 it gives you a ball park figure 
+for -m. For example luminaire no. ies25 which has two fluorescent bulbs each 
+with an initial lumen output of 2770 lumens (cool white), has a total output 
+of 5540. 5540/570 gives you 9.7, and using -m 10 in ies2rad gives you near 
+realistic luminance values. As I'm not a programmer but just a humble user, 
+I don't know if there is an obvious mathematical routine in ies2rad that 
+explains this.
+
+Another question I have is regarding rpict's. I rendered tests with 5 
+different light fittings in the test room, 2 incandescent (ies01 and ies03), 
+and 3 fluorescent (ies25, ies30 and ies41). All used the same oconv and rpict 
+parameters but the images with ies01 as the light source are extremely patchy, 
+a bit like a disco floor! Do you have any idea about what causes this or how 
+it is remedied? I think it maybe the -ar setting in rpict, but why would it be 
+so different for two luminaires that are very similar (ies01 and ies03).
+
+I have included 2 pic files (compressed format) that illustrate this, 
+test_ies01_9.pic has a 3x3 array of ies01 luminaires as the light source, 
+test_ies03_9.pic has a 3x3 array of ies03 fittings. The image is a view from 
+just below the ceiling looking directly at the centre point of the floor (so 
+the lights are behind the viewpoint ie. out of sight).
+
+Grateful for any comments or suggestions,
+
+thanks,
+
+Nick Warring
+Victoria University of Wellington
+School of Architecture
+New Zealand
+
+studs@arch.vuw.ac.nz
+
+PS. I hope this isn't too big for your mailbox.
+
+Date: Mon, 22 Feb 93 15:08:02 PST
+From: greg (Gregory J. Ward)
+To: studs@arch.vuw.ac.nz
+Subject: Re:  ies2rad output values
+
+Hello Nick,
+
+I'm glad to hear that you're using Radiance for its intended purpose.  I'm
+sorry you've been getting unexpected results!
+
+The problem seems to be with the IES luminaire data files themselves.
+I took a closer look at the files, and noticed that the tables they were
+taken from give output in terms of candelas per 1000 lumens.  Since the
+IES data files are exact replicas of these tables, one must multipy their
+values by the expected lumen output of the fixture over 1000.  For example,
+if luminaire ies25 were expected to have a total output of 4800 lumens,
+you would use -m 4.8 for ies2rad to give the correct absolute levels.
+>From what you have said, this would still seem to leave a factor of two
+unaccounted for, but I have checked the results and they seem to work for
+me.  Are you remembering to account for the reflectance of the surface
+in your hand calculation of luminance?
+
+Your second problem with splotchiness in your output is due to the way
+ies2rad generates certain fixture geometries.  Ies01 in particular is
+a (spherical) pendant fixture.  According to the IES specification, this
+fixture should be represented as an actual sphere.  Unfortunately, the
+standard data file actually gives a cubical geometry for this fixture,
+and ies2rad interprets it thusly.  The top and bottom faces are modeled
+as emitters, and the four side faces are modeled as glowing but otherwise
+passive surfaces.  (This preserves the far field output distribution
+while minimizing the number of light sources and the associated
+calculation cost.)  Due to how Radiance computes interreflection, the
+side faces do end up contributing to the illumination of the space, even
+though they should not.  This is really a bug, and though I was aware of
+it before, I didn't realize it could cause such serious artifacts.  I will
+fix it for the next release.
+
+The best fix is to change the ies01 file so it will correctly generate a
+spherical geometry.  Alter the first line after TILT=none to read:
+
+  1    1000. 1.0 21  1 1 1   -1.00   0 0
+
+The -1 is the funky IES way to specify a sphere.
+
+Good luck!
+-Greg
+
+Date: Wed, 28 Jul 1993 12:43:58 -0500
+From: srouten@rubidium.service.indiana.edu
+To: greg@hobbes.lbl.gov
+
+Dear Greg,
+
+     Reuben and I are pulling our hair out.  We are trying to understand
+primitives for generating accurate luminaires, but neither of us has a
+background in engineering or physics!  We have a copy of the IES Handbook
+but the terminology is arcane to us.  
+
+     Can you help us navigate an example?
+
+     If so, ies01.rad is a good starting place:
+
+1) in the header, I see '0 watt luminaire' which seems to imply that an 
+   argument within the file can be changed to correspond with 'n' watts.
+   If so, is this argument related to 'lamp*ballast factor = 1'.  In 
+   past experiments I remember changing the last argument to the brightdata
+   primitive from 1 to a higher number and altering the overall brightness 
+   of the luminaire, but I have no idea what effect i was causing relative
+   to watts, lumens, or footcandles.
+
+2) In the light primitive, this luminaire has an rgb radiance of 10.7693
+   given in Watts/sr/m^2?  Our main difficulty is understanding the units 
+   in which light is specified in Radiance.
+
+3) Why is the geometry of ies01 specified in rectangular polygons when the
+   actual luminaire is a spherical pendant?
+
+4) Once we figure this out we are interested in modelling some obscure lights,
+   like a flashing highway barricade, or perhaps even some imaginary ones.  
+   Since IES data files aren't available for imaginary lights,  can we rely
+   on Radiance to produce accurate distributions if we create the geometry of
+   the fixture in great detail?
+
+
+     We've been over what we think is all of Radiance's documentation,
+including the digests, so we're only bugging you as a last resort.  Hope you
+dont mind.  
+
+-Scott 
+
+ps. I put another of our pictures in xfer.  Its a project for an 
+    architectural competition.  Its called glass.pic.
+
+Date: Thu, 29 Jul 93 11:46:28 PDT
+From: greg (Gregory J. Ward)
+To: srouten@rubidium.service.indiana.edu
+Subject: light sources
+
+Dear Scott and Reuben,
+
+Light sources are tricky buggers, and none too easy to understand in Radiance.
+For starters, you should realize that the IES example luminaire files are
+VERY bad examples.  Many of the fields (such as #watts) are carelessly done
+or just plain wrong, and the files are mostly for testing input procedures,
+not for lighting simulation.
+
+The units generally used for light quantities in Radiance are watts/sr/m^2,
+and they are spectrally-dependent.  Therefore, an incandescent fixture will
+have different quantities of red, green and blue compared to a fluorescent
+fixture with the same total output (ie. lumens).  You can use the program
+"lampcolor" to do some simple calculations along those lines.  The relationship
+between watts, lumens and radiance is difficult to grasp not only due to the
+dependence on efficacy and color, but also due to geometry.  The total output
+of a light source cannot be determined in Radiance without considering the
+emitting area as well.  I really don't want to go into detail, since I often
+get confused myself.
+
+I don't recommend using Radiance to compute light output distributions from
+fancy luminaire geometry.  It is bound to be inaccurate.  I hope someday to
+work on a tool for this purpose, but Radiance is not it.
+
+-Greg
+
+P.S.  I took a look at your picture.  It's quite nice, but I'm not sure what
+	exactly I'm looking at.
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 5</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

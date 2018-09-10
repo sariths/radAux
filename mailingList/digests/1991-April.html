@@ -1,0 +1,1337 @@
+<TITLE>
+Radiance Digest, v1n2
+</TITLE>
+<a name="top"></a>
+<html><h2>RADIANCE Digest Volume 1, Number 2</h2><hr>
+<pre><body>Hello Everyone,
+
+Sorry that it's been so long since my last digest mailing.  Rather a lot
+of mail has piled up.  I've keyed the subjects so that you can skip to
+the one you're interested in more quickly.  Just search for /^PAT/, where
+PAT is a topic key from the list below.  You can skip to the next section
+with /^==/. The topics in this issue are as follows:
+
+	<A HREF="#LIB">LIB</A>	Setting up the library path variable RAYPATH
+	<A HREF="#OCONV">OCONV</A>	Oconv parameters and errors
+	<A HREF="#PART">PART</A>	Partitioned ray tracing using -vs and -vl
+	<A HREF="#ASPECT">ASPECT</A>	Aspect ratios and pfilt options
+	<A HREF="#LUM">LUM</A>	Computing luminance and daylight factors
+	<A HREF="#SIG">SIG</A>	Questions about `88 Siggraph paper
+	<A HREF="#COLOR">COLOR</A>	Dealing with different color formats
+	<A HREF="#RPICT">RPICT</A>	Rpict options
+	<A HREF="#OUT">OUT</A>	Using Radiance to compute a simple outdoor scene
+	<A HREF="#ARCH">ARCH</A>	Architrion file translator
+	<A HREF="#ALG">ALG</A>	Secondary source calculations and new algorithms
+
+-Greg
+
+<A NAME="LIB">======================================================================</A>
+LIB	Setting up the library path variable RAYPATH
+
+Date: Thu, 18 Oct 90 15:58:35 -0400
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject: RADIANCE question
+
+I'm working through the RADIANCE tutorial (got as far as adding the window
+to the sample room before, have some time to go farther today for some
+reason) and I have run into a problem.
+
+I'm at the point in the tutorial where I've done:
+
+$ oconv sky.rad outside.rad window.rad room.rad > test.oct
+
+and am generating a picture with:
+
+$ rpict -vp 2.25 0.375 1.5 -vd -0.25 0.125 -0.125 -av 0.5 0.5 0.5 test.oct > 
+								      test.pic
+
+and it gives me:
+
+rpict: fatal - cannot find function file "rayinit.cal" 
+rpict: 30296 rays, 49.22% done after 0.0141 CPU hours
+
+after working a bit (two, three minutes on a Sun 4/110).
+
+Any idea(s) as to why this is dying?  All my previous images have been 
+generated without trouble.
+
+thanks...
+
+steve spencer
+
+ps: I'm reasonably certain that I have entered all of the data files from
+the tutorial document correctly.
+
+Date: Thu, 18 Oct 90 13:14:31 PDT
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  RADIANCE question
+
+Hi Steve,
+
+The problem appears to be that your Radiance library files are not in
+their standard location, which is "/usr/local/lib/ray".  In the README
+file in the distribution it describes where to put things.  The files
+in ray/lib should go in the library location.  It's OK not to put them
+there, but you need to assign the environment variable RAYPATH if they're
+somewhere else.  For example, if the Radiance distribution is sitting
+in /usr/local/src/ray, then you can put the following in your .login:
+
+	setenv RAYPATH .:/usr/local/src/ray/lib
+
+and everything should work.  Note that RAYPATH is like the Bourne shell's
+PATH variable, since it can take any number of directories to search in
+order.  Typically, you want to have "." first, and you may have your own
+private library to use before the system directory, plus someone else's
+library at the end.
+
+Good luck.  Let me know if you have any more problems.
+
+-Greg
+
+<A NAME="OCONV">======================================================================</A>
+OCONV	Oconv parameters and errors
+
+Date: Wed, 24 Oct 90 14:54:25 EST
+From: Eric Ost <emo@cica.indiana.edu>
+To: greg@hobbes.lbl.gov
+Subject: oconv parameter question
+
+Greetings Greg,
+
+This message concerns parameters to 'oconv'.
+In particular the '-n' and '-r' options.
+I think I mentioned that we have modeled the new Computer Science building
+from the blueprints and I have begun building Radiance versions of all
+the geometry files.  During the course of converting the polygonal data files
+into octtree format files I ran into the following error message:
+
+oconv: internal - set overflow in addobject (TOP.187)
+
+I traced its source to 'oconv.c'.  The manual page for 'oconv' states
+that by increasing the setlimit ('-n') and resolution ('-r') parameters
+this message may be avoided.  The file f3n.rad (the 3rd floor geometry)
+only contains 1408 discrete polygons, yet even when I use 'oconv' as:
+
+oconv -n 10000 -r 16384 -f f3n.rad > f3.oct
+
+I still get the 'set overflow' error message.
+I also have tried scaling the entire geometry up by a factor of 10.0,
+which increases the inter-object spacing.  Even so, the error still occurs.
+Do you have any ideas?  BTW: I can send you the geometry file if you wish.
+
+Thanks.
+
+eric
+
+Date: Wed, 24 Oct 90 13:09:32 PDT
+From: greg (Gregory J. Ward)
+To: emo@cica.indiana.edu
+Subject: Re:  oconv parameter question
+
+First, increasing n cannot eliminate this error.  I checked the manual page,
+and it doesn't say to increase -n when you encounter this message.  Since
+-r doesn't seem to help, though, I would guess that you have many surfaces
+(more than 128) piled on top of each other causing the error.  You must
+eliminate this problem in the scene description first.  (Perhaps it is due
+to a translator bug.)
+
+-Greg
+
+Date: Wed, 24 Oct 90 15:20:26 EST
+From: Eric Ost <emo@cica.indiana.edu>
+To: greg@hobbes.lbl.gov
+Subject: Re: oconv parameter question
+
+You're correct about the manual page not mentioning an increase in '-n'.
+Sorry for the confusion.
+
+This could be a bug in the translator.  I am going to re-check the code
+I wrote yesterday.  It is a program to translate from WaveFront .obj
+to Radiance .rad format.  Pretty simple, but it's possible that I have
+an 'off-by-one' error... though, the first floor looked ok when I rendered
+it.  The output file consists of triangles only.  I am using a simple 
+method of splitting rectangles, etc., into several triangles.
+
+What does it 'mean' for two objects to be piled on top of one another?
+More than two objects sharing an edge in common?
+
+Thanks.
+
+eric
+
+Date: Wed, 24 Oct 90 13:31:55 PDT
+From: greg (Gregory J. Ward)
+To: emo@cica.indiana.edu
+Subject: Re: oconv parameter question
+
+If you are willing to share your translator, I'd love to distribute it!
+By "piled up" I mean coincident.  In other words, overlapping coplanar
+polygons.  I have seen this error before and it almost always comes from
+this type of problem.
+
+Date: Wed, 24 Oct 90 16:16:47 EST
+From: Eric Ost <emo@ogre.cica.indiana.edu>
+To: greg@hobbes.lbl.gov
+Subject: partitioned ray-tracing
+
+I started compiling Radiance on our Stardent but ran into a nasty
+NFS bug which caused the machine to actually crash.
+I'll probably get back to it after I finish with this next batch
+of client requests.
+
+My, perhaps naive, idea was to sub-divide the image into equal areas
+per-processor and let it run.  For example, with a 4 processor
+machine, a 1024x1024 image would be split into 4 256x256 sub-images.
+What kind of speed-up could we expect?  4 times?
+And, is Radiance amenable to this kind of modification of its
+run-time architecture?
+
+eric
+
+<A NAME="PART">======================================================================</A>
+PART	Partitioned ray tracing using -vs and -vl
+
+Date: Wed, 24 Oct 90 14:39:48 PDT
+From: greg (Gregory J. Ward)
+To: emo@ogre.cica.indiana.edu
+Subject: Re:  partitioned ray-tracing
+
+Yes, 4-way image partitioning yields a 4 times speed improvement, and yes,
+Radiance is amenable to such a procedure.  The only time this would
+not result in a linear speedup is if you were using the indirect (ambient)
+calculation capability, which is a global calculation.
+
+To split up your rendering into 4 pieces, you should determine the view
+you want, then reduce the horizontal and vertical size (-vh and -vv) by
+two.  (For perspective views, this means: newsize = 2*atan(tan(oldsize/2)/2).)
+Then, use the -vs and -vl parameters like so:
+
+	Upper left:	rpict -vs -.5 -vl .5 -x 512 -y 512 [args] > ul.pic
+	Upper right:	rpict -vs .5 -vl .5 -x 512 -y 512 [args] > ur.pic
+	Lower left:	rpict -vs -.5 -vl -.5 -x 512 -y 512 [args] > ll.pic
+	Lower right:	rpict -vs .5 -vl -.5 -x 512 -y 512 [args] > lr.pic
+
+Then combine the images with pcompos thusly:
+
+	pcompos ul.pic 0 512 ur.pic 512 512 ll.pic 0 0 lr.pic 512 0 > full.pic
+
+Note that a 1024x1024 images splits into four 512x512 images, not four
+256x256 ones.  The reason for using -vs and -vl is to get the correct
+skewed perspective in each quadrant.  These options were designed for
+creating panoramic views a piece at a time, as might be needed for a
+mural or something.
+
+-Greg
+
+<A NAME="ASPECT">======================================================================</A>
+ASPECT	Aspect ratios and pfilt options
+
+Date: Thu, 25 Oct 90 14:17:11 -0400
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: GJWard@Csa1.lbl.gov
+Subject: re: aspect ratios (again)
+
+
+Something's not right here.
+
+I'd like generate a 640 by 484 pixel image (ratio is 1.322314) with a 50-degree
+horizontal view angle.  I used the following command (a fragment of it...):
+
+-x 640 -y 484 -vh 50.0 -vv 37.8125
+
+The ratios 640/484 and 50.0/37.8125 are identical, 1.3223140495.
+
+The image produced is only 640 pixels by 470 pixels.
+
+Any idea where my last 14 scanlines went?  Thanks.
+
+steve
+
+ps: oh, the output was the same whether I had "-p 1.0" in the command line 
+or not.
+
+Date: Thu, 25 Oct 90 11:38:22 PDT
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: re: aspect ratios (again)
+
+The ratios between angles in a perspective view do not give the aspect
+ratio of the image, unfortunately.  It all has to do with tangents.
+The actual aspect ratio is given by:
+
+	view aspect = y/x = tan(vv/2)/tan(vh/2)
+
+This is a large part of why I introduced the -p option to the programs --
+it was simply too difficult to do this calculation every time.  Generally,
+you can give the maximum resolution in both x and y that you will allow,
+then it will fit an image with the proper aspect ratio within those bounds.
+If you must have absolute control over the x and y resolution, just give
+a -p of 0, and make sure you know what you're doing.  In any case, getinfo
+will report the PIXASPECT of the image if it differs from 1.
+
+-Greg
+
+Date: Wed, 31 Oct 90 08:35:32 -0500
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject: re:RADIANCE
+
+Any quick answer to 'nice picture, Steve, but what about anti-aliasing'?
+I'm looking at the parameters and have a couple of ideas, but nothing is
+jumping out at me right now.  (Given the date, that's probably best.)
+What parameters should be changed to anti-alias the image produced?
+(As if 'anti-alias' was a verb....jeez.)
+
+thanks...
+
+steve
+
+Date: Wed, 31 Oct 90 08:41:43 PST
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: re:RADIANCE
+
+Use pfilt for anti-aliasing (in computer science, we're verbing words all
+the time).  First you should generate an image at higher resolution than
+you'll need for the final result.  Then, reduce the resolution with something
+like:
+
+	pfilt -x /2 -y /2 input > output
+
+For the best results, use an input resolution that is three times what you
+want in the final image, and employ the -r option of pfilt for Gaussian
+filtering:
+
+	pfilt -x /3 -y /3 -r .67 input > output
+
+The argument to -r sets the amount of "defocusing", larger numbers resulting
+in less focused images.  A value of .67 seems to be about optimal for most
+purposes.  (Note that the -r option takes somewhat longer than the default
+"box" filtering.  Also, you can use the -1 option of pfilt to speed things
+up if you know how to adjust or have already adjusted the exposure.)
+
+-Greg
+
+Date: Wed, 31 Oct 90 12:04:21 -0500
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject: re:RADIANCE
+
+Thanks.  I guess I was looking in the rpict documentation instead of the
+pfilt documentation.  
+
+steve
+
+<A NAME="LUM">======================================================================</A>
+LUM	Computing luminance and daylight factors
+
+Date: 6 December 90, 10:28:38 MEZ
+From: MICHAEL.SZERMAN.00497119703322.KKAC%ds0rus1i.bitnet@Csa3.lbl.gov
+To: GJWARD@Csa3.lbl.gov
+
+Hi Greg,
+Thanks a lot for your last information about RTRACE. Allthough it
+is running well now, one problem still remains.
+How do we have to convert the three radiance/irradiance values
+of the RTRACE-output to get final luminance/illuminance in cd/m2 ?
+ 
+Next we intend to make a parameter study on a simple scene.
+Therefore we need values of illuminance and daylight factor. Is it
+possible to receive the daylight factor directly from RADIANCE or
+must we calculate it from illuminance by hand ?
+ 
+Last we want to know, whether we have understood the following
+expression in the right way. You have said "an 88% transmittance
+glass window has a transmission of 96% ". Does this mean, that from
+the outside radiation 96% goes into the glass and 88% from the glass
+into the room ?
+If that's right, then we would like to know if the difference of 8%
+is dependent on your definition of the material glas or if we can choose
+it
+ourselves.
+ 
+Michael+Gernot
+
+Date: Thu, 6 Dec 90 08:58:19 PST
+From: greg (Gregory J. Ward)
+To: kkac@ds0rus1i.bitnet
+
+Hello Michael and Gernot,
+
+The conversion from spectral radiance or irradiance (rgb) to luminance
+or illuminance is:
+
+	(.3*r + .59*g + .11*b) {watts} * 470 {lumens/watt} 
+
+To get the daylight factor, you must divide by the external irradiance,
+which is pi times the "ground ambient level" printed by gensky.  There
+is a program called rcalc that performs these types of calculations
+handily.  For example, you can get luminance (or illuminance) from
+radiance (or irradiance) like so:
+
+	getinfo - < rtrace.out | rcalc -e '$1=141*$1+277*$2+52*$3' > outputfile
+
+Note that you could have piped the output of rtrace directly into rcalc.
+Getinfo with the - option reads from standard input and gets rid of the
+first few info lines from the rtrace run.  The -h option of rtrace does
+the same thing, but if you wish to keep the rtrace file, this information
+can come in handy.
+
+To compute the daylight factor for Feb. 10th at 14 standard time in San
+Francisco, gensky gives:
+
+# gensky 2 10 14
+# Ground ambient level: 5.256781
+
+(I trust you remember to use the -l, -a and -m options for your location.)
+We then use this value in rcalc to get daylight factors from irradiance like so:
+
+	rtrace -h -i octree | rcalc -e '$1=(.3*$1+.59*$2+.11*$3)/(PI*5.257)'
+
+I hope this gives you enough information to do what you want to.
+
+As for glass, the 8% difference between 96% (transmission through the
+medium itself) and 88% (transmissivity) is due to reflection, and it
+varies with incident angle.  This value is determined absolutely by the
+index of refraction, which for glass is 1.52.  I debated about making N
+a parameter, but decided not to.  If you want to change the index of
+refraction, you will need to go to two parallel but opposing dielectric
+surfaces.
+
+-Greg
+
+[I modified the numbers in this message as part of a correction for
+	lumens/watt.  -G]
+
+Date: 21 January 91, 11:41:01 MEZ
+From: MICHAEL.SZERMAN.00497119703322.KKAC%ds0rus1i.bitnet@Csa3.lbl.gov
+To: GJWARD@Csa3.lbl.gov
+
+Hi Greg,
+One new question about RADIANCE:
+We've heard that there could be difficulties by transforming computed
+luminance values into screen luminance, because in reality esometimes a
+greater absolute difference of luminance density, as a
+monitor is able to reproduce.
+We've got a publication, which shows that a combinated linear
+(for luminance less than 200 cd/m*2) and log grading (for luminance
+greater than 200 cd/m*2) transformation should be used.
+How does RADIANCE solve this problem ?
+And therefore, how realistic is the brightness of a RADIANCE picture?
+ 
+We would be glad for quick answer, because we need the information
+for a report in two days.
+ 
+Thanks a lot,
+Michael+Gernot.
+
+Date: Mon, 21 Jan 91 16:32:51 PST
+From: greg (Gregory J. Ward)
+To: kkac@ds0rus1i.bitnet
+Subject: display intensities
+
+Hi Michael and Gernot,
+
+I make no attempt in any of the Radiance display programs to map the
+monitor intensities to anything other than a linear scale.  As far as
+I'm concerned, none of the arguments that has been given for using a
+logarithmic or a power law mapping of intensities is the least bit
+compelling.  Radiance images and displays are similar to photographs
+in their relatively hard clipping of intensities outside the displayable
+range.  If a spot is too bright, it comes out white.  If it is too dark,
+it comes out black.  Brightnesses inbetween have a brightness with a
+linear proportion to the actual computed brightnesses.  I feel that
+the only way to get a better display is to increase the dynamic range.
+
+There are ways to compensate for lack of dynamic range in displayed
+images.  Ximage and x11image have commands for displaying the numeric
+value over selected image locations, and this number is not limited
+by the display.  Also, the user can readjust the exposure by picking
+a spot to normalize against and entering '='.  This way, the viewer
+can dynamically adjust the displayed brightness range without having
+to rerun pfilt.
+
+I hope this has answered your question.  I think that people may
+eventually agree on the best, most appropriate brightness mapping
+for displays, but the debate is still raging.
+
+-Greg
+
+P.S.  I have tried logarithmic mappings, and I think they are much
+more difficult to interpret since contrast is lost in the image.
+
+<A NAME="SIG">======================================================================</A>
+SIG	Questions about `88 Siggraph paper
+
+From: ARIR@IBM.COM
+To: greg@hobbes.lbl.gov
+Subject: questions
+
+Greg,
+
+Could you answer some questions regarding the [`88 Siggraph] paper?
+Here they are...
+
+1. Why is the correction term for surfaces in "front" not symmetric,
+i.e. why can we use a back light value to evaluate illuminance in front
+of it but not vice-versa?
+
+2. Are secondary values also computed for higher generation sampling?
+
+3. How many rays have you used to compute diffuse illuminance values
+(using the primary method)?
+
+4. Is the simulation done in terms of actual physical units (could you
+define a light bulb of 60 Watts) or do you use just numbers that turn out
+right?
+
+5. Are these superquadrics? Where did you get the textures?
+
+Hope you will find the time to answer..
+Thanks, Ari.
+
+
+Date: Tue, 11 Dec 90 20:41:37 PST
+From: greg (Gregory J. Ward)
+To: ARIR@IBM.COM
+Subject: Re:  questions
+
+Hi Ari,
+
+Sure, I'd be happy to answer your questions.  One by one:
+
+1. Why is the correction term for surfaces in "front" not symmetric,
+i.e. why can we use a back light value to evaluate illuminance in front
+of it but not vice-versa?
+
+A: The reason I allow surfaces in front of a value to make use of it is
+because the proximity calculated to other surfaces will consider things
+in front as obstructions.  Therefore, it will be excluded by the other
+accuracy conditions if there is a problem.
+
+2. Are secondary values also computed for higher generation sampling?
+
+A: If by secondary values you are referring to the interpolation method,
+the answer is yes.  In fact, this is where interpolation really starts
+to pay off, since the number of rays would increase exponentially otherwise.
+When the first ray is cast, it spawns a few hundred interreflection
+samples as part of a new primary calculation.  These in turn spawn
+more primary calculations at the next level and so on.  But, since
+the results of each primary calculation are cached and reused for
+neighboring samples, the actual number of primary calculations is
+limited by the total surface area sampled.  This fails to bring
+dramatic savings only when the geometric complexity is so great
+that most samples result in a new primary calculation (a dense forest
+scene for example).
+
+3. How many rays have you used to compute diffuse illuminance values
+(using the primary method)?
+
+A: This parameter varies quite a bit from one scene to another.  I
+cannot answer in general except to say that you must have enough
+rays in the initial sample to produce a value within your desired
+tolerance.  For a simple rectangular space, you can get away with
+a hundred rays or so for 5-10% accuracy.  A typical furnished office
+with daylight may take several hundred or even a thousand rays for
+the primary calculation.  (This number can be reduced for subsequent
+reflections with no loss in accuracy.)
+
+4. Is the simulation done in terms of actual physical units (could you
+define a light bulb of 60 Watts) or do you use just numbers that turn out
+right?
+
+A: Yes, physical units are used throughout.  Total output is defined
+for light sources as well as directionality.  I even have a program
+to import light fixture data from manufacturers.
+
+I am going to Lausanne to work on daylight simulation.  It should be
+fun, except I don't speak a word of French!
+
+-Greg
+
+<A NAME="COLOR">======================================================================</A>
+COLOR	Dealing with different color formats
+
+Date: Fri, 4 Jan 91 14:02:27 EST
+From: Ken Rossman <ken@watsun.cc.columbia.edu>
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+
+Yeah, I think twice now (well, once from the last distribution, several
+months ago, and once just yesterday).  :-)
+
+I have a couple of questions and comments, though, since I have you "on the
+line" here:
+
+  - I have yet to make rview work right on my display.  I had thought it
+    was having problems with my 24-bit display originally (I have a
+    Sun-4/110 with a cg8 frame buffer, which is 24-bit color), but the same
+    thing happens on 8-bit color displays.  I tried 'rview'-ing some of the
+    sample octrees that are included with the distribution, and I generally
+    get just a square in the upper righthand corner of the window that is
+    created by rview (using '-o x11'), and I see that it seems to be trying
+    to resolve the picture in successive quandrants and all that, but
+    that's about all I can tell of what it is doing.  Sometimes I only see
+    a completely white square, on other images I see a larger, gray one,
+    but the result is never quite what I thought it should be.  I take it
+    that might mean I'm just not using the right defaults at runtime?  If I
+    give it no defaults on the command line, does it pick reasonable ones
+    that should show me something of what is going on?
+
+  - I tried out ra_pr24, and noticed that it has the same ailment as many
+    other pieces of code I have played with over the years in conjuncture
+    with this particular 24-bit display.  A Sun 24-bit raster is stored in
+    either XBGR order (for 32-bit rasters, where X is currently undefined),
+    or in BGR order (for 24-bit rasters).  In either case, though, most
+    folks would expect the channels to appear in RGB order, but they are,
+    instead, the reverse of that.  When I view some of the images using
+    ra_pr24, I get blues and reds reversed.
+
+  - Just happened to notice in the man page for ra_bn, that in the text, it
+    is referred to as ra_t16 instead.
+
+FYI, /Ken
+
+P.S. -- Thanks for this distribution!!!
+
+[Ken included my response in his following letter. -G]
+
+Date: Fri, 4 Jan 91 15:26:58 EST
+From: Ken Rossman <ken@watsun.cc.columbia.edu>
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+
+Hi Greg,
+  
+  There are probably one of two (or two of two) things wrong with
+  running rview -- the exposure and the viewpoint.  Neither one is
+  set to a reasonable default, since this varies considerably from
+  one scene to another.
+
+Well, that'll do it.  I was just playing dumb and not setting these
+parameters at all when running rview before.  I tried messing with the
+exposure a bit in rview, and that changes things a bit, but I know now that
+the viewpoint isn't right (I don't know how to properly change that around
+right now, because I don't know what relative units I am working with, and
+what values might be reasonable -- these must also be picture dependent).
+
+  The view parameters (particularly -vp and -vd) should be set according to
+  where you want to be looking in the scene.
+
+Right...  by the way, what is the equivalent command (if there is one) in
+the interactive shell part of rview for this?
+
+  There is often a view parameters file associated with an octree, which
+  ends in a .vp suffix in general.  You may give this to rview with the -vf
+  option.  The exposure is a problem that is easily solved after the
+  rendering starts using the "exposure" command.  Just type "e 1" once you
+  are in rview and it does the rest.  (It may be necessary to use ^R as
+  well to redraw the screen and get a better color table allocation on an
+  8-bit display.)
+  
+OK, I'll try all of those suggestions out.  I'm really starting to use this
+software now, because I'm coming to the point where I will be having some
+real applications for it (I think I mentioned a long time ago that one
+thing I wanted to do was to do some *very* fancy presentation graphics (for
+things like slide shows), and while this package isn't really aimed at that
+kind of application, assuming I can get things like your 3D fonts working
+right, it sure could look good for this kind of application!)...
+
+  I'm really disturbed if 24-bit rasterfiles are actually BGR instead of
+  RGB!
+
+Sorry, but they area, in the case of Sun raster files.  Sun defines a
+24-bit and a 32-bit file format, and they are, as I said before BGR and
+XBGR order, respectively.
+
+  I wrote the translator to hand files to another program, which must have
+  this same confusion, since they work together so well.  I guess the only
+  solution is to add an option to ra_pr24 to tell it to put out RGB
+  sequences instead of BGR (which should be the default if it is correct!).
+
+I had thought ra_pr24 was supposed to write out a standard Sun raster file.
+If that's the case, then you do need to write out the files in BGR or XBGR
+order.  What other program did you expect ra_pr24 to "feed"?
+  
+  Thank you for spotting the problem in the ra_bn manual page.
+
+You're welcome.  And as always, thanks for all your efforts on this software!
+
+/Ken
+
+Date: Fri, 4 Jan 91 15:44:03 EST
+From: Ken Rossman <ken@watsun.cc.columbia.edu>
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+
+That's got it!  I issued the following command (as per some of your
+instructions in the previous message):
+
+  rview -vf examp.vp -o x11 examp.oct
+
+and the thing fired right up, and is looking good!
+
+I'm curious, though.  Does rview know it is working in the 24-bit domain,
+or does it operate in an 8-bit domain internally, and upward expand the
+resulting image for 24-bit planes?  /Ken
+
+
+Date: Fri, 4 Jan 91 13:29:15 PST
+From: greg (Gregory J. Ward)
+To: ken@watsun.cc.columbia.edu
+
+The program I was feeding with ra_pr24 is yet another converter for
+a Kodak color printer.  I don't have access to any 24-bit color
+Suns, so I've never tried ra_pr24 there.
+
+The internal color calculations are floating point.  They use 4 bytes
+per color within the program, and are converted to 3 1-byte mantissas
+with a common exponent when written out to a Radiance picture file.
+In every case, there is better accuracy available than can be displayed
+on any existing hardware.  The drivers for true color under X11 still
+need some work, since I have never gained access to a 24-bit machine
+running X11 and have not debugged the code for x11image or rview there.
+
+-Greg
+
+<A NAME="RPICT">======================================================================</A>
+RPICT	Rpict options
+
+Date: Wed, 9 Jan 91 17:45:04 -0500
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject: Radiance parameters
+
+Quick question:  What parameters and values would YOU use to 'rpict' if you
+wanted to make an image which did a good bit of interreflection of light
+and distribute the light sources (give light sources some penumbra)?
+
+steve
+
+Date: Wed, 9 Jan 91 14:50:47 PST
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  Radiance parameters
+
+I'm not sure I can give you a good answer about parameters, since it
+depends a lot on the scene.  Could you describe it for me briefly,
+including the number and types of light sources and if there is any
+daylight in the space?  How long are you willing to wait?  What machine
+are you using?  Unfortunatly, setting the calculation paramters is
+more of an art than a science right now...
+
+-Greg
+
+Date: Wed, 9 Jan 91 17:56:39 -0500
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject:  Radiance parameters
+
+Assume an interior.  No daylight.  Small spherical light sources either 
+recessed in the ceiling or in lamp(s) with shades (like a Luxo lamp though
+more crudely modeled, at least for now).  Tables, chairs.  Perhaps (later)
+a few area sources simulating fluorescent light boxes in the ceiling.
+(Jeez, I've just described my office.  Oh well...)
+
+Is that enough description?
+
+steve
+
+Date: Wed, 9 Jan 91 15:19:45 PST
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  Radiance parameters
+
+Steve,
+
+For penumbras, make sure that your sources are round, or if they are
+polygons that they are roughly square.  This ensures that sampling over
+their area will not result in inappropriate misses.  (In future
+releases, you will be warned when this happens.)  You should also turn
+off image sampling, since source sampling requires that every pixel be
+calculated.  (You should probably render at a higher resolution, then
+reduce the picture size and anti-alias with pfilt.)  Here are a
+reasonable set of rpict parameters for source sampling:
+
+	-dj .5		# Direct jitter set to .5 (1 is maximum)
+	-sp 1		# Turn off image plane sampling
+
+For interreflection, the first thing to remember is that you should save
+the "ambient" values in an overature run to populate the scene.  I suggest
+the following parameters to rpict:
+
+	-ab 1		# Calculate 1 interreflection bounce
+	-ad 256		# Use 256 divisions in initial hemisphere sampling
+	-as 128		# Sample 128 directions for variance reduction
+	-aa .15		# Set the interreflection interpolation error tolerance
+	-ar 10		# Rolloff accuracy at 1/10th global boundary scale
+	-af ambfile	# Save "ambient" values in a file
+	-av v0 v0 v0	# YOU have to figure out a good value for v0!
+
+The way to figure out v0 is to run rview without setting -av first, then
+pick a point that's kind of in shadow, but not completely, and use the
+trace command to get the value.  Use the same value for red green and blue,
+unless you want a colored ambient component.
+
+Run rpict at low resolution first as an overture to the main rendering,
+and discard the resulting picture like so:
+
+	rpict -dj .5 -sp 1 -ab 1 -ad 256 -as 128 -aa .15 -ar 10 -af ambfile \
+		-av v0 v0 v0 -x 64 -y 64 octree >/dev/null
+
+This stores some ambient values in ambfile to populate the scene and improve
+the appearance of the final run:
+
+	rpict -dj .5 -sp 1 -ab 1 -ad 256 -as 128 -aa .15 -ar 10 -af ambfile \
+		-av v0 v0 v0 -x 1024 -y 1024 octree >picture.raw
+
+Then, you can use pfilt to set the exposure, anti-alias and reduce the
+resolution:
+
+	pfilt -x /2 -y /2 -r .67 picture.raw > picture.done
+
+Since rpict is likely to take a long time for such a rendering, I 
+find it useful to have it write progress reports every hour to a
+separate error file using the following options:
+
+	-t 3600 -e errfile
+
+That way, when you log out with rpict running in the background, you can
+always find out what's going on.
+
+-Greg
+
+Date: Wed, 9 Jan 91 18:21:43 -0500
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: greg@hobbes.lbl.gov
+Subject:  Radiance parameters
+
+Wow.  Thanks for the well-commented information.  I'll let you know how it
+turns out.  
+
+steve
+
+<A NAME="OUT">======================================================================</A>
+OUT	Using Radiance to compute a simple outdoor scene
+
+Date: Thu, 10 Jan 91 12:38:10 PST
+From: djones@awesome.berkeley.edu (David G. Jones)
+To: greg@hobbes.lbl.gov
+Subject: cloudy day
+
+A student wants to create an image of a sphere sitting on a plane
+as it would look on a very cloudy day.  ie illuminated by a
+uniform hemi-sphere (the sky).  He does not want to consider
+inter-reflections (so he doesn't need to use your ambient calculation)
+
+Is the only way of doing this to have very many point sources of light
+on a hemi-sphere, or does RADIANCE have another way to handle this?
+
+thanks,
+  Dave
+
+P.S.  He's a computer vision student and wants to compare
+the appearance of a scene under various lighting situations.
+
+
+Date: Thu, 10 Jan 91 14:31:19 PST
+From: greg (Gregory J. Ward)
+To: djones@awesome.berkeley.edu
+Subject: Re:  cloudy day
+
+Hi Dave,
+
+You can use the -c option to gensky to produce a cloudy sky distribution,
+which is not the same as a uniform sky distribution.  (Nature does not
+usually produce uniform skies.)  He should use the interreflection
+calculation, though, since that's by far the best way to account for
+the sky's contribution.  Try the following description to get started:
+
+	#
+	# A cloudy sky at 4pm (standard time) on March 13th
+	#
+
+	!gensky 3 13 16 -c
+
+	# the glow type for the sky
+
+	skyfunc glow skyglow
+	0
+	0
+	4 1 1 1 0
+
+	# the actual source for the sky dome
+
+	skyglow source sky
+	0
+	0
+	4 0 0 1 180
+
+	# the glow type for the ground and its source
+
+	skyfunc glow groundglow
+	0
+	0
+	4 1.3 .8 .6 0
+
+	groundglow source ground
+	0
+	0
+	4 0 0 -1 180
+
+The parameters I recommend for rpict are as follows:
+
+	set rparams="-ab 1 -ad 256 -aa .1 -av 4 4 4"
+
+Note that the value for -av is that suggested by gensky.  Then, he should
+run an overture calculation to save up some ambient values in a file,
+like so:
+
+	rpict $rparams -af ambfile -x 64 -y 64 octree >/dev/null
+
+The final rendering is done with the same parameters, but at a higher
+resolution:
+
+	rpict $rparams -af ambfile -x 512 -y 512 octree > picture.raw
+
+-Greg
+
+<A NAME="ARCH">======================================================================</A>
+ARCH	Architrion file translator
+
+Date:  Wed, 13 Mar 91 16:24 MST
+From: JALove%uncamult.bitnet@csa3.lbl.gov
+Subject:  Architrion Front-end for Radiance
+To: GJWard@csa3.lbl.gov
+
+Several months ago, you informed me that an Architrion interface was
+under development for Radiance.  Is it completed?  Are interfaces
+available other than the McDonnell-Douglas BDS-GDS?  Thanks.
+
+Date: Thu, 14 Mar 91 08:25:05 +0100
+From: greg (Greg Ward)
+To: JALove@uncamult.bitnet
+Subject: Re:  Architrion Front-end for Radiance
+
+The interface currently works only for Architrion text files, which is
+the package we've been using on the MacIntosh where it runs.  Did you
+have some other CAD program in mind?
+
+Jennifer Schuman (jennifer@hobbes.lbl.gov) is the one working on it,
+so you might want to ask her directly.  It is in pretty good shape
+as far as I'm concerned.
+
+-Greg
+
+Date: Thu, 14 Mar 91 16:46:33 PST
+From: jennifer@hobbes.lbl.gov (Jennifer Schuman)
+To: JALove%uncamult.bitnet@csa3.lbl.gov
+Subject: Architrion-to-Radiance
+
+
+Greg and I are working together on an interface/translator/preprocessor to
+make Architrion files usable as Radiance scene descriptions.  It is available
+to anyone who has the patience to work with it in its current "alpha" form. I'm
+not too eager to release it just yet (better to wait a few months), but if
+you're game then I'm willing.
+
+The details are as follows.  Greg has written a translator called "arch2rad"
+which takes an architrion 3d text file and, together with a "mapping" file, 
+creates a Radiance scene description.  The mapping file is a text file which
+assigns materials to the surfaces created in Architrion.
+
+I have written an interface with HyperCard, to create this mapping file. The 
+interface can also be used to create or modify materials.  Users map materials
+onto surfaces by creating a series of rules based on Architrion object 
+identifiers.  For example, if I have some blocks called "floor" in
+Architrion, and have drawn some of them in red and some in blue, then I might
+make 2 mapping rules to tell Radiance that I want my material called "marble"
+applied to all red "floor" blocks and "carpet" applied to all blue "floor"
+blocks.  It's pretty simple.  It just requires a little forethought when 
+creating the original Architrion model, since how you name, layer, color and
+place (i.e. position of reference face) blocks is important for locating
+materials.
+
+If you run the interface under A/UX, then it can also automatically generate
+the Radiance octree.  If you are using the mac linked to a Unix machine, then
+you must do some ftp-ing of files back and forth.
+
+Arch2rad currently runs on the Unix side of this, while the interface is on the
+Mac finder side.  This is a pretty inconvenient set-up at the moment, but I
+expect to have arch2rad running on the mac, from within the interface, very
+soon.  So if you're eager for the interface, I'd highly recommend waiting at
+least until that task is finished.
+
+As for documentation, unfortunately all we have is Greg's brief write-up of
+the arch2rad procedure and my very messy scribbled notes.  Since I am my own
+alpa tester for this (I'm currently doing a small design project with these
+new tools), I jot down notes as I go.  There are little idiosyncracies in
+Architrion that are critical with respect to Radiance rendering, and I would
+like to have a small user's manual/handbook of "tips" for people working with
+the interface.  Unfortunately, this project only gets worked on in my non-
+existant spare time, so who knows when we'll have a polished release version.
+
+I'm happy to send the software to you over the net.  Or call if you'd like to
+chat about it.
+(415)486-4092
+
+Jennifer Schuman
+
+<A NAME="ALG">======================================================================</A>
+ALG	Secondary source calculations and new algorithms
+
+Date: Mon, 1 Apr 91 21:14:57 PST
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+To: greg@hobbes.lbl.gov
+Subject: Another Rad Idea
+
+Greg,
+
+I've been cogitating on the "problem" of backward ray tracing,
+that being that only direct shadow rays to sources will be
+computed for illumination levels, except when ambient bounces
+are in effect.  In other words, no light bouncing off mirrors
+will cast shadows, right?
+
+What the scenario in which the user has the option of defining
+any number of "virtual sources" by material name either on
+the command line or by another material definition that cross
+references to the specified materials as potential contributors
+to radiance levels.  The thought here is that at every point
+in the scene, rays would be traced to each light source (statistics
+permitting) including each "virtual source."  When the virtual
+direct ray hits its mark (only if, statistics permitting) it
+then traces X number of additional rays to the light sources,
+considers the material properties of the virtual source (like
+if it is highly polished metal) and then figures out any
+additional contribution the reflected images of sources should
+have on the original scene location.  In this manner, it
+would seem, the effect of light bouncing off of mirrors could
+be acheived.
+
+Realizing that this method potentially greatly increases the
+number of shadow rays to be calculated, I've thought of one
+way that the virtual sources could be implemented with potential
+speed improvements.  Perhaps in the definition of the virtual
+source, the material names of the sources to be considered
+as potential reflects could be named.  Another possibility
+might be to somehow "project" all pertinent light sources
+onto the plane of the virtural source so that when a virtual
+source ray strikes, it already knows which other sources 
+would possibly be "in view" of the scene location.
+
+Boy I hope this makes sense.  I put a lot of thought into it
+because the project I'm currently working on has many, many
+mirrors in it with sources projecting directly onto them. 
+
+Take care,
+Chas
+
+From greg Tue Apr  2 11:31:14 1991
+Date: Tue, 2 Apr 91 11:31:08 +0200
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: Hello Hello!
+
+Hi Chas,
+
+Nice to hear from you again.  Yes, I've had problems with the Macintosh
+not writing out its files completely.  Often, I'll compile something
+and everything looks OK, no error messages, but when I go to run
+the program -- SPLAT!  Jennifer is now set up to make Mac distributions,
+so she can get you fresh copies of all the binaries on floppies, or
+you can get slightly older binaries from the distribution using:
+
+	tar xf ~greg/ray/dist/ray1R3.1.tar ray/bin.mac
+	
+I can also upload the newest and grooviest versions as soon as I
+recompile them on the IIfx at home.  (Fortunately, the IIfx doesn't
+seem to have the same trouble writing out its files.)  I can probably
+upload them as soon as (my) tomorrow.
+
+I don't know what to say about your light source without examining
+the files myself.  I assume that you are being careful to put endcaps
+on your cylinders, watch the surface normal directions of all surfaces,
+and be sure that the antimatter does not intersect the illum sphere.
+For a sine surface distribution on the sphere, you can try something like:
+
+	hive_bright = 1+A1*sin(Pz*2*PI);
+
+A1 sets the degree of variation (1 being zero to 2 times the original
+brightness), and the scale factor determines the frequency of the variation.
+
+I have thought about various hacks for secondary sources such as those
+you suggested, and all have failed my basic tests for inclusion in a
+simulation:
+
+	1.  Must be general enough to be useful.
+	2.  Must not be so complicated that it introduces nasty bugs.
+
+Examples of borderline cases for the above tests that I have included
+are instances and antimatter.  Both have been real pains in the hiney,
+but essential for certain types of models.
+
+I think you see the problem already with secondary sources.  Besides
+being very complicated, it is not very general if you treat only
+planar mirrors.  Also, what do you do about small mirrors and mirrors
+that see each other?  Both cases can lead to an astronomical growth
+in the calculation if you do indirect source testing.
+
+Rather than dig into this can of worms, I am going to be trying what
+I hope is a more general approach to secondary contributions.  I will
+write a separate ray tracing procedure to follow rays from the light
+sources and compute secondary source distributions at user-specified
+locations.  This approach also has the advantage of not introducing
+bugs into a working program.  I don't see how to get away from the
+user-specification requirement at this point, since it requires a
+fair amount of intelligence to know where the significant sources
+of secondary illumination will show up.  However, the user will have
+the capability to enclose objects and declare secondary emitting
+"volumes" in this way.  Thus, even something as complex as a glass
+chandelier could be tagged as a secondary source by enclosing with
+a big "illum" and handing it to this other program.
+
+Unfortunately, it will take me some time to implement all of this.
+I don't expect to be really finished before the end of my stay
+in Switzerland, which may be too late for your particular project.
+
+I don't mind if you send this discussion yourself to the ray list.
+If you don't, I will next time I make a digest.  (It's a bit overdue --
+I was just waiting to announce 1.4 at the same time.)
+
+-Greg
+
+Date: Mon, 15 Apr 91 22:58:33 PDT
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+To: greg@hobbes.lbl.gov
+Subject: What else can't Radiance do?
+
+Greg,
+
+I'm excited about your current plans/action to write
+a forward ray tracing pre-processor.  I think that it
+will greatly enhance Radiance's ability to simulate
+more complex lighting schemes.  I  have questions,
+however, as to just how general of a solution it is
+going to turn out to be.  I also don't like the
+fact that it requires an additional time-consuming
+step in the ray tracing process.  It seems like
+the pre-processor is very well suited for tasks like
+modelling light sources with lots of refracting/reflecting
+elements, but much less well suited for the kind of
+application I described earlier, that of a room with
+mirrors on the wall.
+
+My first question is in what ways would the implementation
+of a "smart backward ray tracing (SBRT)" solution as I described
+before not be a general solution?  I've thought about this
+for the last two weeks and could not think of one geometric
+scenario in which the SBRT wouldn't work.  Was my presentation
+of how it might be implemented clear?
+
+My thoughts about the use of a SBRT in the scenario in question--
+a room with mirrors--are that it seems like the SBRT would
+be a much more efficient approach to determining secondary
+contributions because the secondary source ray already
+has a good idea of which sources to do shadow testing of
+because it has a "favored direction" as determined by the
+angle of incidence with the reflective/refractive surface.  In other
+words, only those sources within a defined solid angle around
+the incident ray's direction need to be shadow tested.  The 
+secondary shadow testing would follow the actual path that 
+the light would follow from the source to the originating point
+in the scene.   In other words, the convention of doing
+shadow testing to the geometric center of a polygonal source would
+not prevent other parts of the polygonal secondary source from 
+potentially reflecting light onto the originating point in the scene.
+The same would hold true for cylinders and spheres as secondary
+sources.  A completely different way of thinking about this
+whole shadow ray thing is that there is more than one solution
+to the equation of the light's path.  The first solution is
+the shortest path whereas additional solutions exist where there
+are reflective surfaces.
+
+What is the feasibility of implementing the SBRT into
+Radiance?  Just a quick guess about the number of additional
+lines of code written and/or the percentage of existing
+code that would have to be modified would be great.
+
+My second question surrounds the RGB issue?  How much of
+a problem is it that not all of "reality" is describeable
+with the RGB color model...what percentage of real world
+phenomenon are left out?
+
+My thoughts on this one are that if accurate measurements
+of a material's color and reflectance are going to be made
+with expensive equipment, how much more difficult is it
+to extract full-spectrum color reflectance information than
+simply RGB?  Specularity?
+
+What is the feasability and usefulness of implementing
+new material types that used full-spectrum samplings of
+a material's color instead of RGB?  I'm imagining a material
+that uses an external data file not unlike the data files
+used for illum distrubutions which contain iterpolatable
+values at defined intervals along the spectrum.  Again, 
+rough estimates of number of lines needed to be written/modified 
+would be great.
+
+The next question is an easy one.  What about cylindrical
+sources?  You've given me reasons why they don't make sense,
+but I continue to hang onto this idea based on an alternate
+way of calcuating shadow rays.  The idea is to trace a shadow
+ray to the "nearest point" along the centerline of the cylinder
+rather than to say the midpoint of the centerline as you've
+mentioned to me before as being the "only reasonable way" and
+as such, it didn't make sense.  Again, how feasible is this idea?
+
+My last few questions are much more general in nature.  If
+you had unlimited funds and desire to make Radiance simulate
+"reality" to the "nth" degree, what other things would you
+implement?  And, is there a theoretical limit to the greatest
+degree of accuracy (with unlimited processing power)
+that a ray tracing solution (forward and/or backward) can
+acheive?  What is Radiance's theoretical limit?
+
+Yum, yum.  Food for thought.
+Chas
+
+Date: Tue, 16 Apr 91 14:48:03 +0200
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: digesting... digesting... BURP!!
+
+Hi Chas,
+
+Thanks for all of your "food for thought".  I'll do my best to answer
+your queries, but I'm not always perfectly clear on your ideas when
+I read them.  I think that these discussions would go much easier in
+person, but that's not going to be possible for at least a while...
+
+First, the smart backward ray tracing idea.  I'm not sure I understand
+this one fully.  I think I get the basic tenet of searching for sources
+during the normal ray tracing process, and I think the idea has merit
+for large planar mirrors.  As I understand it, you call each mirror a
+window into a virtual world, where you again look at each light
+source.  The costs would be significant, especially for multiple
+reflections in facing mirrors where the calculation could grow 
+exponentially.  Using solid angles to limit tests would avoid some
+of these costs, but even checking such a list if it's long takes
+time.  I don't know how to make the method work for mirrors that have
+texture or curvature.  The idea as given here would take a couple hundred
+lines of code and a month or more of my time to implement.  I would
+be interested to try it if I have the time.
+
+Second, the cylindrical light source question.  I may do something with
+this.  Not cylinders specifically, but I think it would be good to
+generalize the light source testing procedures to be more forgiving
+of geometry.  Also, I would like the calculation to adaptively sample
+sources based on their proximity.  For example, nearby sources should
+get more samples than a distant source of the same size.  Intensity should
+also be used to determine sampling.  I don't see why I couldn't work
+shape into such a scheme.  The main problem is complexity in the source
+calculation, which should be avoided wherever possible since it is the
+most heavily used part of the program next to intersection testing.
+It has to be dirt cheap.  That's why I can't currently model cylindrical
+sources -- I use a simple extended volume model that can't handle
+surfaces with holes in them.  My guess for this one is 200 lines of code
+and 5 week's time.  I will very probably tackle this along with the
+forward ray tracer, since proper source sampling is critical to the
+success of this effort.
+
+I am not sure how well the forward ray tracing preprocessor would
+perform in a house of mirrors.  It sort of depends on the source
+sampling scheme I use.  If I specified each mirror as a secondary
+source (illum), and the output distributions were all highly peaked,
+source sampling would critical to obtaining an accurate result.
+
+In general, I beleive the preprocessing time would not add nearly
+as much to the rendering time as would be required without it.  This
+is the basic precept of creating such a preprocess to begin with.
+If it's not going to save time, then it's a mistake to use it.
+The forward approach is not that good if the final surface is a
+mirror.  For such cases, the SBRT method you suggest sounds better
+to me also.
+
+And now for color.  I wish I knew the answer to this question.  Since
+I haven't played around with real spectral reflectance data, I can't
+really give you an opinion.  It is not that difficult to implement
+better spectral sampling in Radiance.  It would only require redefining
+the color operations I've built in as macros.  Special programming
+would be required in a few spots where the macros weren't used.  I'd
+estimate a couple of weeks time.  The main reason I haven't done it is
+because I don't have the spectral data.  You should first talk to a student
+who has been working with Gary Meyer at the University of Oregon in Eugene.
+He's been using Radiance to test various spectral sampling schemes.
+He hasn't modified the code, just used multiple runs to increase the number
+of spectral samples from 3 to 3*N.  His name is Roy Ramberg and you can
+send e-mail to him at ramberg@cs.oregon.edu.  I'd be interested in getting
+copies of your correspondance as well.
+
+I have considered separate scaling factors for x, y and z, and decided
+that it wasn't worth it.  Implementing all of the resultant surface
+types, especially with sorts of skewed slices that would be
+left at the end of elliptical cones, is very nasty.  Many months, many
+headaches.  Also, you destroy the consistency of the lighting calculation
+if you perform non-uniform scaling.  I think that any such operations
+should happen before the file is imported to Radiance.  It's too
+non-physical for my taste.  In the limited case of fitting doors and
+things like that, it's OK, so it might be worth having a special
+program called "xfscale" or something similar to do it.  I wouldn't
+want to add it directly to xform, though.
+
+I don't know how to answer your general question about what I would
+implement or like implemented in Radiance given unlimited resources.
+As far as the simulation itself, I can only do what I know to do, what
+occurs to me along the way, and what you tell me I should do!  I could
+make a long list of shit work that I would like done writing interfaces
+to various CAD programs, material and object libraries, image file
+formats, and so on.  Mostly, I would like to see completed a nice
+front-end that would run Radiance and connect to one or more CAD
+systems that could really do a decent job modeling architectural
+environments.  Personally, I'm not sure Architrion on the Mac is it,
+but it seems like a good place to start.
+
+One theoretical limit to light simulation using ray tracing is its
+inability to directly model diffraction and other wave effects.  Ray
+tracing simulates light only as far as its particle behavior.  You can
+fake wave interactions with surfaces, however, and this is usually where
+they are most significant.  At any rate, diffraction is not so important
+to lighting.  I would say that modeling polarization would be an
+interesting addition to Radiance, and not too difficult to implement.
+This has the most effect on multiple specular interactions, although
+skylight is also polarized to some degree and this can affect the
+amount of light entering windows at different angles.  (Note that small
+inaccuracies are generally overwhelmed by the variability of daylight
+in general.)
+
+The main practical limitation of ray tracing (or any global illumination
+calculation for that matter) is finding all sources of illumination with
+a small sample set.  You must figure out where to look, since you can't
+duplicate nature's feat of sending trillions of samples into the eye
+every second.  In general, it is impossible to guarantee a solution to
+within a fixed tolerance.  You can only say that you have some degree
+of certainty that your error is not greater than some amount.  There
+is no guarantee that you won't miss that solar ray that hit your watch
+and bounced off a satellite, blinding some old woman in Leningrad.
+
+Well, it's three o'clock and time to get to work!!!
+
+-Greg
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 1, Number 2</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5></html>

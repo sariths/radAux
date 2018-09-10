@@ -1,0 +1,513 @@
+<!DOCTYPE HTML PUBLIC "-//Netscape Comm. Corp.//DTD HTML//EN">
+<HTML>
+<HEAD>
+    <!-- SGI_COMMENT COSMOCREATE -->
+    <!-- SGI_COMMENT VERSION NUMBER="1.0" -->
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+    <TITLE>RADIANCE Digest, v2n8 part 2</TITLE>
+</HEAD>
+<BODY>
+<P>
+</P>
+<H2>
+<A NAME="top">Radiance Digest, v2n8 (Part 2) </A></H2>
+<HR>
+<PRE>
+Dear Radiance Users, 
+
+This is the second part of the Radiance Digest (v2n8), and it contains
+only one topic. If you got it before the first part, it may be a quirk
+or it may be that your mailer rejected the longer message. If you
+suspect the latter, send me e-mail asking me to resend it to you.
+
+<A HREF="v2n8_2.html#IRRADIANCE_GRADIENT">IRRADIANCE GRADIENT CALCULATION </A>
+
+As usual, please do not respond to this message. If you have something
+to tell me, write to &quot;GJWard@lbl.gov&quot;. If you wish to have
+your name removed from the list, or someone else's name added, send
+e-mail to:
+
+radiance-request@hobbes.lbl.gov 
+
+With some human-understandable message like: 
+
+Please take my name off the Radiance Digest list. 
+
+I receive these messages, and a single word like &quot;subscribe&quot;
+means nothing, since there are two lists, a moderated digest list (the
+one you are certainly on) and an unmoderated discussion list
+(radiance-discuss@hobbes.lbl.gov).
+
+-Greg 
+
+=======================================================================
+<A HREF="v2n8_2.html#IRRADIANCE_GRADIENT" NAME="IRRADIANCE_GRADIENT">IRRADIANCE GRADIENT CALCULATION</A>
+
+From: hwj@henrik.igk.dth.dk
+Subject: Irrad. grad. and BRDF
+To: greg@hobbes.lbl.gov
+Date: Thu, 17 Nov 1994 15:15:52 +0100 (GMT+0100) 
+
+Henrik Wann Jensen
+Institute of Graphical Communication
+Technical University of Denmark
+Building 116
+2800 Lyngby
+Denmark
+Phone: +45 93 12 12 (tone) 16 64
+e-mail: igkhwj@unidhp.uni-c.dk 
+
+Re: Irradiance Gradient method on surfaces with complex BRDF's
+
+Hi Greg, 
+
+I have been working with rendering/ray tracing for a while and I think
+that Radiance is a very impressive program (the most impressive
+rendering package on the net).
+
+I have a question regaring the Irradiance Gradient method. As far as I
+know it is currently limited to Lambertian surfaces. Has any work been
+done towards extending it so that it could be used on surfaces with
+more complex BRDF's (e.g. like Sillion's spherical harmonics
+on surfaces with directional diffuse properties)? If not then how are
+these complex surfaces dealt with - by plain recursive Monte Carlo
+sampling - or via some Lambertian assumption?
+
+I have a &quot;little&quot; extra question that I have been wondering
+about.  How are caustics from refractive objects calculated. I know
+that windows has been taken into account. But how about a pair of
+glasses lying on a desk slightly focusing the light. I know that
+radiance does not emit light rays from the light sources but is there a
+way around this problem (e.g. polygonalization of the refractive
+object) or are the caustics simulated using Monte Carlo sampling
+perhaps combined with high lighting during refraction?
+
+Best regards 
+
+- Henrik 
+
+Date: Thu, 17 Nov 94 09:30:00 PST
+From: greg (Gregory J. Ward)
+To: hwj@henrik.igk.dth.dk
+Subject: Re: Irrad. grad. and BRDF 
+
+Hi Henrik, 
+
+The &quot;indirect irradiance&quot; calculation which makes use of
+gradient approximations in Radiance does not consider the directional
+reflectance of the surface on which the calculation takes place. It
+considers only the diffuse component of its reflectance function, which
+in some cases is small (even negligible). It does of course consider
+the directional reflectances of other surfaces sampled over the
+hemisphere, but only inasmuch as they affect the incoming
+&quot;indirect&quot; radiation.
+
+I know of no one who has extended the gradient work to more detailed
+BRDF's, but the idea has merit. Remembering the trouble I had just
+dealing with diffuse incidence with a simple sampling pattern, I'm not
+sure I would want to tackle such a problem myself. Also, you must
+remember that the principal problem with non-diffuse surfaces is that
+their effect changes with the OUTGOING direction. Therefore, any work
+you do on computing the gradient must be duplicated somehow for each
+outgoing direction.
+
+Caustics are not handled properly in Radiance. There are two reasons
+for this. The first is that they simply are not very important in most
+architectural environments. If light redirection is used, it is usually
+done with mirrors or prisms rather than lenses. Radiance does handle
+these cases. Second, caustics through refractive media are very
+difficult in general to deal with. Radiance &quot;cops out&quot; by
+following shadow test rays through the refractive surfaces (be they
+flat or curved), and if they hit the source, great. If not, we consider
+it a &quot;shadow&quot;, even though it's not.  This halfway approach
+is exactly right for glass panes, but further from the truth the
+further the glass is from a plate.
+
+I hope this answers your questions.
+-Greg 
+
+From: hwj@henrik.igk.dth.dk
+Subject: A few academic ideas...
+To: greg@hobbes.lbl.gov
+Date: Fri, 18 Nov 1994 03:15:43 +0100 (GMT+0100)
+
+
+Hi Greg, 
+
+Thanks, for your fast reply... 
+
+I agree that modifying the irradiance gradient method to account for
+surfaces with directional reflection is a complex task. (The following
+is just a thought...) A simple idea could perhaps be to use the old
+irradiance technique without the gradient information (comp.  graph.
+1988).  Instead of storing only the &quot;Lambertian intensity
+constant&quot; one could use Sillion's spherical harmonics (comp.
+graph. 1991) or perhaps Wavelets to store a complete intensity
+distribution and then compute the interpolation/extrapolation of the
+intensity from this distribution.  This would allow an efficient
+simulation in models containing surfaces with directional diffuse
+properties.
+
+You are right that caustics aren't particularly important in practice
+but still... I believe that caustics could be integrated rather easily
+in Radiance as an external tool that would apply the light ray tracing
+method introduced by Arvo in 1986. The tool or program could be used in
+a preprocessing step and it should calculate the caustics values using
+illumination maps. These illumination maps could then be integrated
+into the rendering pipeline as texture maps with illumination
+information. This would unfortunately be limited to Lambertian surfaces
+but it would allow the simulation of caustics caused by the reflection
+of light from a (small) water bassin. I guess this effect is also used
+by some architects.  This kind of calculation must be somehow similar
+to the skyillum-program (?) that calculates the indirect contribution
+through windows. The tool would also fit nicely into the store and
+reuse idea exploited in Radiance since the illumination maps are
+view-independent and as such reusable.
+
+A little extra question. Has anyone implemented fractal/procedural
+objects in Radiance (e.g. plants) without approximating these with
+polygons or other simple objects?
+
+- Henrik 
+
+PS: I don't hope my questions/ideas are to academic... 
+
+Date: Thu, 17 Nov 94 15:50:57 PST
+From: greg (Gregory J. Ward)
+To: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas... 
+
+Hi Henrik, 
+
+The main problem with storing information linked to directional
+reflection is the amount of RAM it takes up. The diffuse+gradient
+information stored in Radiance requires about 75-85 bytes/value, which
+when you add up all the values to be computed is quite substantial.
+Multiply that by a factor of at least 20 for spherical harmonics or the
+like and you're all out of memory.  Swapping becomes the rule, as in
+most radiosity calculations (even the ones just handle Lambertian
+surfaces).
+
+Your idea for integrating caustics is not too far-fetched, but again,
+the cost of applying texture maps to EVERY surface is simply not
+practical. Especially when you consider that many Radiance models
+contain upwards of 100,000 surfaces, you can see why this might be a
+problem. I feel it is essential to always look at the practical side of
+the computation. Otherwise, you end up with something that no computer
+can run.
+
+I have not implemented any primitives other than polygons, spheres and
+cones.  It is possible to do so, but you may find that the expense both
+in terms of programming and in terms of rendering time is not worth the
+effort. You can save some RAM by implementing higher-order primitives,
+and maybe even improve the quality of your results, but you will
+generally incur a large expense during rendering unless you are VERY
+clever with your intersection procedure.
+
+I recommend instead that you make use of the functionality already
+built into gensurf, and check out the &quot;genpine.csh&quot; program
+in the ray/src/gen directory as an example of building a fractal tree
+using hierarchical instancing.
+
+-Greg 
+
+From: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas...
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 18 Nov 1994 19:00:42 +0100 (GMT+0100) 
+
+Hi Greg, 
+
+I agree that spherical harmonics does indeed use a lot of memory.
+However they should only be used on the (few) surfaces in the scene
+that has directional reflection properties. Furthermore one might even
+cut the memory requirements further down by using sp.ha. only at
+intersections with primary rays or rather intersections seen by the eye
+(that includes rays that have had one or more specular reflections).
+
+The caustics idea could also be optimized a lot. Only surfaces
+illuminated by caustics need a texture map (these surfaces could be
+specified by the user).
+
+One of the things I really like about Radiance are the rather advanced
+materials and light sources. In order to use these properly I have been
+looking for some material-database containing reflection-data for
+common materials (metals, plastics etc.) but I have not been able to
+find it. I was very pleased to see your 92-paper on Anisotropic
+Reflection especially the tables of data measured from a range of
+common materials. Since the article also presented equipment for
+measuring reflection-properties I have been looking forward to seeing
+some database containing measurements for different materials. I think
+that this would be very useful since it could eliminate some of the
+tentative part of designing scenes -- the creation of materials.
+Does such a database exist? 
+
+- Henrik 
+
+Date: Fri, 18 Nov 94 11:14:34 PST
+From: greg (Gregory J. Ward)
+To: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas... 
+
+Hi Henrik, 
+
+Most of the surfaces are non-diffuse, unfortunately, so that won't help
+reduce memory costs much. Primary rays still intersect many, many
+thousands of surfaces. I don't really like these kinds of halfway,
+compicated implementations, especially when my budget for Radiance
+development has dropped to zero.
+
+Your idea for texturing selected surfaces is exactly what I have in
+mind for my next work on light source computations. The mkillum program
+is a first attempt at that, though it still has trouble with some
+interactions since it still runs rays backwards w.r.t. light.
+
+Your ideas for databases are appreciated, and I agree that this is
+sorely lacking. Ultimately, I believe it is the responsibility of
+surface manufacturers to measure their own products, since there are
+way too many for the research community to deal with them unaided. My
+current work in this area is to develop and calibrate a portable
+reflectance measurement device, that would permit field measurements of
+surface materials in situ. I see this as the most practical short-term
+solution to the problem, since the databases we both want don't seem to
+be forthcoming.
+
+-Greg 
+
+From: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas...
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Mon, 21 Nov 1994 19:05:20 +0100 (GMT+0100) 
+
+Hi Greg, 
+
+Most real-world surfaces are non-diffuse, but I think that our computer
+models could settle with only a few &quot;important&quot; surfaces
+being non-diffuse and since reflectance-data aren't available this
+comes quite natural.
+
+I agree that different materials ought to be measured by their
+manufactors.  However computer graphics is quite new and it has not yet
+proven useful in enough areas to make this realistic. Instead I believe
+that your measurement device could be very useful in obtaining
+reflectance data for common materials that would fit the
+isotropic/anisotropic models.  I really believe the computer graphics
+community could benifit a lot from this.  It would fx. make the
+creation of standard scenes more realistic since we would be able to
+talk about the same materials - instead of only Lambertian reflection.
+
+I was browsing through the scenes following Radiance and I found some
+reflectance data for gold, silver, brass, wood, etc. Are these
+materials measured or just created in order to look good?
+
+I am looking forward to seeing illumination maps in Radiance.  In my
+own rendering program I have quite succesfully implemented light ray
+tracing and combined it with the irradiance gradient method.
+
+Some time ago I heard about a global illumination mailing list. Does
+this mailing list still exist and if so, can I somehow join it?
+
+- Henrik 
+
+Date: Mon, 21 Nov 94 10:51:01 PST
+From: greg (Gregory J. Ward)
+To: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas... 
+
+Hi Henrik, 
+
+As much as I would like to create a materials database, the real work
+of collecting and cutting up suitable samples is beyond me. I wouldn't
+know how to go about it. Perhaps you or someone could organize a
+&quot;sample drive,&quot; where interested people sent in appropriate
+samples of various materials for me to measure. I don't want to do all
+the work of cataloging everything, but I could probably handle the
+actual measurement and fitting if there weren't too many samples to
+deal with. This is a very tentative idea...  I'm nervous about taking
+on any new projects without funding right now, as I have plenty to do
+and not enough time to do it already.
+
+I'm glad that you've managed to implement and use the irradiance
+gradients in your code. You're the first I've heard from to do so.
+
+Yes, the globillum list is still going. To sign up, send a request to
+Paul Heckbert &lt;ph@cs.cmu.edu&gt; and say you want on it.
+
+-Greg 
+
+From: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas...
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Tue, 22 Nov 1994 01:23:17 +0100 (GMT+0100) 
+
+Hi Greg, 
+
+I can see the problem of collecting material-samples. I would however
+also think that measuring and fitting these materials would take a lot
+of time.
+
+I could see if I could get my hands on some materials like:  Bricks,
+pieces of wall-paper, different types/colours of paint, plants? (grass,
+leaves, bark...) Of course a number of these would have to be
+accompanied by some texture mapping. Plants would be quite difficult to
+sent - I guess the reflectance properties would change during air-mail
+;-)
+
+I wouldn't mind collecting a material database. I think the work of
+cataloging the materials could simply be done (initially) using a
+text-file containing names of materials and the corresponding
+reflectance model and measured data - just like the tables you
+presented in your paper at siggraph 92.
+
+It surprises me that no one else has announced implementations of the
+irradiance gradient method. I am very pleased with it. I started
+initially with plain recursive Monte Carlo sampling which took years
+(almost) to complete. Then I found your article on the store and reuse
+technique in comp. graph. 1988 which I implemented and it was a large
+improvement (It did however eat up a bit of memory). A few month later
+I found your article on the irradiance gradient method which was again
+a large improvement and it gave very good results.
+
+- Henrik 
+
+From: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas...
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Tue, 22 Nov 1994 22:32:03 +0100 (GMT+0100) 
+
+Hi Greg, 
+
+It could indeed be very interesting to arrange a sample drive.  I can
+think about a number of materials that could be quite interesting to
+measure: Bricks, different types/colours of wall-paper, different
+types/colours of paint, plants (I don't know whether they fit into the
+model). I wouldn't mind cataloging these materials. I think it can be
+done (initially) simply by adding information to a text-file regarding
+the material name and the measured reflectance data.
+
+It surprises me that no one else has announced implementations of the
+irradiance gradient method. It has been very useful to me. I started
+initially with plain Monte Carlo sampling of the indirect light (it
+took years to complete). Then I found your article in comp. graph. 88
+concerning storing and reusing the indirect light which I implemented
+with very good results. Later I found your 92 article with the gradient
+technique and it gave even better results. I think that for instance
+Chen in comp. graph. 91 could benifit from the irradiance gradients
+method instead of using path tracing in the visualization step.
+
+I have read in your articles that the results in Radiance are verified
+from time to time (and they improve). How is this verification done.
+Is it via a simple model that can be handled with exact calculations or
+is it via a brute force Monte Carlo technique?
+
+- Henrik 
+
+Date: Tue, 22 Nov 94 11:14:14 PST
+From: greg (Gregory J. Ward)
+To: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas... 
+
+Hi Henrik, 
+
+Sorry not to respond to your last message, but there are so many
+problems with creating a material database that I haven't solved yet,
+that I don't even want to think about it right now. (Material textures
+and colors are BIG problems.)
+
+Radiance has been compared to measurements of scale models, other
+lighting simulations and measurements and qualitative comparisons of
+full-sized environments. Most of the good validation work has been done
+outside of LBL.
+
+-Greg 
+
+From: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas...
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Tue, 22 Nov 1994 20:24:10 +0100 (GMT+0100) 
+
+Hi Greg, 
+
+&gt; Sorry not to respond to your last message, but there are so many
+problems
+
+Sorry for resending it. But elm crashed just after sending the mail and
+I was wondering whether it was sent at all.
+
+&gt; with creating a material database that I haven't solved yet, that I don't
+&gt; even want to think about it right now. (Material textures and colors are
+&gt; BIG problems.)
+
+That is true, but as a beginning textures could be ignored.  Why are
+colours problematic?
+
+&gt; Radiance has been compared to measurements of scale models, other lighting
+&gt; simulations and measurements and qualitative comparisons of full-sized
+&gt; environments. Most of the good validation work has been done outside of LBL.
+
+Are these results somehow available? I would be very interested in
+validating my own little rendering-program....
+
+- Henrik 
+
+Date: Tue, 22 Nov 94 13:54:25 PST
+From: greg (Gregory J. Ward)
+To: hwj@henrik.igk.dth.dk
+Subject: Re: A few academic ideas... 
+
+Hi Henrik, 
+
+The problem with colors and textures is that the device I currently
+have can neither measure nor ignore them. They interfere with the
+measurements, especially surfaces with visible textures or patterns.
+
+There are a couple of reports with Radiance validation data in them.
+One is by John Mardaljevic:
+
+Mardaljevic, John, K.J. Lomas, D.G. Henderson, ``Advanced
+Daylighting
+Design for Complex Spaces'' Proceedings of CLIMA 2000, 1-3
+November
+1993, London UK. 
+
+Two others come from LBL: 
+
+Grynberg, Anat, Validation of Radiance, LBID 1575, LBL
+Technical
+Information Department, Lawrence Berkeley Laboratory, Berkeley,
+California, July 1989. 
+
+Papamichael, Kostantinos, Liliana Beltran,
+``Simulating the Daylight Performance of Fenestration
+Systems and Spaces of Arbitrary Complexity: The IDC Method''
+&quot;Proceedings of Building Simulation `93&quot;,
+Adelaide, Australia, August 16-18, 1993. 
+
+Don't ask me to send Anat's to you. It's rather long, and the color
+images don't copy well. These papers are not the best resource if what
+you want to do is validate your own software, however. You would be
+better off using the simulations that lie in the /pub/tests directory
+on hobbes.lbl.gov. That's what they're there for.
+
+-Greg 
+</PRE>
+<P>
+<STRONG>Back to <A HREF="#top">Top of Digest Volume 2, Number 8, Part 2</A></STRONG><A
+ HREF="#top"></A><BR>
+ <STRONG><FONT SIZE="3">Return to <I><A HREF="../HOME.html">RADIANCE</A></I><A
+ HREF="../HOME.html"> Home Page</A></FONT></STRONG><A
+ HREF="../HOME.html"></A><BR>
+ <STRONG>Return to <I><A HREF="rad_dig_HOME.html">RADIANCE</A></I><A
+ HREF="rad_dig_HOME.html"> Digests Overview</A></STRONG><A
+ HREF="rad_dig_HOME.html"></A></P>
+<HR>
+<H5>
+All trademarks and product names mentioned herein are the property of 
+their registered owners.<BR>
+ All written material is the property of its respective contributor.<BR>
+ Neither the contributors nor their employers are responsible for 
+consequences arising from any use or misuse of this information.<BR>
+ We make no guarantee that any of this information is correct. </H5>
+</BODY>
+</HTML>

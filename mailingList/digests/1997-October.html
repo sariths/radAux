@@ -1,0 +1,1239 @@
+<!DOCTYPE HTML PUBLIC "-//Netscape Comm. Corp.//DTD HTML//EN">
+<HTML>
+<HEAD>
+    <!-- SGI_COMMENT COSMOCREATE -->
+    <!-- SGI_COMMENT VERSION NUMBER="1.0" -->
+    <TITLE> Radiance Digest v3n3 </TITLE>
+</HEAD>
+<BODY>
+<H2>
+<A NAME="top">RADIANCE Digest Volume 3, Number 3</A></H2>
+<HR>
+<PRE>
+Radiance Digest Volume 3 Number 3        October 10, 1997
+
+The latest version of Radiance is 3R1P5.
+
+Archives can be found at: ftp://radsite.lbl.gov/pub/digest
+and   ftp://radsite.lbl.gov/pub/discuss
+
+Index of Topics
+---------------------------------------------------------
+<A HREF="#patch">LATEST PATCH FILES AVAILABLE</A>
+<A HREF="#autocad">AUTOCAD AND DXF TRANSLATORS</A>
+<A HREF="#nt">RADIANCE FOR WINDOWS NT</A>
+<A HREF="#lightboxes">LIGHTS INSIDE BOXES WITH SMALL HOLES</A>
+<A HREF="#mkillum">USING MKILLUM FOR SIDELIGHTED OFFICE</A>
+<A HREF="#largearea">LARGE AREA SOURCE GLARE CALCULATIONS</A>
+<A HREF="#gensurf">PROCEDURAL MODELING WITH GENSURF</A>
+<A HREF="#aquarium">AQUARIUM ANALYSIS</A>
+<A HREF="#wiremesh">MODELING WIRE MESH</A>
+<A HREF="#lightshelf">SPECULAR LIGHT SHELF</A>
+<A HREF="#exposing">'EXPOSING' IMAGES FOR INDOOR AND OUTDOOR BRIGHTNESSES</A>
+---------------------------------------------------------
+
+<A NAME="patch">LATEST PATCH FILES AVAILABLE</A>
+
+&gt;From radiance  Tue Sep  2 18:21:04 1997
+Date: Tue, 2 Sep 1997 18:14:37 -0700
+From: radiance (Radiance Account)
+To: raydisc
+Subject: New Radiance patch now available
+
+
+Radiance users,
+
+A new patch is now available at the Radiance WWW site:
+
+   http://radsite.lbl.gov/rad/patch/
+
+The changes include:
+
+3.1.4 patch files:
+src/rt/ambient.c        - fixes problems with -aw option
+src/cv/ies2rad.c        - improvement for direct/indirect fixtures
+src/cv/source.cal       - improvement for direct/indirect fixtures
+src/px/x11image.c       - enhancement of 'h' and 'a' commands
+
+3.1.5 patch files:
+src/cal/util/Rmakefile - fixes missing compatibility flags
+src/rt/persist.c       - fixes problem with AIX select() differences
+src/util/netproc.c     - fixes problem with AIX select() differences
+src/common/color.h     - fixes problem with AIX macro definitions
+src/common/lookup.h    - fixes problem with AIX macro definitions
+
+Instructions for installation are in the README File.  
+
+Thanks Greg!
+
+-Chas
+---------------------------------------------------------------------------
+<A NAME="autocad">AUTOCAD AND DXF TRANSLATORS</A>
+
+
+&gt;From akienyy@nus.sg  Fri Aug 29 11:01:15 1997
+Date: Sat, 30 Aug 1997 01:56:39 +0800
+To: radiance
+From: akienyy@leonis.nus.sg (Edward Ng)
+
+Hi
+
+As a new user of radiance, I have heard people saying that there is a
+autocad/dxf to radiance translator somewhere written by a Phil Thomson. Any
+idea where I can locate that or are there other offerings somewhere?
+
+Edward
+
+________________________________ ________________________________
+Dr Edward Ng   .........  reply to (akienyy@nus.sg)
+School of Architecture, National University of Singapore
+Kent Ridge Crescent, Singapore 119260 Tel: 65-7723567 Fax:7793078
+________________________________ ________________________________
+
+
+&gt;From radiance  Tue Sep  2 13:49:44 1997
+Date: Tue, 2 Sep 1997 13:49:43 -0700
+From: radiance (Radiance Account)
+To: akienyy@leonis.nus.sg (Edward Ng)
+Subject: ACAD to Radiance
+Cc: radiance
+
+
+Dear Dr. Ng,
+
+Although answering this questions always makes me a little nervous because
+of my personal interest, I will venture to provide an answer that is as
+complete as possible.  Any omissions are unintentional and I am eager
+to hear about additional solutions to this problem from the Radiance
+community.
+
+There are a few options for exporting and/or translating geometry from
+AutoCAD and DXF files into Radiance, none of them perfect.  The AutoLISP 
+&quot;torad&quot; program is available from the Radiance ftp site:
+
+   ftp://radsite.lbl.gov/rad/pub/translators/torad.tar.Z
+
+Torad is slow because it is AutoLISP and will only run within versions of
+AutoCAD that support AutoLISP (is AutoLISP still supported in R14?).
+
+There is another &quot;dxf2rad&quot; lisp program in the same ftp directory, but
+as far as I can remember, it does not support as many entity types.
+
+The &quot;radout&quot; program is a close cousin of torad and because it is
+written in &quot;C&quot;, it is much faster.  If you have the Unix version of
+AutoCAD on a Sun workstation, then you can get a version of radout 
+which is part of the &quot;DDRAD&quot; package from Georg Mischler at:
+
+   http://www.schorsch.com/autocad/radiance.html
+
+{The last time I checked this site, it wasn't working.  Give it a try
+in a few days before giving up.}
+
+And there is a version of &quot;radout&quot; available for AutoCAD Release 12
+DOS and Windows3.11.  It is mostly the same as torad except it does not
+support the export of views (this never works well in torad anyway),
+but, it includes support for CLOSED 3D PLINES.  This capability means
+that any other entity type that degenerates to a 3D PLINE is also
+supported.  This includes most SOLIDS.  Sometimes this means &quot;exploding&quot; 
+the higher-order geometry, sometimes even this is not necessary.  Radout 
+for DOS/Windows is available for $50.00 from:
+
+   http://www.innernet.com/radiance/radout.htm
+
+Lastly, the ADELINE software package contains an MS-DOS executable
+program that can translate DXF files into Radiance with varrying degrees
+of success.  It will aparently work with ACAD Ver 13, but it does
+not support the new V13 3D entities.  For more information about
+the ADELINE package, please see:
+
+   http://radsite.lbl.gov/adeline
+
+This is by no means an endorsement for any of these packages and your
+success may vary.  If anyone else would like to be mentioned, please let
+me know.
+
+Happy exporting,
+-Chas
++---------------------------------------------------------------------------+
+| Charles Ehrlich                                     Phone: (510) 486-7916 |
+| Principal Research Associate                        Fax:   (510) 486-4089 |
+| UC Lawrence Berkeley National Laboratory            Contact person for:   |
+| 1 Cyclotron Road MS: 90-3111, Berkeley, CA 94720    RADIANCE and ADELINE  |
++---------------------------------------------------------------------------+
+
+-------------------------------------------------------------------
+<A NAME="nt">RADIANCE FOR WINDOWS NT</A>
+
+&gt;From MREANEY@KUHUB.CC.UKANS.EDU  Wed Aug 27 13:56:05 1997
+Date: Wed, 27 Aug 1997 15:53:42 -0500 (UTC -05:00)
+From: Mark Reaney &lt;mreaney@KUHUB.CC.UKANS.EDU&gt;
+Subject: Radiance on an Alpha box?
+To: gregl@asd.sgi.com
+
+Greg,
+
+A novice question.
+
+We would like to do some experiments with Radiance, but most of our
+computers are pretty wimpy.  We may have the oportunity to use a very
+speedy NT Workstation that uses Alpha processors.
+
+Does the NT version of Radiance run on Alpha?  Is there some way to get
+the unix version to run on it?
+
+Thanks for any advice.
+Mark Reaney
+
+======================================================================
+     Mark Reaney, i.e.VR         http://www.ukans.edu/~mreaney       
+Institute for the Exploration         
+   of Virtual Realities              ()    ___   \\  //|| \\
+ Dept. of Theatre &amp; Film             ||   //_\\   \\// || //
+     Univ. of Kansas                 ||() \\__ ()  \/  || \\
+    mreaney@ukans.edu                     
+======================================================================
+
+
+&gt;From radiance  Tue Sep  2 14:06:34 1997
+Date: Tue, 2 Sep 1997 14:06:33 -0700
+From: radiance (Radiance Account)
+To: mreaney@ukans.edu
+Subject:  Radiance on an Alpha box?
+Cc: radiance
+
+
+Dear Mark,
+
+I enjoyed my brief visit to your WWW site.  I can see the use of
+Radiance in your work enhancing the realism you have already 
+achieved with the tools you have at your disposal.  A whole audience
+of people wearing head-mounted displays, eh?  Quite impressive!
+
+There is a version of Radiance which will run on Wintel machines,
+but it has not been compiled for Alpha NT.  The Wintel version
+is part of the ADELINE package which is available from LBNL
+at a cost of $450.00.  Please see our WWW pages for more info:
+
+   http://radsite.lbl.gov/adeline
+
+It is not optomized for NT, but does run well as a DOS shell 
+application.  In fact, it runs 40 to 70% faster that under DOS 6.22!
+
+I also suggest you contact your esteemed colleagues in the lighting
+department.  Professor Moeck and his students did a fantastic job
+of using Radiance to render a church as part of a student competition.
+You can find their WWW site at:
+
+   http://www.arce.ukans.edu/arce/681ld/daylight/dosdoc2.htm
+
+Sincerely,
+-Chas
++---------------------------------------------------------------------------+
+| Charles Ehrlich                                     Phone: (510) 486-7916 |
+| Principal Research Associate                        Fax:   (510) 486-4089 |
+| UC Lawrence Berkeley National Laboratory            Contact person for:   |
+| 1 Cyclotron Road MS: 90-3111, Berkeley, CA 94720    RADIANCE and ADELINE  |
++---------------------------------------------------------------------------+
+
+---------------------------------------------------------------
+<A NAME="lightboxes">LIGHTS INSIDE BOXES WITH SMALL HOLES</A>
+
+&gt;From sunil@teil.soft.net  Mon Aug 25 22:34:34 1997
+Date: Tue, 26 Aug 1997 10:56:18 -0530
+From: Sunil S Hadap &lt;sunil@teil.soft.net&gt;
+Organization: Tata Elxsi (India) Ltd.
+To: Radiance Account &lt;radiance&gt;, raydisc, radiance
+Subject: Set oferflow error!
+
+
+Dear Radiance Users,
+
+We are developing Radiance support for Alias and is almost over. We model a
+sceen for the beta test and we get error &quot;set overflow&quot; somthing related
+MAXSET which is set 127 currently. The error is at that part of the scene
+where number of polygons (greater than 256) in small region. In perticular
+the scene contains a cylender of small size order 10 cm when overall scene
+is 12x8 meters. I increased MAXSET (sorry) to 1024 it works for some cases
+but again fails in some other cases. Can any one suggest what is the error
+and remedy for it.
+
+Thanking You
+
+Sunil Hadap
+
+Tata Elxsi (India) Ltd.
+fn:             Sunil Hadap
+n:              Hadap;Sunil
+org:            Tata Elxsi (India) Ltd.
+adr:            Whitefield Road, Hoody,;;Tata Elxsi (India) Ltd.;Bangalore;Karnataka;560048;India
+email;internet: sunil@teil.soft.net
+title:          Specialist, Visual Computing
+tel;work:       +91-80-8452016/17/18
+tel;fax:        +91-80-8452019
+
+
+------
+
+&gt;From tcvc@indiana.edu  Tue Aug 26 09:45:18 1997
+Date: Tue, 26 Aug 1997 11:40:34 -0500 (EST)
+From: &quot;robert a. shakespeare&quot; &lt;tcvc@indiana.edu&gt;
+To: Jean-Louis Maltret &lt;jlm@eiffel.univ-mrs.fr&gt;
+cc: tcvc@falstaff.ucs.indiana.edu, raydisc
+Subject: Re: Set overflow error
+
+
+       I suggest that you break the scene into components and create
+a seperate octree file for each. These component octree files can then be
+combined with either instance commands or using the -i flag in oconv.
+
+       Using this method, I have been able to eliminate most set overflow
+problems and have not had to eliminate small details from huge scenes.
+
+-Rob
+
+Rob Shakespeare, Director
+Theatre Computer Visualization Center
+Room 200, Theatre Building             V/Fax: 812-855-8827
+Indiana University                     tcvc@indiana.edu
+Bloomington, IN 47405                  shakespe@indiana.edu
+http://appia.tcvc.indiana.edu/~tcvc
+
+Announcement:
+RENDERING WITH RADIANCE: THE ART AND SCIENCE OF LIGHTING VISUALIZATION
+       by Greg Ward Larson and Rob Shakespeare
+       Morgan and Kaufmann Publishers (December 1997)
+
+
+--------------
+
+Date: Tue, 26 Aug 1997 08:01:24 -0700
+From: greg@pink (Gregory W. Larson)
+To: Sunil S Hadap &lt;sunil@teil.soft.net&gt;
+Subject: Re:  Set oferflow error!
+Cc: radiance-discuss
+
+We are developing Radiance support for Alias and is almost over. We model a
+sceen for the beta test and we get error &quot;set overflow&quot; somthing related
+&gt;From Sunil Hadap of Tata Elxsi (India) Ltd.
+&gt;
+&gt; MAXSET which is set 127 currently. The error is at that part of the scene
+&gt; where number of polygons (greater than 256) in small region. In perticular
+&gt; the scene contains a cylender of small size order 10 cm when overall scene
+&gt; is 12x8 meters. I increased MAXSET (sorry) to 1024 it works for some cases
+&gt; but again fails in some other cases. Can any one suggest what is the error
+&gt; and remedy for it.
+
+If you read the oconv manual page, it talks about this error, and the
+solution is to increase the -r command-line parameter value by factors
+of two.  If you take your overall scene dimension and divide by the
+smallest region in which you expect to have a compound object, this
+arrives at he appropriate setting for this parameter.
+
+If you run into memory problems with this solution (I could have sworn
+we just discussed this in the latest digest), you can put your small,
+complex objects into separate octrees and populate the scene using
+the instance primitive.  This is a really good idea if your small
+geometry is highly repetitive, like identical pieces of furniture
+scattered about.
+
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+&gt;From sunil@teil.soft.net  Wed Aug 27 03:29:58 1997
+Date: Wed, 27 Aug 1997 15:55:40 -0530
+From: Sunil S Hadap &lt;sunil@teil.soft.net&gt;
+Organization: Tata Elxsi (India) Ltd.
+To: Radiance Account &lt;radiance&gt;, raydisc, radiance
+CC: sunil@teil.soft.net
+Subject: Slightly dirty image, help me to improve! (HTML)
+
+
+Dear Radiance Users,
+
+The image is modelled using LightGen tool. But we can't render it better.
+The rendering is with high quility and spends hours. The rif file is
+attached.
+
+Following points can be of concern
+
+    * Point lights used are very small (radius .05m) and intensity [254 253
+229]
+    * The light sources are spherical and are enclosed in box type
+enclosure with one face open which throws light. There is no direct
+lighting in the room except small portion of the room. All the light
+received by the room is due to interreflections. Mind room color is not
+green but almost gray. [0.7056      0.72     0.710823]
+    * The rif file says room is with detail medium.
+    * VAR is medium, we use logic: there is no sunlight hence it is not
+high and we see lightsource directly hence can not be low.
+    * PENUM is FALSE, we don't want jitter to further spoil the picture.
+
+We don't understand the spotches, and we can not remove them even if we
+increase -ad 1024 and -as 512. Also there is strange glow on the edges of
+the walls and pot looks as if made of florescent material. Shadow below the
+table is brown ting. We don't think it's a reality. Image in the mirror
+looks speckled when roughness is very small (though not zero) 0.001
+
+Sorry for HTML mail. I am including the image.
+
+
+view= Camera -vf hallOfVision/hughes_Camera.vf
+QUALITY= H
+AMBFILE=hallOfVision/hughes.amb
+RESOLUTION= 512
+ZONE=I  -1e-06  4  -1e-06  4.00054  -1e-06  3
+PENUMBRA=FALSE
+render= -t 1 -ab 2
+DETAIL=M
+VAR=M
+oconv=-n 3
+scene=hallOfVision/hughes_l.rad hallOfVision/hughes_s.rad
+hallOfVision/hughes_o.rad
+
+Thank You
+
+Sunil Hadap
+Mehaboob Ali
+
+Tata Elxsi (India) Ltd.
+
+----------
+
+&gt;From tcvc@indiana.edu  Wed Aug 27 07:40:43 1997
+Date: Wed, 27 Aug 1997 09:36:00 -0500 (EST)
+From: &quot;robert a. shakespeare&quot; &lt;tcvc@indiana.edu&gt;
+To: Sunil S Hadap &lt;sunil@teil.soft.net&gt;
+Subject: Re: Slightly dirty image, help me to improve! (HTML)
+
+
+       This is just a stab in the dark (no pun intended!) but by locating
+the -ab 2 in the render option, rad does not take 2x interreflection into
+account when generating the rendering process.
+       I would suggest removing the -ab 2 from render and including:
+
+INDIRECT= 2
+
+       Then take a look at the rad variable settings and compare them
+with what you were running previously....
+
+               rad -n -e your.rif
+
+By including INDIRECT=2 you will likely find that rad will recreate your
+ambient file with data from a small image using a setting of -aw 0.
+Then using this file, your final rendering is produced with a setting of
+-aw xxx. I would think that you might  continue to overide the -ad and -as
+automatic settings, replacing them with your higher values.
+
+Though this is s subtle change, it might improve the outcome.
+
+As per the greenish ambient light and glowing quality:
+
+... I assume that you are using a white light source. As the wall is
+slightly weighted to green and blue, the greenish hue  might be due
+to overexposure. I would expect that the blue vase, though insignificant
+to a broadly lighted scene,  will effect the scene in your case.
+ Try a red vase and see what changes!!
+
+ I would not expect the undertable to appear so &quot;bright&quot;
+so again, you might reduce the exposure a stop, which in turn, might help
+to elliminate the &quot;glowing&quot; quality.
+
+I would be interesting to see how pcond would modify the appearance of
+the image... after rerendering you might try:
+
+pcond -h- test.pic &gt; testpd.pic
+
+
+Rob Shakespeare, Director
+Theatre Computer Visualization Center
+Room 200, Theatre Building             V/Fax: 812-855-8827
+Indiana University                     tcvc@indiana.edu
+Bloomington, IN 47405                  shakespe@indiana.edu
+http://appia.tcvc.indiana.edu/~tcvc
+
+Announcement:
+RENDERING WITH RADIANCE: THE ART AND SCIENCE OF LIGHTING VISUALIZATION
+       by Greg Ward Larson and Rob Shakespeare
+       Morgan and Kaufmann Publishers (December 1997)
+
+---------
+
+Date: Wed, 27 Aug 1997 09:05:43 -0700
+From: greg@pink (Gregory W. Larson)
+To: Sunil S Hadap &lt;sunil@teil.soft.net&gt;
+Subject: Re:  Slightly dirty image, help me to improve! (HTML)
+Cc: radiance-discuss
+
+The main problem is sounds like your light sources.  You must instead of
+placing your spheres in boxes and expecting the interreflection calculation 
+determine their output, use small polygons at their openings and eliminate
+the spherical sources.
+
+This will cure most of your problems.  You may have to manually set the
+-aw parameter to 0 in the &quot;render&quot; variable of rad if you still see strange
+glowing edges.
+
+-Greg
+
+----------------------------
+
+<A NAME="mkillum">USING MKILLUM FOR SIDELIGHTED OFFICE</A>
+ 
+
+&gt;From Markku.Norvasuo@vtt.fi  Tue Aug 12 04:39:46 1997
+Date: Tue, 12 Aug 1997 14:37:50 +0300 (EET DST)
+To: ckehrlich@lbl.gov
+From: Markku Norvasuo &lt;Markku.Norvasuo@vtt.fi&gt;
+Subject: Adeline/Radiance
+
+
+Hi Charles,
+
+The Adeline package has been delightful and well working. However, getting
+acquainted requires some time as you said.
+
+Concerning Radiance I have a few questions: 
+
+1) I have been modeling a sidelit office space. Is it reasonable to define
+window surfaces as illum sources if blinds (from genblind) are at the same
+time used beside them? I.e. does this arrangement behave correctly?
+
+2) Should I use illum sources, anyway, to include sky glow in the interior
+illumination, or is this glow sufficiently included if the option -ab &gt; 0?
+
+3) I put the office scene in the mkillum files box in the Adeline/Rad user
+interface. When the original octree was named R013.oct, rview generated two
+additional ones, R0130.oct and R0131.oct. If I use rpict instead from a
+command line, is it correct to give the last one (R0131.oct) as the input
+octree? (I did not find a clear advice in the manual but this seems to work). 
+
+Do you have a mailing list similar to Radiance Digest or should I subscribe
+the latter one?
+
+Thank you for advice
+
+Markku 
+________________________________________________________________
+Markku Norvasuo, Senior Research Scientist
+Technical Research Centre of Finland, Building Technology
+Postal address: 
+VTT Building Technology, P.O.Box 1801, FIN-02044 VTT, Finland
+Tel. +358 9 456 6269 (office), +358 40 515 1100 (mobile)
+Fax  +358 9 456 6251, Internet: markku.norvasuo@vtt.fi
+
+
+------------
+
+&gt;From chas@pink  Tue Aug 12 09:38:27 1997
+Date: Tue, 12 Aug 1997 09:35:35 -0700
+From: chas@pink (Charles Ehrlich)
+To: Markku Norvasuo &lt;Markku.Norvasuo@vtt.fi&gt;
+Subject: Re:  Adeline/Radiance
+Cc: radiance@pink
+
+Markku,
+
+I'm glad to hear that you are not having as much problems with
+ADELINE as some of my other users.
+
+1. The main purpose of the mkillum feature is to provide a means
+to define an average distribution for complex fenestration.
+Therefore, the most efficient way of modeling a sidelit office
+with blinds is to put the blinds on the &quot;outside&quot; of the illum
+surface.  This may require that you create an &quot;imposter&quot; polygon
+with material type &quot;void&quot; which serves this purpose.  It can
+sometimes be challenging to find ways to create the imposter
+geometry in a way that minimizes the potential inaccuracies
+which can be introduced with the use of illum.  In particular,
+if direct sunlight strikes only a portion of your &quot;imposter&quot;
+or &quot;illum&quot; surface, the distribution for the whole window will
+be the average, but this may not produce satisfactory results.
+
+2. In most cases you will want to use mkillum to define the
+diffuse component of the sky when you have complex glazing (blinds,
+light shelf, etc.). If you have a more simple glazing (no blinds), 
+then ab &gt; 0 works fine.  In effect, using mkillum reduces the 
+number of bounces necessary to acheive adequate results by one.
+Unfortunately, mkillum can sometimes cause &quot;banding&quot; when very
+close to the illum.
+
+3. The &quot;rad&quot; command handles the two-step octree generation in
+the way you discovered.  The latter octree will contain the
+scene geometry plus the glazing or imposter surfaces which have
+been sampled by mkillum.  
+
+4. I have been thinking about the fact that the promised user
+support e-mail list for ADELINE never coagulated, mostly because
+I was doubtful that there were enough users of the software to
+make it work.  Perhaps now that I am in charge of the Radiance
+e-mail lists, I could combine ADELINE with the rest of the
+Radiance users.  Perhaps I could also create a separate list
+which is for ADELINE-specific needs like Superlite, scribe,
+plink, etc, and keep the discussion of Radiance issues open
+to ADELINE users in the Radiance forum.  Hmmmm.
+
+Good luck.  Please share with me some images when you have 
+something satisfactory to show.
+
+-Chas
+Charles Ehrlich
+Principal Research Associate
+
+-------------------------------------
+
+<A NAME="largearea">LARGE AREA SOURCE GLARE CALCULATIONS</A>
+
+
+&gt;From haico.schepers@arup.com  Mon Jul 21 22:49:28 1997
+Date: Tue, 22 Jul 1997 05:41:00 +0000
+From: Haico Schepers &lt;haico.schepers@arup.com&gt;
+To: greg
+Subject: Re:  Can you help with this one? -Reply
+
+Greg
+
+Thank you for your last reply, I've been reading the journals you
+referenced in the manual and it seems to imply that the program does
+take into account large sources.  I tried to email LESO in Switserland for
+confirmation at  lesoweb@lesosun1.epfl.ch, but I have had no success
+getting through.  Do you know of a person or email account I can contact
+to ask these questions to?
+&lt;&lt;How does radiance performs glare calculations for day lighting
+analysis and how this is best modelled?  For a simple room with large
+windows how does Radiance calculate glare?  Does it take into account
+large sources as indicated by Guth (and referenced in the Radiance
+documentation)?  What are the algorithns thatit uses?  Has any work
+been done to validate this?&gt;&gt;
+&gt;From a technical stand point it would be of great benifit to know what
+algorithns radiance uses to calculate glare indices.
+
+ Also with reference to your reply;
+&gt; 1/ I can't find xglaresrc to run the visualization program for Glare
+
+Doesn't exist in ADELINE, since it's tied to X11.
+
+Is there any way to get a copy of the script used for this program and
+can I update Adeline2 at all to run this script?
+
+ I recently read your paper on A Visiblity Matching Tone Reproduction
+Operator for High Dynamic Range Scence.  Our company is largely
+using radiance to model natural daylight for passive solar design.  We
+are greatly concerned with in occupant comfort (with regard to glare)
+and their perception of the work place environment thus any
+developments in how a scene is veiwed is of great interest.  Can you
+inform me of any developments in this feild and whether it has been or
+will be incorporated into adeline2.
+
+Any information on this topic would be greatly appreciated.
+
+With kind Regards
+Haico Schepers
+
+-----------
+
+&gt;From greg  Tue Jul 22 09:51:44 1997
+Date: Tue, 22 Jul 1997 09:51:43 -0700
+From: greg (Gregory W. Larson)
+To: Haico Schepers &lt;haico.schepers@arup.com&gt;
+Subject: Re:  Can you help with this one? -Reply
+
+Hi Haico,
+
+I dug up an old document I'd written in 1992 after I wrote the glare script
+and programs in Radiance, and I put it on our mirror web site (still under
+development).  You may access it directly over the web at:
+
+       http://radsite.lbl.gov/mirror/radiance/man_html/Notes/glare.html
+
+This should get you partway there, but for the full scoop on daylight glare
+calculations using Radiance, you should talk to Raphael Compagnon, who is
+on sabbatical at Cambridge University, and may be reached at &quot;rjrc2@cam.ac.uk&quot;.
+
+
+There really is no easy way to incorporate the xglaresrc program into Adeline,
+since it relies on X11 to circle glare sources in a displayed image.  It's
+not as simple as translating a script, and I doubt anyone is putting the
+work into porting this particular utility, though you can write to Charles
+Ehrlich at &quot;radiance@floyd.lbl.gov&quot; if you want to ask about it.  While
+you're at it, you can also ask him about the porting of pcond (the tone
+reproduction program I wrote for 3.1) to Adeline.  There is no reason in
+principle why this should pose a problem, but the development plans on
+the PC-compatible platform are still in flux and I have nothing further
+to do with them as I no longer work at LBNL.
+
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<A NAME="gensurf">--------------------------------------</A>
+<A NAME="gensurf">PROCEDURAL MODELING WITH GENSURF</A>
+
+
+&gt;From panop@xarch.tu-graz.ac.at  Tue Jul  8 05:07:27 1997
+From: &quot;Christos Panopoulos&quot; &lt;panop@xarch.tu-graz.ac.at&gt;
+To: greg (Gregory J. Ward)
+Date: Tue, 8 Jul 1997 14:05:42 +0000
+Subject: create a quarter cycle
+
+Hi Greg,
+
+how can I create surface of cycle segment (angle = PI/2) ?
+And then extrude this.Thank you in advance.
+
+
+Christos
+
+Christos Panopoulos         E-Mail:panop@xarch.tu-graz.ac.at 
+http://xarch.tu-graz.ac.at/~panop
+
+&gt;From greg  Tue Jul  8 09:29:42 1997
+Date: Tue, 8 Jul 1997 09:29:41 -0700
+From: greg (Gregory W. Larson)
+To: panop@xarch.tu-graz.ac.at
+Subject: Re:  create a quarter cycle
+
+Use the gensurf command.  The x(s,t) y(s,t) and z(s,t) are independent
+parametric functions for surface indices (s,t) each running between 0 and 1.
+Define them however you like.
+
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+----------------------------------------------------
+<A NAME="aquarium">AQUARIUM ANALYSIS</A>
+
+
+&gt;From chrisg@GLASS.lplizard.com  Fri Sep  5 10:03:27 1997
+Date: Fri, 5 Sep 1997 12:58:24 -0400
+From: Chris Green &lt;chrisg@lplizard.com&gt;
+To: radiance
+Organization: Leaping Lizard Software, Inc. (301)-963-8230 FAX (301)-963-9016
+
+       Do you know if anyone has ever used radiance to render an
+aquarium environment? I am designing a very large salt-water reef
+aquarium aquarium for my home, and lighting is a big issue. I wish to
+be able to try out different combinations of halide bulbs of differing
+wattages and color temperature with different reflector types, and see
+the lighting effect on the tank and the room viewing it. The surface
+ripples of the water also have a big effect on the way the light
+looks. It's kind of a worst-case caustic generator.
+
+       Things I'd like to be able to do:
+
+       See some pictures that would show what it might look like.
+
+       Try different bulbs in different combos and placements. I'm
+not sure if the data needed by the simulation is available for the
+higher temperature halide bulbs used for SW aquariums.
+
+       Know the amount of PAR (photosyntehtically active radiation)
+hitting a given point inside the tank. This would be used to figure
+out what areas were adequate for which kinds of corals. PAR is the
+number of photons hitting an area that are in the photsynthetically
+active wavelengths. Because of the ripples, I'd need it averaged over
+time.
+
+       Try different types of glass for the front panel to see how
+whether I need to use special fancy glass to not have too much of a
+greenish tint. I could also see the effect of different coverings for
+the back and sides.
+
+       Plan the layout of the reef structure in the tank and be able
+to see the shadow effects.
+
+       I would appreciate anything that you could tell me about the
+feasability of this particular application, or if you know of anyone
+who has done anything similar.
+
+       Thanks,
+
+
+-- 
+Chris Green
+
+-------------------------------------------------
+
+Dear Chris,
+
+Radiance is probably as close as you'll come to a tool for
+the simulations you need.  Short of a full-blown forward ray 
+tracer like Breault Research's ASAP software (which is no 
+easier to use than Radiance and doesn't produce nice images), 
+the one limitation of Radiance that you'll have to live with 
+is the caustics.  Radiance can do a wavy surface of
+water, but you won't know if you have a problem with high
+concentrations of light where light rays are converging.
+This seems like a minor effect to me because the surface of
+the water in aquaria are more or less flat, right?  Of more
+interest might be the bubbles.
+
+Greg's &quot;podlife&quot; sculpture is a good example of a model that
+uses water and bubbles.  It can be found at:
+
+  ftp://radsite.lbl.gov/pub/models/podlife.tar.Z  
+
+The issue of caustics came up a year or two ago and is documented 
+either in the Radiance Digests or Discussion group archives
+which can be found at:
+
+  ftp://radsite.lbl.gov/pub/digest   ../discuss
+
+Search for caustic and you should find more information.
+
+A great improvement in Radiance since the digest postings is
+that you can now model single-scatter &quot;participating media&quot;
+which in the case of an aquarium would be particles of dirt
+and/or haziness in the water.  This material entity is
+called &quot;mist.&quot;
+
+What you'll need to do for the photon counting business
+is develop a correlation between the photosyn-whatever
+sensitivity you're after and Radiance's Red, Green and
+Blue spectral samples.  It will be easiest to represent
+this value as an illuminance, so you'll have to correlate
+numbers of rays to illuminance as well.  Take a look at
+the file called rlux inside the Radiance distribution.  
+It is a C-shell script which calculates photopic illuminance.
+You'll have to tweak the multipliers for R, G and B to
+get what you want.
+
+Your other tasks all seem very reasonable.  The most difficult
+task will be modeling the geometry of the coral.
+
+And, once you've gone through all of this trouble to develop
+an aquarium analysis tool, the great thing about Radiance
+is that it can be licensed for worldwide distribution at a
+cost of $10,000.00 so that you could sell it to other aquarium
+afficionados, if you're into that sort of thing.
+
+Good luck,
+-Chas
++---------------------------------------------------------------------------+
+| Charles Ehrlich                                  Phone: (510) 486-7916    |
+| Principal Research Associate                     Fax:   (510) 486-4089    |
+| UC Lawrence Berkeley National Laboratory         email: ckehrlich@lbl.gov |
+| 1 Cyclotron Road MS:90-3111, Berkeley, CA 94720  Contact person for:      |
+| http://radsite.lbl.gov/radiance  ../adeline      RADIANCE and ADELINE     |
++---------------------------------------------------------------------------+
+
+Date: Fri, 5 Sep 1997 11:09:45 -0700
+From: greg (Gregory W. Larson)
+To: Chris Green &lt;chrisg@lplizard.com&gt;
+Subject: Re: radiance and aquarium design
+
+The sad answer is no, Radiance would not do the right thing, no matter how
+you modeled the surface of the water.  Its backwards ray-tracing algorithm
+depends on knowing the locations of the light sources in order to find them,
+especially if they're nearly point sources!  There's very little hope with
+the current version of simulating this environment correctly.
+
+Every system has it's Achille's heel, and this is it for Radiance.  You would
+need some kind of bidirectional ray-tracing system to do what you want.  You
+might investigate Arris Inspirer as a possible solution to your problem, or
+perhaps Specter, both from Integra corporation (http://www.integra.co.jp/eng/).
+
+Good luck!
+-Greg
+
+---------------------------------------------------------------------
+<A NAME="wiremesh">MODELING WIRE MESH</A>
+
+Note: this message is being forwarded to the entire Radiance
+discussion group instead of the Radiance Modeling group because 
+in the transition from Greg to Chas, the &quot;radiance-model&quot; list 
+has been lost.  My appologies.
+
+---------------
+
+Date: Wed, 10 Sep 1997 07:59:31 -0500
+From: &quot;T. Prater&quot; &lt;squid@ksu.edu&gt;
+To: &quot;'radiance-model@radsite.lbl.gov'&quot; &lt;radiance-model@radsite&gt;
+Subject: Wire Mesh
+
+
+Hello Radiance users,
+
+Recently we have been trying to use Radiance to simulate the
+lighting conditions inside a small 'chamber'; this chamber
+will eventually be used to grow a plant. Two sides of the
+box will be covered in stainless steel wire mesh.
+
+My question is: how do I model this wire mesh? Are there any
+preexisting material definitions that would be useful in this
+situation? Really, the most important properties to us would
+be how much light (overall) is transmitted through and
+reflected back from the surface of the mesh (in other words,
+we are not that concerned with the subtle effects of indivi-
+dual wires in the mesh).
+
+We have conjectured that the BRTDfunc material would be the
+best option. Does this sound right? If so, I need a bit of
+help with that material. Are the 'rfdif', 'gfdif', ...'btdif'
+parameters used internally by Radiance? Or, are you supposed
+to use them in your function file? What, intuitively,
+do these quantities correspond to? How about physically?
+
+Thanks in advance for any help you can give...
+
+Todd Prater
+Dept. of Agronomy
+Kansas State University
+Manhattan, KS 66506
+
+----------------
+A reply from Chas:
+Hello Todd,
+
+With regard to your questions about a growing chamber and
+the modeling of wire mesh.  While BRTDfunc would work, you
+would have to subject your wire mesh sample to some quite
+rigorous bi-directional reflectance and transmittance tests
+in order to adequately utilize this material.  I would 
+suggest instead, that you try the trans or trans2 materials.
+The benefit of the trans_ materials is that a light-source
+ray is traced from both the reflected and transmitted ray
+directions (that is, a direct ray is used to calculate both
+the transmitted specular and reflected specular component.)
+While neither BRTDfunc or trans_ are simple to understand,
+you can find examples of the use of each in the Radiance
+digests and/or discussion group archives on our WWW site.
+
+Have you spoken with your distant cousins at KU?  The
+Prof. Martin Moek in the lighting department has used 
+Radiance extensively.  He might be able to offer you some
+additional advise.
+
+Another posting to the discussion group which I will be
+forwarding deals with the modeling of an aquarium.  The
+individual is interested in calculating the amount of 
+photosynthetic light reaching a particular surface.  While
+I don't have the exact equation for this, you might also
+be concerned with this quantity.  I suggest that you contact
+him and possibly collaborate and let me know what you
+discover.
+
+Good luck,
+-Chas
+--------------------------
+
+
+Date: Wed, 17 Sep 1997 17:45:32 -0700
+From: greg@pink (Gregory W. Larson)
+To: radiance (Radiance Account)
+Subject: Re:  Wire Mesh
+Cc: radiance-discuss, radiance, squid@ksu.edu
+
+I would go with Chas' recommendation to use the &quot;trans&quot; type as the
+most efficient solution.  It may not reproduce the individual mesh
+elements, but neither would BRTDfunc.
+
+If you know the basic reflectance of your mesh material and the percentage
+of mesh to air in it, you can compute the parameters for the trans type.
+See the URL:
+
+http://radsite.lbl.gov/mirror/radiance/digests_html/v2n10.htm#TRANS_PARAMETERS
+
+for some more hints.
+-Greg
+
+
+---------------------------------
+
+<A NAME="lightshelf">SPECULAR LIGHT SHELF</A>
+
+Date: Tue, 16 Sep 1997 18:13:16 +0200 (MET DST)
+To: radiance-discuss
+From: Krzysztof Wandachowicz &lt;wandach@sol.put.poznan.pl&gt;
+Subject: light shelf
+
+Dear Radiance users,
+
+I'm working on calculation of daylight in office room with internal
+reflective shelf. My shelf looks like long (it is on the whole length wall
+with windows) and wide (1 m) window sill (I don't know if the &quot;window still&quot;
+is the right definition, I have found in dictionary two different
+definitions: &quot;window stool&quot; and &quot;parapet wall&quot;). This shelf is only first
+easy model of my system of daylight. I have more complicated idea to direct
+the light from sun and sky to the ceiling, but I have used this shelf to
+test the material. 
+
+I need two different reflective materials: diffuse (Lambertian
+characteristic) and specular (or/and semispecular) reflection. I have tested
+the Greg's material (e-mail 12 Sep 95 from Greg to manuel@ise.fhg.de)
+BRTDfunc for partially transparent shelf 55% reflection 25% transmission
+(below). 
+
+void BRTDfunc blind_grey
+10 if(Rdot,.55,0) if(Rdot,.55,0) if(Rdot,.55,0)
+       .25     .25     .25
+       0       0       0
+       .
+0
+9      0       0       0
+       0       0       0
+       0       0       0
+
+void mirror blind_illum
+1 blind_grey
+0
+3 .55 .55 .55
+
+This example is good for specular reflection and direct transmission, but
+how to change this description in order to obtain diffuse and semidiffuse
+characteristic. I try many times without success.     
+
+
+So, for diffuse reflection I chose &quot;plastic&quot; and &quot;mirror&quot;:
+
+void plastic blind_grey
+0
+0
+5 .7 .7 .7 0 0
+
+void mirror blind_illum
+1 blind_grey
+0
+3 .7 .7 .7
+
+Plastic type in this example describes diffuse reflection, mirror type
+supports secondary light sources. I have made calculation for sunny day at
+noon with windows on the south side. The light from sun and sky reflects in
+my shelf and it is directed to the ceiling. This is diffuse reflection and
+the ceiling should be illuminated almost uniformly but picture looks
+differently.I see on the ceiling the virtual image of my windows with high
+luminance. This is the light from the sun, the light from sky reflects in
+shelf by directional way too. It strange because if I look at the ceiling I
+think that shelf reflects daylight by directional way however if I look
+directly at the shelf I'm sure that shelf reflects daylight by diffuse way.
+I don't know if &quot;mirror&quot; is the right type of material but it is only type
+for supports secondary light source. I have tried with &quot;illum&quot; type but
+without success. The other difference is that the change of material type
+and turn off or on sun doesn't influence the distribution of luminance.  
+
+Time for the question. How describe diffuse reflection of such shelf? 
+
+Now more complicated and additional question how to change the Greg's
+description of BRTDfunc (above) to diffuse and semi diffuse reflection and
+transmission. 
+
+I will be grateful for any suggestions. 
+
+The desperate Radiance user,
+
+Krzysztof Wandachowicz.
+############################################
+# Krzysztof Wandachowicz                   #
+# Poznan University of Technology          #
+# Division of Lighting Engineering         #
+# PL-60-965 Poznan, ul.Piotrowo 3a, Poland #
+# fax +48 61 8782389                       #
+############################################
+
+
+--------------
+
+Date: Tue, 16 Sep 1997 17:24:15 -0700
+From: martin@color.arce.ukans.edu (Martin Moeck)
+Subject: reflections
+To: radiance-discuss
+
+In response to Krzysztof Wandachowicz's questions, his modeling approach works fine for me. 
+
+The diffuse component shows up on the ceiling when considering 
+
+void plastic blind_grey
+0
+0
+5 .7 .7 .7 0 0
+
+
+and the specular component shows up when modeling a shelf of 
+
+void mirror blind_illum
+0 
+0
+3 .7 .7 .7 
+
+without mixing the materials. If you mix them by defining 
+
+void plastic blind_grey
+0
+0
+5 .7 .7 .7 0 0
+
+void mirror blind_illum
+1 blind_grey
+0
+3 .7 .7 .7
+
+
+both the diffuse component from the plastic and the specular component from the mirror are there. These components from the sun only work just fine. 
+
+If you model the diffuse sky, the situation is a little bit more complicated. 
+The ambient bounces from the diffuse plastic material are ok, but about the 
+specular mirror and its effect on reflecting skylight I'm not so shure. 
+It seems that the sky would have to be mimicked by creating an array of lights 
+having the sky luminances of the corresponding patches. If you do 
+
+void light skyglow
+0  0 3
+.96 .96 1.2
+
+skyglow source sky
+0 0 4
+0 0 1 180
+
+or something like that, a sharp image on the ceiling of that source is created. 
+That does not do the job, because one light source with a center is assumed. 
+
+Martin Moeck
+mmoeck@ukans.edu
+
+----------------------------------------------------------------
+<A NAME="exposing">'EXPOSING' IMAGES FOR INDOOR AND OUTDOOR BRIGHTNESSES</A>
+
+&gt;From el2gasae@uco.es  Wed Oct  8 05:52:35 1997
+Date: Wed, 8 Oct 1997 14:49:10 +0200
+From: Enrique Garcia Salcines &lt;el2gasae@uco.es&gt;
+To: greg
+Subject: A question
+
+Hi Greg,
+
+I'm working with Radiance in illumination design. I have a problem 
+with the sun, the sky and the ground description that appear below. 
+The model is a simple office with a great glass window. I have used 
+the rad program with a view point inside the room. The problem is 
+when I see through the window, the sky is not blue and the ground is 
+not brown that is the RGB of these glow sources, all appear in white 
+color like a very strong sun penetrating inside the room, the gensky 
+options were &quot;gensky 10 8 13&quot;.
+
+void light solar
+0
+0
+3 6.76e+006 6.76e+006 6.76e+006
+
+solar source sun
+0
+0
+4 -0.032656 -0.711654 0.701771 0.5
+
+void brightfunc skyfunc
+2 skybr skybright.cal
+0
+7 1 1.15e+001 2.17e+001 5.64e-001 -0.032656 -0.711654 0.701771
+
+skyfunc glow sky_glow
+0
+0
+4 0.90 0.90 1.15 0.00
+
+sky_glow source sky
+0
+0
+4 0 0 1 180
+
+skyfunc glow ground_glow
+0
+0
+4 1.40 0.90 0.60 0.00
+
+ground_glow source ground
+0
+0
+4 0 0 -1 180
+
+void glass Glxxx0
+0
+0
+3      0.950000        0.950000        0.950000
+
+skyfunc brightfunc window_dist
+2 winxmit winxmit.cal
+0
+0
+
+window_dist illum Glass01
+1 Glxxx0
+0
+3 0.88 0.88 0.88
+
+Glass01 polygon cristal.0
+0
+0
+12    ......the coordinates
+----------------------------------------------------
+
+Thanks in advance,
+
+
+From: greg (Gregory W. Larson)
+Message-Id: &lt;199710081618.JAA03709@pink.lbl.gov&gt;
+To: Enrique Garcia Salcines &lt;el2gasae@uco.es&gt;
+Subject: Re:  A question
+Status: R
+
+The reason the ground and sky appear white is due to exposure.  Just as
+in a photograph, it is very difficult to obtain an exposure that correctly
+presents both interior and exterior surfaces in their apparent colors.
+
+Try using the pcond program on your rendered picture.  This program is
+designed to compensate for these dynamic range limitations in the display,
+and the result should be better in terms of perception.
+
+-Greg
+
++---------------------------------------------------------------------------+
+| PLEASE AVOID THE EVIL REPLY COMMAND, AND ADDRESS YOUR E-MAIL EXPLICITYLY! |
++---------------------------------------------------------------------------+
+| Radiance Discussion list (unmoderated):  radiance-discuss@radsite.lbl.gov |
+|*Radiance Digest mailing list (moderated):        radiance@radsite.lbl.gov |
+| Radiance Modeling list (unmoderated):      radiance-model@radsite.lbl.gov |
+| Requests to subscribe/cancel:            radiance-request@radsite.lbl.gov |
+| Archives available from:             ftp://radsite.lbl.gov/rad/pub/digest |
+| Radiance world-wide web site:            http://radsite.lbl.gov/radiance/ |
++---------------------------------------------------------------------------+
+</PRE>
+<HR>
+<P>
+<STRONG>Back to <A HREF="#top">Top of Digest Volume 3, Number 3</A></STRONG><A
+ HREF="#top"></A><BR>
+ <STRONG><FONT SIZE="3">Return to <I><A HREF="../HOME.html">RADIANCE</A></I><A
+ HREF="../HOME.html"> Home Page</A></FONT></STRONG><A
+ HREF="../HOME.html"></A><BR>
+ <STRONG>Return to <I><A HREF="rad_dig_HOME.html">RADIANCE</A></I><A
+ HREF="rad_dig_HOME.html"> Digests Overview</A></STRONG><A
+ HREF="rad_dig_HOME.html"></A></P>
+<HR>
+<H5>
+All trademarks and product names mentioned herein are the property of 
+their registered owners.<BR>
+ All written material is the property of its respective contributor.<BR>
+ Neither the contributors nor their employers are responsible for 
+consequences arising from any use or misuse of this information.<BR>
+ We make no guarantee that any of this information is correct. </H5>
+</BODY>
+</HTML>

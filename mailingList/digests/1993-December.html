@@ -1,0 +1,1534 @@
+<TITLE>
+Radiance Digest, v2n5, Part 2 of 2
+</TITLE>
+<html>
+<a name="top"><h2>RADIANCE Digest Volume 2, Number 5, Part 2</h2></a>
+<hr>
+<pre><body>
+Dear Radiance Users,
+
+Here is the second half of Volume 2, Number 5 of the Radiance Digest.
+You should have received the first half already.  If you don't get it
+in a day or so, write me e-mail and I'll resend it to you.
+
+As always, I ask that you do NOT reply to this letter directly, but
+write instead to GJWard@LBL.GOV if you have any questions or comments,
+or if you wish to be removed from the mailing list.
+
+These are the topics covered in this mailing:
+
+	<A HREF="#RPICT">RPICT PARAMETERS</A>	- A couple questions answered re. rpict
+	<A HREF="#EXTENDING">EXTENDING RADIANCE</A>	- How to add materials/surfaces to Radiance
+	<A HREF="#BRTDFUNC">NEW BRTDFUNC AND NEON</A>	- An extended reflectance type and neon lights
+	<A HREF="#LIGHT">LIGHT SOURCE ACCURACY</A>	- Near-field accuracy test of light sources
+	<A HREF="#BRIGHTNESS">BRIGHTNESS MAPPING</A>		- Going from simulation to display
+	<A HREF="#PARALLEL">PARALLEL RADIANCE AND ANIMATIONS</A>- New features of 2.3 and animation
+	<A HREF="#AMIGA">AMIGA PORT</A>			- Reorganized Amiga port
+	<A HREF="#PVALUE">PVALUE</A>				- Getting values from pictures
+	<A HREF="#BACKGROUND">BACKGROUND COLOR</A>		- Setting the background in a scene
+	<A HREF="#DEPTH">DEPTH OF FIELD</A>			- Simulating depth of field
+	<A HREF="#COMPANY">A COMPANY CALLED RADIANCE</A>	- Not mine -- someone else's!
+
+Hopefully, I won't let a whole year go by before the next posting!
+
+-Greg
+
+<A NAME="RPICT">=================================================================</A>
+RPICT PARAMETERS
+
+Date: Sun, 28 Feb 93 09:33:01 -0500
+From: macker@valhalla.cs.wright.edu (Michael L. Acker)
+To: greg@hobbes.lbl.gov
+Subject: rpict parameters
+
+Greg,
+
+Could you explain the purpose and use of the 'sp' parameter to 'rpict'?
+
+I'm a student who has been using Radiance 2.1 to do some graphics 
+modeling as part of an independent graphics study. The scene that I am 
+currently working with has objects as large as 100 feet across and as
+small as 1/2-inch wide.  With sp at 4 (the default) the 1/2-inch objects
+are not completely represented in the image (missing parts I assume from
+inadequate sampling).  However, when I reduce sp to 1, the 1/2-inch
+objects appear more complete (and smoother) though still not completely
+represented.
+
+Also, if I increase the ambient bounces (ab) to 1 or greater but leave
+all other parameters at their default, rpict produces images with very
+'splotchy' surfaces.  For example, white walls look as if they have had
+buckets of lighter and darker shades of white thrown at them.  
+The problem appears to lessen if I reduce the surface specularity and
+increase the ambient super-samples (as).
+
+Could you give me some insight into the proper parameters to use that
+will smooth out the images?  Or could you provide some example 
+rendering statements with the parameter lists?  Or do you do some 
+preprocessing with oconv or postprocessing with other utilities, like
+pfilt, to smooth out (improve) the images?
+
+I'd appreciate any information you can offer.
+
+Thanks,
+Mike Acker,macker@valhalla.cs.wright.edu
+
+Date: Mon, 1 Mar 93 09:18:59 -0800
+From: greg@pink.lbl.gov (Gregory J. Ward)
+To: macker@valhalla.cs.wright.edu (Michael L. Acker)
+Subject: Re:  rpict parameters
+
+Hi Mike,
+
+In version 2.1 of Radiance, the -sp (sample pixel) parameter was changed to
+-ps (pixel sample) to make way for new -s? parameters to control specular
+highlight sampling.  Since the -sp option has disappeared in version 2.1,
+you must either be using a previous version or a different option.
+
+At any rate, anti-aliasing in Radiance requires rendering at a higher
+resolution than that you eventually hope to display with, then using pfilt
+to filter the image down to the proper size.  A set of reasonable parameters
+to do this might be:
+
+	% rpict -x 1536 -y 1536 [other options] scene.oct > scene.raw
+	% pfilt -x /3 -y /3 -r .65 scene.raw > scene.pic
+
+In this case, the final image size will have x and/or y dimensions of 512,
+and even small objects should appear smooth.
+
+As for the ambient bounces, it sounds as if the specular component of your
+surfaces may be too high.  Non-metallic surfaces generally don't have specular
+components above 5%.  Check out the document ray/doc/notes/materials for
+further guidelines.  The splotchiness can be reduced by increasing the -ad
+and the -as parameters (as you seem to have discovered).
+
+Let me know if I can be of more help.  Sometimes it is easier if you send
+me an example file with view parameters, if youre scene's not too big.
+
+-Greg
+
+<A NAME="EXTENDING">=========================================================================</A>
+EXTENDING RADIANCE
+
+Date: Sun, 7 Mar 93 14:07:26 PST
+From: Mark J Young <mjy@maxwell.arc.nasa.gov>
+To: GJWard@lbl.gov
+
+Hello.
+
+Your name came up two days in a row for me. Yesterday I read
+your 1992 CG paper, "Measuring and modeling anisotropic
+reflection". I really enjoyed it and learned a good deal from
+it. I wish there were more graphics papers than had such a
+satisfying blend of science and graphics.
+
+Then I was reading a newsgroup posting that indicated that you
+have written a rendering package. So I was moved to ask your
+advice. Myself and a few colleagues at NYU are looking for
+rendering software that could be reasonably modifiable for the
+following purposes.
+
+We do psychophysical experiments and modeling of depth cue fusion
+(in the sensor fusion sense) in human 3D perception. Some of us
+also do modeling and psychophysics concerning color space in human
+perception. Those folks are looking towards extending that work to
+include reflectance models (of the internal kind). There is a desire
+to have graphics software that could generate stimuli for both the
+depth and color/reflectance experiments. There would need to be a
+variety of rendering pipeline structures, surface models, color models,
+and reflectance models employable.
+
+I have written a crude 3D modeler that allows me to independently
+manipulate the various 3D cues to a surface's shape in an abstract
+geometrical way. I didn't do anything sophisticated about the color
+representation or the reflectance model. We are at a point where
+I either do alot of work on this package or find a mature package
+that can be modified towards our needs. We would obviously like
+something that is extremely modular. My package is object-oriented
+(C++) and a paradigm like that seems very well suited to the kind of
+extensions we need to make.
+
+Do you know of a rendering package that is object-oriented or is of
+the flavor that we are looking for? Also, could you tell me where I
+can find "Radiance"? Thank you for any help you can give.
+
+Regards,
+Mark J. Young
+Experimental Psychology            Vision Laboratory
+New York University                NASA Ames Research Center
+6 Washington Place                 Mail Stop 262-2
+New York, NY 10003                 Moffett Field, CA 94035
+(212) 998-7855                     (415) 604-1446
+mjy@cns.nyu.edu                    mjy@vision.arc.nasa.gov
+
+Date: Mon, 8 Mar 93 11:10:16 PST
+From: greg (Gregory J. Ward)
+To: mjy@maxwell.arc.nasa.gov
+Subject: human perception modeling
+
+Hi Mark,
+
+Thanks for the compliment on my paper.  Yes, I have written a fairly mature
+simulation and rendering package called Radiance.  You may pick it up by
+anonymous ftp from hobbes.lbl.gov (128.3.12.38), along with some test
+environments, libraries and so on.
+
+The reflectance model built into Radiance is that presented in the `92
+Siggraph paper.  Additional hooks are provided for procedural or
+data-driven reflectance models, though the resulting simulation will be
+less complete as it will not include indirect highlight sampling (ie.
+highlights caused not by light sources but by reflections from other
+surfaces).  The code is fairly modular and extensible, though it was
+written in K&R C for maximum portability and speed.  (Also, C++ was
+not around when I started on the project 8 years ago.)
+
+Adding a surface model requires writing two routines, one to intersect
+a ray with the surface, and another to answer whether or not the surface
+intersects a specific axis-aligned cube (for octree spatial subdivision).
+
+Adding a reflectance model requires writing a routine to determine the
+reflected value based on an incident ray, a list of light sources
+(actually a callback routine that computes a coefficient as a function
+of source direction and solid angle) and other ray values as required.
+
+The rendering pipeline is very flexible -- too flexible for most people.
+It makes it somewhat difficult to learn and to master.  There are about
+50 programs altogether.  Even if you decide to use your own renderer,
+you may find some of the programs provided with Radiance useful to your
+research.
+
+The one part of Radiance that is currently difficult to change is the
+RGB color model.  I have been prodded by several people to introduce a
+more general spectral model, which is something I had planned to do at
+some point but I have been hung up by a lack of data and motivation.
+Right now, people can define the three color samples to mean whatever they
+want, but to get more samples, multiple rendering runs are necessary.
+
+I look forward to hearing more from you.
+
+-Greg
+
+Date: Tue, 20 Jul 93 13:19:52 MED
+From: bojsen@id.dth.dk (Per Bojsen)
+To: GJWard@lbl.gov
+Subject: Bezier Patches?
+
+Hi Greg,
+
+I was wondering how easy it would be to add support for Bezier patches
+as a new primitive in Radiance?  What is the status of Radiance and
+future development of Radiance?  Is it still free or is it going
+commercial?
+
+-- 
+Per Bojsen         The Design Automation Group     Email: bojsen@ithil.id.dth.dk
+MoDAG            Technical University of Denmark          bojsen@id.dth.dk
+
+Date: Tue, 20 Jul 93 09:07:44 PDT
+From: greg (Gregory J. Ward)
+To: bojsen@id.dth.dk
+Subject: Re:  Bezier Patches?
+
+Hi Per,
+
+Adding a new surface primitive is easy in principle.  Two routines are needed:
+one to determine whether or not a surface intersects an axis-aligned cube,
+and another to determine the intersection point and surface normal for a
+ray with the surface.  Neither one is particularly easy or difficult for
+Bezier patches, but I have little need for them myself.  If ever I do need
+such a thing, I use gensurf to create a smoothed, tesselated version for me.
+
+Believe it or not, the Department of Energy STILL has not decided what they
+want to do with Radiance, or if they have, they haven't informed me.
+
+-Greg
+
+<A NAME="BRTDFUNC">==================================================================</A>
+NEW BRTDFUNC AND NEON
+
+From: phils@Athena.MIT.EDU
+Date: Wed, 19 May 1993 18:18:50 -0400
+To: greg@hobbes.lbl.gov
+Subject: Mirrored glass?
+
+Greg,
+Do you have any suggestion for specifying mirrored glass?
+Reflective on the outside and low transmission on the inside.
+Neither "glass" or "mirror" materials offer enough control of
+parameters.  I'm not having much luck in using "trans" materials either.
+Have any ideas what skyscrapers are made of?
+
+Thanks,
+Philip
+
+Date: Wed, 19 May 93 17:36:45 PDT
+From: greg (Gregory J. Ward)
+To: phils@Athena.MIT.EDU
+Subject: Re:  Mirrored glass?
+
+Hi Philip,
+
+I really wish I knew more about coated glazings so I could implement at good
+material type for them.  It's not a difficult problem; I simply don't know
+the physics of these materials.  The measurements I have access to deal only
+with photometric transmittance -- they don't consider color and they don't
+look at reflection.
+
+I suppose I could take a hack at it by assuming that reflectance either
+doesn't depend on incident angle (wrong) or that it follows Fresnel's law
+for a specific dielectric constant (possibly complex).  The thing is, I'd
+like to do it right the first time, but I need more information.
+
+Let me do a little investigation on my end to see what I can come up with.
+I can't think of a good solution with the current material types unless you
+use the BRTDfunc and make it sensitive to orientation.  I'll get back to you.
+
+-Greg
+
+Date: Thu, 27 May 93 16:18:16 PDT
+From: greg (Gregory J. Ward)
+To: phils@Athena.MIT.EDU
+Subject: Re:  Mirrored glass?
+
+Hi Philip,
+
+I haven't forgotten about the glazing problem.  In fact, I've spent a good
+part of the past week working on it.
+
+As it turns out, no one seems to have a very good handle on the behavior
+of coated glazings, including the manufacturers!  Our resident window
+experts have been using a formula based on reflection function fits to
+clear and bronze glazing.  I have implemented their formulas in Radiance
+via the BRTDfunc type.  Unfortunately, I had to modify this type in the
+process in order to get it to work, so you'll have to pick up a new
+beta release which I've put in xfer/4philip.tar.Z on hobbes.lbl.gov.
+The function file ray/lib/glazing.cal is contained therein.
+
+[Don't try to upload this file -- it's already been incorporated in 2.3]
+
+Let me know if you need any help using it.
+
+-Greg
+
+Date: Thu, 30 Sep 93 10:39:05 EST
+From: TCVC@ucs.indiana.edu
+Subject: Radiance and neon
+To: greg@hobbes.lbl.gov
+
+Hello Greg,
+
+1) I have been modelling the effects of neon in the environment.
+Where its direct component is irrelevant, I have used instances of
+'light' polygons in order to explore the effects of shape and color
+in relationship to specular surfaces. This certainly creates a
+rapid rendering time.
+
+But now I am also interested in the direct component of neon. It
+appears that point sources are arrayed along any "light" or "glow"
+emitting surfaces. Unfortunately, I appear to have no control of
+their density or spacing, so that uninstanced(sp!?) neon appears
+like a string of christmas lights attached to the tube. Are there
+parameters I can adjust? I am using 1 unit = 1 foot, sometimes 1
+unit = 1 meter. Most views are fairly distant.
+
+A related problem is in my representing the effect of 3 neon tubes
+located behind a piece of frosted glass. The glass surface is about
+8 feet long and .5 feet wide. I am interested in the direct
+component effect onto the surface of a 6 foot diameter pillar
+located 1 foot in front of this narrow light box. Rather than
+building a model of the neon tubes with 'glow' and then placing a
+Translucent surface in front of it, I have tried to simply use a
+polygon to represent the glass, and have given it the attributes of
+'glow'. The result is the effect of 4 bare lightbulbs lighting the
+column. How can I increase this density so that the effect is
+smoothed out?
+
+2) Is the intensity of the sun in Gensky in proportion to the
+intensity of the output of IES2RAD? I need to merge daylight with
+measured electric light sources in a complex environment.
+Interreflection will play an important role. Should I create my own
+sun using an IES2RAD spotlight with the correct sun intensity at a
+great distance?
+Please share your thoughts! 
+
+-Rob 
+
+Date: Sat, 16 Oct 93 22:20:08 PDT
+From: greg (Gregory J. Ward)
+To: TCVC@ucs.indiana.edu
+Subject: Q&A
+
+Hi Rob,
+
+1) "Coving" from extended light sources.
+
+The artifacts you are witnessing are the result of the internal limit
+Radiance has in breaking up large light sources.  The constant is somewhere
+in src/rt/source.h, and I think it's set to 32 or 64 presently.  You can
+try increasing this value and recompiling, but a better approach is to
+set -dj to .5 or .7 and/or break up your long light source into several
+shorter ones.
+
+By the way, you can use glow with a distance of zero instead of instancing
+"light" polygons if all you want to avoid inclusion in the direct calculation.
+In release 2.3 (coming soon, I hope), a negative distance for a glow type
+also excludes the materials from indirect contributions, which can be a
+problem when -ab is greater than one and the sources are relatively small.
+
+2) Sun from gensky.
+
+Yes, gensky does produce a sun with the proper brightness, using certain
+assumptions about the atmospheric conditions.  If you wish to adjust the
+value up or down, I suggest you modify the gensky output rather than trying
+to create the source yourself, since gensky does such a nice job of putting
+the sun in the right place.
+
+Gensky in version 2.3 will offer several new options for adjusting solar
+and zenith brightness.
+
+-Greg
+
+Date: Sun, 24 Oct 93 20:22:24 EST
+From: TCVC@ucs.indiana.edu
+Subject: new material type
+To: greg@hobbes.lbl.gov
+
+Hi Greg,
+       Thanks for your note and assistance regarding consortium and
+       "neon". I have yet to post some images for you to hopefully
+       enjoy... maybe by Thanksgiving! 
+
+       There is a "material" which Radiance does not yet support and
+       which I am finding the need for. It is similar to what is 
+       called "chroma key blue" in TV. The situation is this:
+          
+           I have a scanned image of a tree without foliage. This was
+           taken from a painting from the surrealist painter Magritte,
+           and will be used in an upcoming production of a play titled
+           SIX CHARACTERS IN SEARCH OF AN AUTHOR by the Italian author
+           Pirandello. Several instances of this "tree" are to be located
+           on a platform. The backdrop is a cloud filled sky. The trees 
+           are seen silhouetted against this backdrop. They will actually
+           be made by stretching a fine black net over a tree shaped
+           frame, then applying opaque shapes to the surface. Fine branches
+           will be caulked into the net. The complex shape will be suspended
+           via fine wires from the pipes above the stage.
+
+           My solution was to map the scanned image of the sky onto
+           a polygon of type plastic. This works well. I then mapped
+           the trees onto a polygon of type glass ( trees were made black
+           on a white field in Photoshop). The result is that the trees 
+           are clearly silhouetted in their several locations between the
+           audience and the backdrop. They cast predictable shadows etc...
+           BUT the rectangular "glass" polygon surface is still present and 
+           even though it has an RGB value of 1 1 1 , its "presence" can be 
+           seen against the lighted backdrop... and light sources are seen 
+           as reflections on its surface. Any details other than black would
+           be seen as transparant colors... fine for stained glass BUT I need
+           them all to be opaque.
+
+           I propose an "invisible" surface which only has a visual
+           presence where elements of an image are mapped onto it. Perhaps 
+           there is an option for rbg = 1 1 1  or rgb = 0 0 0  to be the 
+           invisible component. This is dependent on the nature of the
+           image. Perhaps the "paint" or image data could take on the 
+           attributes of metal, plastic, trans, mirror, or glass... 
+           making it truely versatile. 
+
+           Materials that could be modelled this way are not limited to
+           theatrical objects. Sunscreens made of metal with punched
+           holes and detailed architectural profiles are but a few of the
+           objects that could take advantage of this new "material" type.
+
+Maybe I am missing the boat, and this is already a component of this
+excellent simulator... if so, please point it out. We have successfully
+used "trans" to represent stained glass and theatrical "scrim"... its
+the invisible component that's needed.
+
+-Rob
+
+Date: Mon, 25 Oct 93 10:11:21 PDT
+From: greg (Gregory J. Ward)
+To: TCVC@ucs.indiana.edu
+Subject: Re:  new material type
+
+Hi Rob,
+
+There is a new material type in the next release that may do what you want.
+It's called "BRTDfunc", and it's been modified since release 2.1 to permit
+a number of things, including varying diffuse reflectance using a pattern.
+
+I am not quite ready to release 2.3, but you may pick up an advanced copy
+I've made for you from hobbes.lbl.gov in /xfer/private/4rob.tar.Z.  The
+private directory doesn't have read permission, so you won't be able to
+run "ls", but you should be able to pick up the file nonetheless.
+
+The only real changes I will make before the official 2.3 release will be
+in the documentation, so you probably won't need to recompile when it becomes
+official in a week or so.
+
+You can read the new ray/doc/ray.1 manual for an explanation, but what you
+want will look something like this:
+
+	void colorpict tree_pict
+	7 clip clip clip tree.pic picture.cal pic_u pic_v
+	0
+	0
+
+	tree_pict BRTDfunc tree_mat
+	10
+		0	0	0
+		1-CrP	1-CgP	1-CbP
+		0	0	0
+		.
+	0
+	9
+		1	1	1
+		.1	.1	.1
+		0	0	0
+
+The way I have given it here, you should face your tree polygon towards
+the audience, and the back will appear either transparent or fairly dark
+(where there are branches).
+
+Let me know if this works!
+
+-Greg
+
+Date: Tue, 26 Oct 93 16:04:48 EST
+From: TCVC@ucs.indiana.edu
+Subject: Re:  new material type
+To: greg@hobbes.lbl.gov
+
+Thanks for the fast responce! I can certainly get a lot of mileage
+out of the new material you have created.
+Your example produced a "cutout" of the image, so I reversed
+some parameters, making the scanned image opaque and the polygon
+transparent.
+
+void colorpict filigree
+9 red green blue robtree2f.pic picture.cal pic_u pic_v -s 7.5
+0
+0
+
+filigree BRTDfunc net
+10
+        0       0       0
+        CrP   CgP   CbP
+        0       0       0
+        .
+0
+9
+        1       1       1
+       0        0       0
+       0        0       0
+
+net polygon tree
+0
+0
+12
+   0   0   0
+   6.5  0   0
+   6.5  13  0
+   0  13  0
+
+
+I have yet to explore the properties of the image surface....
+   wether its like plastic or glass or metal or all.
+
+It works excellently for this application though!
+
+-Rob
+
+<A NAME="LIGHT">======================================================================</A>
+LIGHT SOURCE ACCURACY
+
+From: apian@ise.fhg.de
+Subject: lightlevels close to lightsources
+To: gjward@lbl.gov (Greg Ward)
+Date: Thu, 10 Jun 93 17:17:05 MESZ
+
+Dear Greg,
+
+what follows is a uuencoded cpio demo file concerning light intensities
+close to lightsources, and a problem.
+Given a disc (diameter=1), rtrace calculates irradiance for a point
+above the disc center, varying the distance between center and point.
+The values are compared with
+a) inverse square law, valid for distances >> disc diameter
+b) the analytical solution
+
+Problem:
+The radiance values are too low for distances in the order of the
+diameter and smaller. For very small distances the values are in fact
+decreasing.
+
+Hm. Any help, ideas or is my testdemo wrong? (could be... could be..)
+
+The files:
+makefile	starts the rtrace stuff
+rquadrat.rad	demo geometry
+eins-durch-r-quadrat	gnuplot file
+
+If you got gnuplot, simple say "make demo" and tell gnuplot
+load "eins-durch-r-quadrat"
+The two curves are 1/r^2 and the integrated solution, points are
+rtrace output.
+
+For -ds 0  all points lie on the 1/r^2 curve, as expected. Setting
+-ds 2  nicely shows the sampling of the disc, but -ds 0.001 results
+in a curve too low.
+
+TIA*1e8
+Peter
+-- 
+
+----------------------------------------------------------------------
+ Peter Apian-Bennewitz				apian@ise.fhg.de
+ Fraunhofer Institute for Solar Energy Systems	  Tel +49-761-4588-123
+ (W-Germany) D-7800 Freiburg, Oltmannsstrasse 5,  Fax +49-761-4588-100
+>>> new phonenumber effective after Friday, 11.6.93
+>>> new Freiburg postal code: 79100 , effective 1.7.93 
+----------------------------------------------------------------------
+
+Date: Thu, 10 Jun 93 13:12:39 PDT
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  lightlevels close to lightsources
+
+Hi Peter,
+
+Your results, though disappointing, are not terribly surprising.  You see,
+I don't use an analytical solution for disk sources.  In fact, the real
+problem is that I don't sample them as disks at all.  I assume they are
+approximately square, and thus sample points may fall outside the actual
+disk at the corners, particularly if -ds is small or -dj is close to 1.
+Points that fall outside the disk are not counted, so the resulting
+estimate is low.
+
+[But read ahead - there was a mistake in the integral]
+
+Intelligent sampling is difficult (ie. expensive) to do in general, so
+I don't usually do it.  It would add a lot to the cost of the calculation
+because it has to happen everytime a source is examined, which is all the
+time in Radiance.
+
+The only case that is handled properly is parallelograms (incl. rectangles).
+Thus, if you want a correct result, you'd better start with a rectangular
+light source.  Fortunately, most sources are approximately rectangular, and
+it is cheap to sample them.
+
+Just out of curiousity, why did you decide to test this case?  Because you
+know the analytical solution, or because you have a real need to calculate
+illumination very close to a disk light source?  (BTW, you'll find that
+spheres are even worse -- I don't substructure them at all in Radiance!)
+
+-Greg
+
+P.S.  Here is a bgraph input file to plot the same stuff.  You can type:
+
+	bgraph comp.plt | x11meta
+or
+	bgraph comp.plt | psmeta | lpr -P PostScript_printer
+
+These programs are distributed with Radiance 2.1.  I wrote them ages ago,
+before GNU came into being.
+
+::::::::
+comp.plt
+::::::::
+include=function.plt
+xmin=.001
+xmax=8.5
+Alabel=Exact
+Blabel=Rtrace
+A(x)=PI*2*(1-x/(sqrt(x*x+1)))
+Bdata=rtrace.out
+
+From: apian@ise.fhg.de
+Subject: Re:  lightlevels close to lightsources
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 11 Jun 93 12:20:25 MESZ
+
+Hi Greg,
+
+thanks for your answer.
+> Just out of curiousity, why did you decide to test this case?  Because you
+
+Yep. the disc integral is a lot easier to do. The first idea was to 
+compare the 1/r^2 approxomation with the real thing, to estimate errors
+in the measurements I make. Only as second thought came the idea of
+comparison with rtrace. Probably more of academic interest.
+
+greetings
+Peter
+-- 
+
+From: apian@ise.fhg.de
+Subject: nice values in rpict/rtrace
+To: gjward@lbl.gov (Greg Ward)
+Date: Fri, 11 Jun 93 14:51:38 MESZ
+
+one more suggestion:
+The default nice values in rt/Rmakefile are a bit of an xtra. If
+you user wants lower priority, normal nice is available, but its
+a bit tricky to get rid of the nice once rpict has set it.
+This can be nasty in shell scripts and NQS / HP-taskbroker batch 
+processing.
+IMHO, suggestion: as a default, no nice settings in rt/Rmakefile.
+
+(BTW: my integral was a bit wrong, we'll look into this)
+Peter
+
+Date: Fri, 11 Jun 93 08:15:14 PDT
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  nice values in rpict/rtrace
+
+You know, Rmakefile is there for you hackers to play with.  If no other
+processes are running on the machine, the nice value has no effect.  It's
+just there so your time-consuming processes that are not interactive, rtrace
+and rpict, don't slow you down too much when you're trying to do something.
+It's also there to protect me and my less knowledgeable users from the scorn
+of system administrators.  I'm one of them, so I know how scornful they can be.
+
+-G
+
+From: apian@ise.fhg.de
+Subject: rtrace&integral
+To: gjward@lbl.gov (Greg Ward)
+Date: Fri, 11 Jun 93 15:05:04 MESZ
+
+ok ok ok ok ok ok ok ,
+f(x)=pi*(1-x*x/(x*x+1))
+looks a lot better, your disc subdivison is ok.
+sorry for all the noise.
+-- 
+ Peter Apian-Bennewitz				apian@ise.fhg.de
+
+Date: Fri, 11 Jun 93 08:24:32 PDT
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  rtrace&integral
+
+I'm much relieved to hear it!  I can't believe I was willing to just lay down
+and admit that my calculation was all wrong without even checking your work.
+Oooo!  It makes me so mad!
+
+The new plot does look much better, though I notice the value still does
+drop precipitously at extremely close range.  Using a value of .7 for -dj
+changes that drop to noise above and below the correct value, which is better.
+The reason it drops is that there is a limit to how far the subdivision will
+go, so the calculation doesn't go berzerk next to light sources.
+
+Thanks for following through on this.
+-G
+
+<A NAME="BRIGHTNESS">====================================================================</A>
+BRIGHTNESS MAPPING
+
+To: raydist@hobbes.lbl.gov, raylocal@hobbes.lbl.gov
+Subject: Hello 
+Date: Tue, 15 Jun 93 18:35:47 +0100
+From: Kevin Jay marshall <kevin@sigma.hella.de>
+
+Hello again,
+
+	I am not really a new radiance user, but I am not by any means a first 
+time user.  I first have to say that I have found Radiance to be an exceptional
+collection of programs and enjoy using them when I get a chance.  Lately I 
+have been really studing Radinace and trying to understand the meat inside 
+the programs, and have found it a little hard to follow.  I think that most
+of my problem is lack of experience and knowledge in light technique.  I am 
+hoping that someone out there is able to give me a hand in what I am learning.
+
+	I am creating a scene that does not contain much lighting but a couple
+of direct sources read in from an ies file format.  What I am having a problem 
+with is the intensity of light after I reset the exposure with pfilt, the 
+lights are coming out really too bright.  I have read the segment that Greg
+wrote Jim Callahan on Exposure in the Radiance Digest.  So I would like to 
+ask a couple of questions also.  First, is in the letter in the digest it was 
+stated that the exposure was a more precise way of setting the image color 
+to look more realist.  Would it be safe to say that the use of pfilt would
+be more correct than a gamma correction applied to an image?  I only ask, 
+because I am not absolutely 100% sure of the correct answer, but I would guess
+the answer is yes.  So once I know that answer it will be easier to understand 
+the next question.  I would like to find the correct exposure that suits the 
+realness of the picture better.  Would I be correct if I decided to set the 
+exposure value based on the ratio of my lights luminous efficiency to that of 
+white light?  Since the lights I am using all have the same luminous efficiency
+about 21 lumens/watt as aposed to the 179 lumens/watt white light in Radiance.
+Could I use the two pass pfilt averaging of the exposure values and then 
+multiply the luminous value by 11% which is what 'my light/white light'?  Or 
+on the other had would I just use the 1 pass exposure setting and set the 
+exposure to that of white light 179 lumens/watt.  They both look good to me, but
+the first method is brighter than the other.  I am just starting in all this 
+luminous levels and what not so my main question is am I on the right track?  
+Is one of my solutions better than the other or am I absolutely not 
+understanding my problem correctly? 
+
+	Then another question if someone has time.  Since I am new to the 
+lumious/illuminance Engineering, what is the advantage to calculating Radiance
+values as apposed to calculating luminous values?  I spent the other night 
+attempting to understand why and what I could understand is that Radiance is
+based upon amount of light emitted from a Black body and its measurments 
+through, and from matterials is wavelength independent.  I also looked up the 
+definition of the candela which is based upon radiance measurements that are
+converted to luminous measurements by a max luminous efficiency of 
+683 lumens/watt is at a wavelength of 545 nm.  I realise I am probably asking 
+questions that will probably better answered in a course, but I figure it never
+hurts to ask.  Well thanks for the time.
+
+-Sincerly,
+
+Kevin
+
+Date: Tue, 15 Jun 93 13:01:44 PDT
+From: greg (Gregory J. Ward)
+To: kevin@sigma.hella.de
+Subject: exposure, etc.
+
+Hi Kevin,
+
+Luminous efficacy doesn't really have much to do with luminance or the
+perception of brightness.  Luminous efficacy tells how efficiently a
+lamp converts electrical energy into visible light.  You can still use
+a greater quantity of inefficient fixtures to outshine the more
+efficient ones, but as a researcher in energy conservation it is my
+job to criticize you if you do.
+
+If I understand you correctly, your basic question is, 'how do I
+display my image so as to reproduce the same viewer response as the
+actual environment?'  I believe this question is still open to debate,
+but at least it is starting to attract some of the research attention
+from the computer graphics community that it deserves.
+
+One answer has come from Jack Tumblin and Holly Rushmeier.  Looking back
+to subject studies conducted in the early 1960's, they devised a formula
+that maps world luminance values to display luminances in a way designed
+to evoke the same viewer response as the actual scene (would).  So far,
+their paper has appeared only as a technical report (number GIT-GVU-91-13
+from the Georgia Institute of Technology, College of Computing,
+Atlanta, GA 30332-0280), but an abbreviated version will soon appear in
+IEEE Computer Graphics and Applications [Fall 1993 issue].  An implementation
+of the Tumblin-Rushmeier display mapping is appended at the end of this
+message.
+
+In the meantime, Chiu, Herf, Shirley, Swamy, Wang and Zimmerman have done
+some interesting work on mapping brightness adaptively over an image in
+their 1993 Graphics Interface paper.  They refer also to Tumblin and
+Rushmeier's work, which seems to becoming widely accepted as the standard
+even before it's been properly published.
+
+The approach I've been working on lately is a simple linear scalefactor,
+which can be applied with pfilt, or dynamically with a new version of ximage.
+The scalefactor is based on some early 1970's subject studies by Blackwell,
+and it attempts to reproduce visible contrast on the display to correspond
+to the visible contrast in the environment being simulated.
+
+For a standard color monitor, the formula boils down to:
+
+	exposure = .882/(1.219 + L^0.4)^2.5
+
+where the world adaptation luminance, L, is expressed in candelas/m2.  To
+find this value, it's easiest to use the 'l' command of ximage after selecting
+the area at which the viewer is supposedly looking.  Let's say that ximage
+reports back a value of 25.  You could then apply pfilt as follows:
+
+	pfilt -1 -e `ev '.882/(1.219+25^.4)^2.5'` orig.pic > adjust.pic
+
+Be sure to use the -1 option, and this must be the first exposure-adjusting
+application of pfilt to your picture, otherwise you will not be starting from
+the original values and the exposure will be off.  Like I said before, the
+next version of ximage will have a new command, '@', that performs this
+adjustment interactively.  The result is a dark display if you're starting
+from a dark environment, and a normal display if the environment has good
+visibility.
+
+Again, do not confuse luminous efficacy with brightness perception.  The
+efficacies given in common/color.h are for the visible spectrum only, and
+are different from full-spectrum efficacies reported for the sun and electric
+light sources.  The only reason for using spectral radiance (the physical unit)
+instead of luminance is to have the capability of color.  The conversion
+factor between the two of 179 lumens/watt corresponds to uniform white light
+over the visible spectrum.  It does not include lamp losses or infrared and
+ultraviolet radiation, as do other luminous efficacies, and is purely for
+conversion purposes.  I could pick almost any value I like, as long as I use
+it consistently to go back and forth between radiant and luminous units.
+
+-Greg
+
+----------------------------------------------
+{ BEGIN tumblin.cal }
+{
+	Mapping of Luminance to Brightness for CRT display.
+	Hand this file to pcomb(1) with the -f option.
+	The picture file should have been run previously through
+	the automatic exposure procedure of pfilt(1), and
+	pcomb should also be given -o option.  Like so:
+
+	pfilt input.pic | pcomb -f tumblin.cal -o - > output.pic
+
+	If you are using pcomb from Radiance 1.4, you will have
+	run without pfilt and set the AL constant manually.  If
+	you are using a pcomb version before 1.4, you will have
+	to do this plus change all the colons ':' to equals '='
+	and wait a lot longer for your results.
+
+	Formulas adapted from Stevens by Tumblin and Rushmeier.
+
+	29 May 1993
+}
+PI : 3.14159265358979323846;	{ Hmm, looks familiar... }
+LAMBERT : 1e4/PI/179;		{ Number of watts/sr/m2 in a Lambert }
+DL : .027;			{ Maximum display luminance (Lamberts) }
+AL : .5/le(1)*10^.84/LAMBERT;	{ Adaptation luminance (from exposure) }
+
+sq(x) : x*x;
+aa(v) : .4*log10(v) + 2.92;
+bb(v) : -.4*sq(log10(v)) + -2.584*log10(v) + 2.0208;
+
+power : aa(AL)/aa(DL);
+
+mult = li(1)^(power-1) * ( LAMBERT^-power/DL * 10^((bb(AL)-bb(DL))/aa(DL)) );
+
+ro = mult*ri(1);
+go = mult*gi(1);
+bo = mult*bi(1);
+
+{ END tumblin.cal }
+
+[And here is a response from Charles Ehrlich...]
+
+Date: Wed, 31 Dec 69 16:00:00 PST
+From: SMTPMcs%DBUMCS02%Servers[CEhrlich.QmsMrMcs%smtpmrmcs]@cts27.cs.pge.com
+Subject: Kevin's email
+To: greg@hobbes.lbl.gov, greg@hobbes.lbl.gov
+
+Kevin,
+
+You have stumbled on (or rammed into) one of the most sticky issues
+related to renderings and visualization.  I catagorize it as "How does the
+eye measure light?"  I would like to share with you my understanding of
+the situation.
+
+Radiance is based on the idea of Scientific Visualization...the very
+same kind of algolrhythms and techniques used to take measurements
+of any other kind of real-world physical data like the density of earth
+from sonic echos or cloud coverage from radar imaging, are used to 
+represent visual data.  The only difference is that Radiance happens to
+be best at measuring a physical quantity that we all are very familiar
+with...light.  As a proof of concept, display a radiance image on screen
+with ximage, position the cursor somewhere in the image, and press
+the "i" key.  Notice the bands of color appear.  This is a "False-Color"
+image, just another way of displaying luminance values different than 
+the way our eye "measures" luminance values.
+
+2.  Very little is known about the way our eyes actually measures light.
+Radiance doesn't try to figure this out to the Nth degree.  It uses an
+approximation technique that is similar to the technique used by the
+color photographic process (none in particular.)  When you say that
+your image appears too bright, this is because, indeed, that is the way
+a camera would represent the same scene on a photograph.  Really!
+I've proven it to myself.  Alternatives to the linear, photographic 
+mapping technique exist, but are not refined (look in the ray/src/cal/cal
+directory for tumblin.cal).  More work needs to be done that involves
+emprical studies of human response.  In my opinion, a gamma correction
+comes closer to the way the human eye preceives light than a linear
+mapping.  I've asked greg to build into ximage a way of displaying images
+with gamma correction, and to build into pfilt a reversible gamma
+correction facility (so that the original, linear values of the image
+file can be retreived.)  He does not want to do this because indeed, the
+eye does not do "gamma correction."  I believe that once it is figured
+out what the eye does, he'd be happy to implement that algolrhythm. For
+the time being, I use Adobe Photoshop to make the image look more realistic, if
+I'm less concerned with accuracy or design.
+
+2.a.  Radiance image files store many more magnitudes of luminance
+values than a photograph or a computer monitor can reproduce.  How the
+eye processes these out-of-range luminance values is still largely
+unknown.
+
+For the lighting designer, or concerned informed architect using Radiance,
+what it should tell you when you've created a scene that you judge to
+have "light sources that are too bright" is that you need better light
+sources...ones with a better cutoff angle and/or higher specularity
+grating and/or VDT grade luminaires.  You could also try an indirect
+lighting solution that makes the ceiling surrounding the light fixtures
+bright so that the CONTRAST RATIO between the light fixtures and the 
+wall is not so great, effectively reducing the perceived brightness of
+the light fixtures.  You could also try using a brighter colored carpet
+so that more light gets reflected onto the ceiling if an indirect (uplighting)
+solution does not work for you.  Note: changing the brightness of your
+carpet from 5% to 10% doubles the amount of reflected light!
+
+I haven't seen the particulars of your scene and I don't know how you're
+calculating your images, but make sure you're doing an indirect (-ab>0)
+calculation to initially set the -av value if you're using direct fixtures.
+If you're using indirect fixtures, then you're whole calculation should
+be an indirect one (-ab>=1).  To set the -av value, set up a .rif file for
+rad to calculate an interactive (rview) image with ambient bounces.
+Pick a point in the scene once the image is fairly well refined that you
+think represents the average ambient value in the shadows of your scene.
+Rview will report something like:
+ray hit such_and_such_surface surface_type surface_mat
+at point (x.xxxxx, y.yyyyyy, z.zzzzzzz)
+with value (r.rrrrrr, g.gggggg, b.bbbbbb).
+This last value is the luminance at that point.  Write it down and try
+a few other places in the scene.  Unless you want colored shadows,
+average each value with the function (.3*Red+.59*Green+.11*Blue),
+which is the function for the eye's (and Radiance's) average brightness
+given the three primary colors.  Use the resulting value in subsequent
+calculations of rview or rpict for all three coordinates of -av.
+
+I believe that, the difference between the luminous efficacy of your 
+fixtures has little to do with pfilt exposure settings.  It has everything 
+to do with the description of your fixtures from within radiance.  I 
+assume that you're using some kind of low pressure sodium fixture that 
+has less white in it?  I believe that you should be adjusting you're 
+fixture's intensity such that it matches that of white light using the same
+function above (verify this with Greg).  Very little work has been done 
+(to my knowledge) with different colored light sources and what to do
+with them once an image has been calculated (how to average them so 
+that the image "looks" accurate.)  Again, this depends upon how the
+eye funcitons and I suggest using Adobe Photoshop if you must use colored
+light sources.  For the most part, unless you're using multiple types of
+light source colors (low pressure sodium and incandescent) you should
+just assume that the lights are white.  If you're talking about the 
+difference between a good tri-phosphor fluorescent light and daylight,
+I'd say you're wasting your time, unless the difference between these
+sources is what is important to you.  Most people find the orange hue
+of daylight film used in incandescently lighted places to be anoying.  The
+same goes for the bluish tint one finds with tungsten film used in
+daylighted spaces.  Again, we do not know exactly how the eye responds to
+light, especially when it involves great contrasts, and when it involves
+multiple colors of light.  Even if we did, Radiance uses only three samples
+of the spectrum...which is not enough to accurately describe what is
+going to happen to the light from a light source with all sorts of spikes
+and valleys in its spectrum when it gets mixed together with other 
+spectrally diverse sources in a scene.  And furthermore, I know of n
+commercially available computer monitor or photographic film with more
+than three colors of phosphors or dyes. But, who knows, maybe there's a 
+Radiance-16 out there with 16 samples of the spectrum. (don't hold you're
+breath.)  But then again, even HDTV only has three colors of phosphors.  
+But, you say, the eye only has three "colors" of receptors.  I say that I've 
+never seen a computer monitor that can display "fluourescent," day-glow
+orange, purple or green.  Why?
+
+-Chas
+chas@hobbes.lbl.gov
+
+Date: Tue, 15 Jun 93 16:35:46 PDT
+From: greg (Gregory J. Ward)
+To: chas, kevin@sigma.hella.de
+Subject: remarks on Chas' remarks
+
+Hi Kevin (and Chas),
+
+I agree with everything Chas had to say (as far as I can remember!).
+
+I did forget to mention gamma correction.  Gamma correction is called that
+because most CRT-based display systems exhibit a natural response curve
+that to reasonable approximation follows a power law, ie:
+
+	display_luminance = maximum_luminance * (pixel_value/255)^gamma
+
+The gamma correction done by ximage and the other converters is
+designed to compensate for the built in response function of the
+display monitor or output device, but it can be used to increase or
+decrease contrast if desired as well.  For example, your monitor may
+have a gamma value of 2.6 (typical).  If you want to display an image
+with artificially increased contrast (eg. for more vibrant colors), you
+can intentionally underrate the gamma with ximage, (eg. ximage -g
+1.5).  Similarly, you can artificially decrease contrast by overrating
+the gamma (eg. ximage -g 3.2).
+
+To find out what the actual gamma of your monitor is, you can look at the
+image supplied in ray/lib/lib/gamma.pic like so:
+
+	ximage -g 1 -b gamma.pic
+
+Set your monitor to normal brightness and contrast, then match the display
+on the left with the grey scale on the right.  The corresponding number is
+the correct gamma value for this monitor under these settings.  Rather than
+setting the gamma with the -g option in ximage all the time, you may then
+define the environment variable GAMMA to this value, ie:
+
+	# In .login file:
+	setenv GAMMA 2.6
+
+	: Or, in .profile:
+	GAMMA=2.6
+	export GAMMA
+
+This has the added advantage of setting the gamma value in rview, which
+doesn't have a -g option.
+
+If you have an SGI, I should mention that the way they handle gamma correction
+is a bit screwy.  There is a system-set gamma value that neither indicates
+the actual gamma of the graphics display nor does it completely correct for
+the natural gamma of the monitor, but leaves the combined system
+response somewhere between linear and the natural curve in most cases.
+For example, the system gamma is usually set to 1.7.  What this means is that
+if the monitor's natural response was around 1.7, then the graphics system
+has fully compensated for this and the response function is now linear.
+In fact, the monitor's gamma is larger than this, and the combined response
+ends up being around gamma=1.2, which is to what you should set the GAMMA
+environment variable.
+
+Hope this is more help than confusion...
+-Greg
+
+To: greg@hobbes.lbl.gov, chas@hobbes.lbl.gov
+Subject: Hello
+Date: Thu, 24 Jun 93 18:09:48 +0100
+From: Kevin Jay marshall <kevin@candela.hella.de>
+
+Greg and Chas,
+
+	I wanted to write again and thankyou for all your help and to
+	fill you in on all the results of the test that we made the
+other day.  What we first did was to measure actual headlights on a car
+from one of the employee's here, then what we did was to take a picture
+of the car at night of what the car's headlights on the road actually
+look like.  Then we took that data and simulated the headlights using
+Radiance.  That was when I had the problem of how to use pfilt
+correctly, which I still cannot do.  But thanks to the two of you and
+some experimenting of my own I understand why it is currently
+impossible to get the exact picture I am looking for to be the exact
+picture that my boss is looking for and so on.  I also have come to
+respect the job that is trying to be accomplished by the pfilt
+program.  But to continue on.  So we created some pictures and then
+yesterday I had the opportunity to accompany my boss to the light
+channel here at Hella to see the actual headlights that were created
+from all this theoretical data.  The results were excellent.  My
+picture looked exactly like the real lights shown on the road, except
+for the brightness.  I think the part my boss likes best is the ability
+to compute a rough picture, which is enough to get a clear idea of the
+distribution on the street, in about 5 to 10 minutes.  Well anyway I
+thought you might be interested in the results.
+
+                                            -Kevin
+
+Date: Thu, 24 Jun 93 09:35:09 PDT
+From: greg (Gregory J. Ward)
+To: kevin@candela.hella.de
+Subject: Re:  Hello
+Cc: chas
+
+Hi Kevin,
+
+I'm glad you got it to (sort of) work.  Like we told you, more sophisticated
+brightness mappings are possible with pcomb, but you have to know what you
+are doing, I think, to get good results.
+
+-G
+
+Date: Wed, 31 Dec 69 16:00:00 PST
+From: SMTPMcs%DBUMCS02%Servers[CEhrlich.QmsMrMcs%smtpmrmcs]@cts27.cs.pge.com
+Subject: Hella headlight study
+To: greg@hobbes.lbl.gov
+
+Kevin,
+I'm very encouraged to hear that your simulation worked!!  How much
+time have you spent learning Radiance all together?
+
+Regarding the fact that the brightness of the image (presumably around
+the location of the headlights or where the beam hits the road) did not
+match the physical simulation...did you take any luminance measurements
+and correlate those with the luminance predicted by Radiance (using
+the "L" command within ximage?)  I think that doing that might just
+convince your boss what Radiance is all about...namely that the
+pretty picture you get is just a by-product of the time-consuming,
+physically-based calculations going on behind the scenes.
+
+-Chas
+
+<A NAME="PARALLEL">=======================================================================</A>
+PARALLEL RADIANCE AND ANIMATIONS
+
+From: matgso@gsusgi1.gsu.edu (G. Scott Owen)
+Subject: Re: parallel radiance
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Mon, 21 Jun 1993 13:44:35 -0500 (EDT)
+
+Greg,
+
+Has the parallel version of radiance been released yet? We were thinking
+of adapting Radiance to the PVM (Parallel Virtual Machine- see article in
+latest IEEE Computer)) environment. What do you think of this idea?
+
+Scott Owen
+ 
+Date: Tue, 22 Jun 93 15:58:01 PDT
+From: greg (Gregory J. Ward)
+To: matgso@gsusgi1.gsu.edu
+Subject: Re: parallel radiance
+
+Hi Scott,
+
+Although I still have not received permission to distribute the next
+release, I have made a beta copy of the software for you to test in
+the /xfer directory on the anonymous ftp account on hobbes.lbl.gov, in
+the file "4owen.tar.Z".  Check out the manual page for "rpiece" in
+ray/doc/man1.  Usage is a little awkward, so don't be shy with your questions.
+
+I picked up a copy of the article from IEEE Computer, but haven't taken
+the time to read it through carefully, yet.  It seems like a really good
+approach.
+
+The approach I have taken is more simple-minded, but shares
+the advantage of running in a heterogeneous environment.  In fact,
+all I require is NFS and the lock manager to coordinate multiple
+processes.  The host processors may be on one machine, on many machines
+distributed over the network, or any combination thereof.  Each processor
+must either have exclusive access to enough memory to store the entire
+scene description, or must share memory with other processors that do.
+
+If you want to do animations, you can run separate frames on the
+separate machines, rather than dividing up each frame, which is
+technically more difficult.  At the end of this letter I have put a
+couple of files that might make your animation work easier.  Using the
+"view" command within rview, you may write out a list of key frames,
+one after another, in a walk-through view file, like so:
+
+	: v walk.vf -t N
+
+Where "N" is replaced by the number of seconds that you assumed has passed
+since the previous keyframe (for the first keyframe, just enter 0).  After
+you have all the keyframes you want in the view file, simply run the mkspline
+command on that file, writing the result to a .cal file:
+
+	% mkspline walk.vf > walk.cal
+
+Then, you may use rcalc to compute any frame desired from your animation:
+
+	% rcalc -n -f walk.cal -f spline.cal -e 't=10.3' -o view.fmt >10.3.vf
+
+Or, generate the entire sequence:
+
+	% cnt 1000 | rcalc -f walk.cal -f spline.cal -e 't=Ttot/999*$1' \
+		-o view.fmt | rpict -S 1 -vf start.vp -x 1000 -y 1000 \
+		[more options] -o frame%03d.pic {octree} &
+
+You should also be aware of the pinterp program, which can greatly speed up
+renderings of walk-through animations.  (Ie. animations where no objects
+are in motion.)  Since I have never gotten around to making an animation
+rendering program, I would strongly recommend that you show me your scripts
+before running any long renderings on your machines.  I could potentially
+save you a lot of compute time with a little appropriate advice.
+
+-Greg
+
+----------------- BEGIN "spline.cal" ------------------
+{
+	Calculation of view parameters for walk-throughs.
+	Uses Catmull-Rolm spline.
+
+		09Feb90 Greg Ward
+
+	Define:
+		T(i)	- time between keyframe i and i-1
+	Input:
+		t	- time
+	Output:
+		s(f)	- spline value for f at t where f(i) is value at T(i)
+}
+
+s(f) = hermite(f(below), f(above),
+		(f(above)-f(below2))/2, (f(above2)-f(below))/2,
+		tfrac);
+
+tfrac =	(t-sum(T,below))/T(above);
+Ttot = sum(T,T(0));
+
+below = above-1;
+above = max(upper(0,1),2);
+below2 = max(below-1,1);
+above2 = min(above+1,T(0));
+
+upper(s,i) = if(or(i-T(0)+.5,s+T(i)-t), i, upper(s+T(i),i+1));
+
+sum(f,n) = if(n-.5, f(n)+sum(f,n-1), 0);
+
+or(a,b) = if(a, a, b);
+min(a,b) = if(a-b, b, a);
+max(a,b) = if(a-b, a, b);
+
+hermite(p0,p1,r0,r1,t) =	p0 * ((2*t-3)*t*t+1) +
+				p1 * (-2*t+3)*t*t +
+				r0 * (((t-2)*t+1)*t) +
+				r1 * ((t-1)*t*t);
+--------------- END "spline.cal" --------------------
+--------------- BEGIN "mkspline" ----------------------
+#!/bin/csh -f
+#
+# Make a .cal file for use with spline.cal from a set of keyframes
+#
+if ( $#argv != 1 ) then
+	echo Usage: $0 viewfile
+	exit 1
+endif
+cat <<_EOF_
+{
+	Keyframe file created by $0
+	from view file "$1"
+	`date`
+}
+_EOF_
+foreach i ( Px Py Pz Dx Dy Dz Ux Uy Uz H V T )
+	echo "$i(i) = select(i,"
+	rcalc -i 'rview -vtv -vp ${Px} ${Py} ${Pz} \\
+			-vd ${Dx} ${Dy} ${Dz} \\
+			-vu ${Ux} ${Uy} ${Uz} \\
+			-vh ${H} \\
+			-vv ${V} \\
+			-vs 0 -vl 0 -t ${T}' \
+		-o '	${'$i'},' $1 | sed '$s/,$/);/'
+end
+--------------- END "mkspline" --------------------------
+--------------- BEGIN "view.fmt" ------------------------
+rview -vtv -vp ${Px} ${Py} ${Pz} \
+      -vd ${Dx} ${Dy} ${Dz} \
+      -vu ${Ux} ${Uy} ${Uz} \
+      -vh ${H} -vv ${V}
+--------------- END "view.fmt" ------------------------
+
+<A NAME="AMIGA">=================================================================</A>
+AMIGA PORT
+
+Date: Tue, 13 Jul 93 13:09:05 MED
+From: bojsen@id.dth.dk (Per Bojsen)
+To: GJWard@lbl.gov
+Subject: Reorganized hobbes.lbl.gov:/pub/ports/amiga
+
+Hi Greg,
+
+I've reorganized the /pub/ports/amiga directory on hobbes.lbl.gov.  I
+deleted the old files there and put some new files up instead.  I
+broke the big archive up into a few pieces and replaced the binaries
+with new versions.  I hope it's ok with you!
+
+-- 
+Per Bojsen         The Design Automation Group     Email: bojsen@ithil.id.dth.dk
+MoDAG            Technical University of Denmark          bojsen@id.dth.dk
+
+<A NAME="PVALUE">=======================================================================</A>
+PVALUE
+
+Date: Sat, 17 Jul 93 22:42:00 EDT
+From: "Yi Han" <yihan@yellow.Princeton.EDU>
+To: greg@hobbes.lbl.gov
+Subject: question
+
+Hi Greg, I have installed your RADIANCE program. I just have a quick question
+for you. Is there a way to find out luminance and radiance on all pixels of
+the picture? It is like the function of press <return> and "l" keys in ximage.
+But I don't want to do it pixel by pixel.
+
+Thank you very much for your help.
+
+Yi
+
+Date: Mon, 19 Jul 93 09:28:34 PDT
+From: greg (Gregory J. Ward)
+To: yihan@yellow.Princeton.EDU
+Subject: Re:  question
+
+Yes, you can use the "pvalue" program to print out the color or gray-level
+radiance values.  For the spectral radiance values, pvalue by itself or with
+the -d option (if you don't want the pixel positions).  For the gray-level
+radiance values use the -b option (with or without -d).  For the luminance
+values, take the radiance values and multiply them by 179.  You can do this
+with rcalc, like so:
+
+	% pvalue -h -H -d -b picture | rcalc -e '$1=$1*179' > luminance.dat
+
+-Greg
+
+<A NAME="BACKGROUND">==============================================================</A>
+BACKGROUND COLOR
+
+Date: Mon, 18 Oct 93 20:28:48 -0400
+From: David Jones  <djones@Lightning.McRCIM.McGill.EDU>
+To: greg@hobbes.lbl.gov
+Subject: setting background to something other than black ?
+
+Hi Greg,
+
+I am putting together a rendering of a geometric model
+for a presentation and I want the background to be a
+dark royal blue, instead of black.  That is, whenever the
+traced ray goes off to infinity without intersecting a surface,
+I want it dark blue.
+
+I know this can be done in an elegant way, but I cannot figure it out.
+
+Can you tell me?
+
+of course the slides need to be ready by tomorrow ....
+
+dj
+
+Date: Tue, 19 Oct 93 09:33:06 PDT
+From: greg (Gregory J. Ward)
+To: djones@Lightning.McRCIM.McGill.EDU
+Subject: Re:  setting background to something other than black ?
+
+Just use a glow source, like so:
+
+void glow royal_blue
+0
+0
+4 .01 .01 .3 0
+
+royal_blue source background
+0
+0
+4 0 0 1 360
+
+-Greg
+
+<A NAME="DEPTH">==================================================================</A>
+DEPTH OF FIELD
+
+Date: Fri, 29 Oct 93 12:50:40 PDT
+From: djones@mellow.berkeley.edu (David G. Jones)
+To: gjward@lbl.gov
+Subject: optics and radiance
+
+Hi Greg,
+
+I am unsure how accurate RADIANCE can model certain optical effects.
+For example, what about blur ?
+
+Can I "build" a simple "camera" inside RADIANCE and "view" the
+image plane?
+
+I might build a scene and build a camera in this scene, with a
+"thin lens" from "glass" and place an iris of a certain diameter
+in the middle and view the "image plane" behind the lens ?
+Would this work?  Would it give be the appropriate blur for the
+iris diameter?
+
+What if I have two "irises" displaced from the optical axis?
+This is in fact what I really want to model.  Any hope in heck of this
+working in RADIANCE?
+
+dj
+
+Date: Fri, 29 Oct 93 14:09:14 PDT
+From: greg (Gregory J. Ward)
+To: djones@mellow.berkeley.edu
+Subject: Re:  optics and radiance
+
+Hi David,
+
+Radiance does not directly simulate "depth of field," but it is possible to
+approximate this effect through multiple renderings with slightly different
+view parameters by summing the resulting pictures.
+
+All you do is pick a number of good sample viewpoints (-vp) on your
+aperature (or iris, as the case may be), then set the -vs and -vl view
+options like so:
+
+	vs = s / (2*d*tan(vh/2))
+	vl = l / (2*d*tan(vv/2))
+
+	where:
+		d = focal distance (from lens to object in focus)
+		s = sample shift from center of aperature (in same units as d)
+		l = sample lift from center of aperature
+		vh = horizontal view angle (-vh option)
+		vv = vertical view angle
+
+Then, sum the results together with pcomb, applying the appropriate scalefactor
+to get an average image, eg:
+
+	pcomb -s .2 samp1.pic -s .2 samp2.pic -s .2 samp3.pic \
+		-s .2 samp4.pic -s .2 samp5.pic > sum.pic
+
+Let me know if this works or you need further clarification.
+
+-Greg
+
+P.S.  You can start with lower resolution images, since this averaging
+process should be an adequate substitute for reducing (anti-aliasing) with
+pfilt.
+
+<A NAME="COMPANY">==================================================================</A>
+A COMPANY CALLED RADIANCE
+
+Date: Tue, 2 Nov 93 16:55:47 PST
+From: ravi@kaleida.com (Ravi Raj)
+To: GJWard@lbl.gov
+Subject: A company called Radiance Software
+
+Greg,
+
+I am a partner in a company called Radiance Software. Radiance was 
+formed as a partnership in January of this year and the company 
+develops a low-cost modeling and animation system called Movieola. 
+The product at the moment runs only on SGIs but is expected to be 
+ported to Sun, HP and IBM by middle of next year. Version 1.0 of 
+the product is expected to ship in February next year.
+
+I've heard a lot about your ray tracing product called Radiance.
+I haven't really used it yet but am planning on downloading your code 
+and checking it out on an SGI. Believe it or not, when we formed
+a partnership called Radiance Software, it never occurred to
+us that there might be a rendering product called Radiance.
+
+We are planning on incorporating Radiance Software soon. Would you or
+Lawrence Berkeley Labs mind your product name being used as a company
+name by a company that develops a modeling/animation system? We'd
+really appreciate hearing from you one way or the other. Please
+reply via e-mail or call Lee Seiler at (510) 848-7621.
+
+Many Thanks!
+
+Ravi
+
+Date: Wed, 3 Nov 93 14:55:42 PST
+From: greg (Gregory J. Ward)
+To: ravi@kaleida.com
+Subject: Re:  A company called Radiance Software
+
+Hi Ravi,
+
+Well, well.  You know there is also a rendering program called "Radiant" and
+some other product called "Radiance."  Neither one is very popular as far
+as I know, but the crowding of names in such a short lexicographical space
+is a bit confusing.  Radiance (our software) has been around for a good
+5 or 6 years, so having a company by the same name could confuse a lot
+of people.  I appreciate your asking me about it, though.
+
+Since rendering is in some sense complimentary to modeling and
+animation, perhaps your company would like to take advantage of this
+happenstance by becoming a distributor of our software?  We are in the
+process of setting up a licensing arrangement to make this possible,
+and the fee should be quite reasonable.  At any rate, I would appreciate
+it if you do check out the Radiance renderer and tell me what you think.
+(You might want to wait a few days for me to prepare the next release,
+version 2.3.)
+
+-Greg
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 5, Part 2</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

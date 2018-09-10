@@ -1,0 +1,1134 @@
+<TITLE>
+Radiance Digest, v2n3
+</TITLE>
+<html>
+<a name="top"></a><h2>RADIANCE Digest Volume 2, Number 3</h2>
+<hr>
+<pre><body>
+Dear Radiance Users,
+
+Here is the latest culling of mail messages from users with questions
+about Radiance.  The topics are as follows:
+
+	<A HREF="#CYLINDER_SOURCES">CYLINDER SOURCES</A>	What kind of cylinder may be a light source?
+	<A HREF="#GETTING_STARTED">GETTING STARTED</A>		Documentation and modeling without CAD
+	<A HREF="#NUMERICAL_OUTPUT">NUMERICAL OUTPUT</A>	Calculating point illuminances
+	<A HREF="#PCOMPOS">PCOMPOS</A>			Overcoming pcompos input limits
+	<A HREF="#USER_INTERFACE">USER INTERFACE</A>		Advice on creating a user interface
+	<A HREF="#OCONV_SET_OVERFLOW">OCONV SET OVERFLOW</A>	What causes "set overflow" error in oconv?
+	<A HREF="#HEIGHT_FIELDS">HEIGHT FIELDS</A>		How to use gensurf to create height fields
+	<A HREF="#COMPILATION">COMPILATION QUESTIONS</A>	Problems compiling on NeXT and with GNU-C
+	<A HREF="#ANIMATION">ANIMATION SPLINES</A>	Using Catmull-Rolm splines for camer animation
+	<A HREF="#RA_PICT">RA_PICT</A>			Transferring output of ra_pict to Macintosh
+	<A HREF="#LIGHT_SOURCES">LIGHT SOURCES</A>		Problems with light sources
+	<A HREF="#HARTMANN">HARTMANN CONSTANT</A>	What is it?
+	<A HREF="#SPOTLIGHTS">SPOTLIGHTS</A>		Questions about spotlight type
+
+I hope you find the information useful.
+
+-Greg
+
+<A NAME="CYLINDER_SOURCES">=============================================</A>
+CYLINDER SOURCES
+
+Date: Tue, 2 Jun 92 14:46:48 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: cylinders & lights
+To: GJWard@lbl.gov
+
+In section 2.1.2 of the Radiance manual in the section on materials
+and the light material you say...
+"..., cylinders (provided they are long enough),...can act as light sources.
+
+What exactly (or inexactly) does "long enough" mean?
+------------------------------
+Paul D. Bourke                             School of Architecture
+pdbourke@ccu1.aukuni.ac.nz                 Auckland University
+
+Date: Tue, 2 Jun 92 12:36:38 PDT
+From: greg (Gregory J. Ward)
+To: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re:  cylinders & lights
+
+Well, it's not a fatal error if the cylinder is too short, but cylinders
+in general are imperfect as light sources because I send a ray to the
+center of the object, and if it comes in axially, then it can pass right
+through the source.  You will get warnings if your cylindrical sources are
+too short.  I recommend a ratio of length to diameter of 4 or more.
+
+-Greg
+
+<A NAME="GETTING_STARTED">=========================================================</A>
+GETTING STARTED
+
+Date: Wed, 3 Jun 92 04:19:06 PDT
+From: logan%cs@hub.ucsb.edu (Bruns)
+To: GJWard@lbl.gov
+Subject: The "Radience Reference Manual"
+
+I printed out the Mac document files in which there are many references
+to said manual.  Where could I obtain this from?  Or do I already have it
+and don't know it?
+
+Also, I would appreciate any advice for people who do not have access to
+CAD.  Currently I plan to write short C rountines which would create objects
+in various positions based upon input parameters.  (for example I might
+have a program which would generate a flexible desk lamp and would
+accept parameters to determine relative positions of its pieces.)
+
+However, I am new to this and would appreciate any advice you could give
+me.
+					Sincerely yours,
+					Logan O'Sullivan Bruns
+
+Date: Wed, 3 Jun 92 14:16:09 PDT
+From: greg (Gregory J. Ward)
+To: logan%cs@hub.ucsb.edu
+Subject: Re:  The "Radience Reference Manual"
+
+Hi Logan,
+
+The "Radiance Reference Manual" is distributed in the form of a troff
+document in the ray/doc directory.  It is the file "ray.1" in that directory.
+There is also a short tutorial, called "tutorial.1".  You should at least have
+nroff on your system, and you can print out these files like so:
+
+	% nroff -ms ray.1 | lpr
+	% nroff -ms tutorial.1 | lpr
+
+Most sytems also have a more sophisticated text formatter, such as ditroff or
+psroff or troff or some such.  Ask your system administrator about how to get
+decent troff output.
+
+I wish I could offer some helpful insights to you about modeling without CAD.
+I have done it for many years myself, and it's not all that easy.  You can
+get some distance using the Radiance generators (genbox, genrev, gensurf, 
+genprism, etc) in conjunction with the scene transformer, xform.  The Mac
+user's manual does a pretty good job describing how this is done.
+
+Best of luck!
+-Greg
+
+<A NAME="NUMERICAL_OUTPUT">==============================================================</A>
+NUMERICAL OUTPUT
+
+[The following is in response to some faxed questions from Xabier Gorritxategi
+ (good thing this isn't voice-mail) about using Radiance to compute values.]
+
+Date: Fri, 5 Jun 92 09:38:43 PDT
+From: greg (Gregory J. Ward)
+FAXnumber: 01134943796944
+FAXto: "Xabier Gorritxategi, IKERLAN"
+Status: R
+
+Dear Xabier,
+
+I am glad that you have been using Radiance so successfully in your work.
+You can use the program "rtrace" to get numerical output, such as luminance
+and illuminance values, from numerical input such as point locations.  Since
+Radiance uses radiometric units, such as radiance and irradiance, conversion
+is necessary if you want to get results in photometric units.  This is:
+
+	photometric unit = (.3*r + .59*g + .11*b) * 179 lumens/watt
+
+The value of 179 is the luminous efficacy of uniform white light, which
+is the default value used by programs that take photometric units and
+produce Radiance source descriptions (such as ies2rad and gensky).  The
+three coefficients, .3, .59 and .11 are the relative contributions of
+the standard red, green and blue to luminance.  (There is actually a
+slightly more accurate conversion stored in ray/src/common/color.h, but
+this more common approximation is good enough for most applications.)
+
+As an example of producing illuminance values at regularly spaced points
+on a 4x5 workplane, you might use the following command:
+
+	% cnt 3 4 | rcalc -e '$1=$1+.5;$2=$2+.5;$3=1;$4=0;$5=0;$6=1' \
+		| rtrace -h -I [options] octree \
+		| rcalc -e '$1=179*(.3*$1+.59*$2+.11*$3)' > outfile
+
+Note that rcalc was used to massage both the input and the output to
+rtrace.  Rcalc is a standard program distributed with Radiance, and
+it has quite a number of mathematical functions not found in the
+standard UNIX program "awk", plus it is easier to use.  (I think.)
+Note that the output file will not contain the point locations.
+If you want them, you can add them with a post-process like so:
+
+	% cnt 3 4 | rcalc -e '$1=$1+.5;$2=$2+.5' | lam - outfile > values
+
+Lam is another program distributed with Radiance, and it merely concatenates
+lines from multiple files (one of which is the standard input in this example).
+
+I hope that this helps you with some of the more esoteric features of Radiance.
+I want to make these sorts of calculations more straightforward for designers,
+if I can only get the funding from Washington, D.C.
+
+-Greg
+
+<A NAME="PCOMPOS">=========================================================</A>
+PCOMPOS
+
+Date: Thu, 11 Jun 92 9:16:29 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: question
+To: GJWard@lbl.gov
+
+Before I start pawing over the code can you give me an idea of how hard it
+might be to increase the maximum frames for pcompos from 32 to a larger number.
+I am creating 64x64 renderings as tests for animation flightpaths and it would
+be useful to be able to pcompos larger matrices, for example 10x10.
+------------------------------
+Paul D. Bourke                             School of Architecture
+pdbourke@ccu1.aukuni.ac.nz                 Auckland University
+
+Date: Thu, 11 Jun 92 12:18:03 PDT
+From: greg (Gregory J. Ward)
+To: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re:  question
+
+There is a macro called MAXFILE near the top of pcompos.c that you can
+easily change to be whatever you want.  You may have another problem though
+if you run into the system limit on the number of open files a process can
+have.  Another way to construct large matrices of images is of course to
+create several small matrices and put them all together with pcompos at
+the end.
+
+-Greg
+
+<A NAME="USER_INTERFACE">================================================================</A>
+USER INTERFACE
+
+Date: Wed, 10 Jun 92 19:18:49 -0400
+From: Jim Callahan <jmc@ugrad.ee.ufl.edu>
+To: GJWard@lbl.gov
+Subject: Radiance as a tool for Architecture
+
+	I just recently acquired the 2.0 version of Radiance and was *very*
+impressed with it.  I am interested in using this program to render some of
+my designs for school and thought you might have some experience with this
+sort of thing.  
+
+	Have you or others developed any generator programs which are
+specific to architectural design?  Texture functions?  Objects?  If so,
+where can I find them? 
+
+	Also, I am in the process of developing a Graphic User Interface
+(GUI) to the oconv, rpict, pcompos, and pfilt programs using the InterViews
+C++ library written by Mark Linton of Stanford (it is available via
+anonymous at interviews.stanford.edu). Like you, he has developed a very
+powerful program and is willing to share it for free.  We all owe you for
+your generosity.  If you are willing, I'd like to distribute my interface
+at your site as soon as it is up and running (and bug free I hope).
+
+	I may soon be purchasing a SGI machine if I can scrape up the
+money and my next project will be to write a 3d interactive "front end" for
+designing scenes.  It would allow the user to design in 3d enviroment
+rather than using clumsy 2d orthagonal views and allow the construction of
+agregate object libraries. Radiance seems to be the best "free" tool for
+producing the final images I have seen.  Could you suggest features/options
+that you would like to see in something like this.  I would be willing to
+distribute this software for no charge.  I believe that the best software
+is written by people who need a solution to a problem NOT by money hungry
+programmers.  These kind of tools should be shared so that we can build on
+each others work (but I guess you don't need to be told all this).
+
+	Once again, GREAT JOB!  Thanks for the program and the help.
+
+						- Jim
+Date: Sat, 13 Jun 92 09:48:35 PDT
+From: greg (Gregory J. Ward)
+To: jmc@ugrad.ee.ufl.edu
+Subject: Re:  Radiance as a tool for Architecture
+
+Dear Jim,
+
+Thank you for your nice letter, and for your interest in our software.  I
+have wanted for some while to work on a user interface for Radiance, but
+have had neither the time nor the funds to pursue it.  Of course, I would
+be delighted if you would work on a GUI and make it available to people.
+The thing that I have found to be most important in distributing software
+is to make sure that there is a common base.  In my case, that means UNIX
+and K&R C (boring as that may be).  I have not played with the library you
+mentioned, partly because I don't get around the network much so I hadn't
+heard of it, and partly because I don't have and cannot afford a C++
+compiler.  (Actually, maybe the compiler's not so expensive, but I would
+have to buy a new machine to run it on!)
+
+There is much work to be done before Radiance is truly useful as a design
+tool, I think.  The main problem is that it is too general a lighting
+simulation, and doesn't know a thing about architecture or architectural
+design.  Radiance has no notion of human scale or what a door is or a
+window or a space.  It only knows geometry and materials, placing all
+the burden of description and interpretation on the user.  This may be
+all right for the user with time on his hands, but it's unacceptable
+for the practicing designer, who needs to talk to a design tool in his
+or her own language.  That is what a user interface is all about.
+
+I need to get to work talking to practicing architects and designers so
+I can start to bridge this gap between design and simulation.  I may not
+get to the graphical part of the user interface for some time.  Most of
+my work will entail writing programs and scripts to perform particular
+design evaluation tasks and take some of the burden of description and
+interpretation off of the user.  I'm not sure I'm even the best person
+to work on the final graphical user interface, so I am quite open to
+working with someone else on that part of it.
+
+I, too, have a lot of respect for people who work long and hard on
+a program for little or no money, then make it available for free
+to others.  Many would even cast such people in the role of heroes,
+though I might not go that far.  But I'm not one of those people.
+I was paid well for my efforts by the Department of Energy, and
+have been very lucky to work on something I enjoy and get money
+for it besides.  The reason Radiance is "free" is because it has
+already been paid for by government taxes!
+
+I agree with you that programs are best developed by those who are
+very familiar with the task involved.  I wish I knew more about lighting
+design and architecture for that reason.  My hope is to get people like
+you to do the real work of user interface design for me, but I don't
+expect you to do it for nothing.  You should expect some sort of
+compensation for your efforts.  Don't devalue yourself.  Programmers
+doing interesting work rarely make much money -- there's no reason
+for the MicroSofts and IBMs of the world to take it all with our consent.
+Even if you're not a money-grubbing bastard, you've still got to eat.
+
+The only models and programs that I have are on the hobbes.lbl.gov ftp
+server in the pub subdirectories.  Help yourself, and please do add to
+our little collection if you can.
+
+-Greg
+
+P.S.  Hobbes address is 128.3.12.38.  Also note that Radiance is now
+in release 2.1.  Where is everyone getting these outdated copies?!
+
+<A NAME="OCONV_SET_OVERFLOW">=======================================================</A>
+OCONV SET OVERFLOW
+
+From: phils@Athena.MIT.EDU
+Date: Mon, 15 Jun 92 11:59:43 -0400
+To: greg@hobbes.lbl.gov
+Subject: overflow problem.
+
+Hi Greg,
+
+We're trying to trace a BIG model are getting the following error: 
+<79> oconv -w sky.rad plot.rad > plot.oct
+oconv: internal - set overflow in addobject (poly12914)
+
+This is the Washington D.C. monumental core (about 21,000) polygons.
+But this is a BIG Vax 9000 with 500 meg. RAM so memory should not be a
+problem.  Any ideas?
+
+Thanks,
+
+Philip
+
+Date: Mon, 15 Jun 92 09:34:06 PDT
+From: greg (Gregory J. Ward)
+To: phils@Athena.MIT.EDU
+Subject: Re:  overflow problem.
+
+Hi Phil,
+
+The cause of this error is either many overlapping surfaces (ie. coincident),
+which would probably mean an error in the model, or that the enclosing global
+cube is too large with respect to the detail in the model.  Check out the
+manual page for oconv.  You can try increasing the octree resolution with
+the -r option.  Set it to the maximum overall dimension of your scene
+divided by the size of a relatively small surface, and you should be OK.
+
+-Greg
+
+<A NAME="HEIGHT_FIELDS">======================================================================</A>
+HEIGHT FIELDS
+
+To: greg@hobbes.lbl.gov
+Subject: Gensurf file in Radiance
+Date: Wed, 17 Jun 92 09:45:31 EDT
+From: Gilbert Leung <gleung@Athena.MIT.EDU>
+
+Hi,
+
+	We are running your program Radiance and want to use the gensurf
+command.  But there is little, if any then unclear, information about the
+coordinate files that gensurf reads.  Can you send us some more details
+about this or at least point us to the right direction?  A/some sample file(s)
+that gensurf reads will be great.
+
+Sincerely yours,
+Gilbert Leung
+
+To: greg@hobbes.lbl.gov
+Subject: freadscan vs freadcolr
+Date: Wed, 17 Jun 92 18:29:54 EDT
+From: Philip  Thompson <phils@Athena.MIT.EDU>
+
+Hi,
+
+I'm trying to update my ra_xim code and have noticed that you
+now use freadcolr a lot more often.  Is freadscan now obsolete?
+
+Also, we're trying to get DEMs (Digital Elevation Maps) into
+radiance.  Do you have an example of a height field in action?
+or sample input to gensurf?
+
+Thanks,
+Philip
+
+Date: Wed, 17 Jun 92 15:52:16 PDT
+From: greg (Gregory J. Ward)
+To: gleung@Athena.MIT.EDU, phils@Athena.MIT.EDU
+Subject: Re: gensurf height functions
+
+Dear Gilbert and Philip,
+
+Here is a simple example of gensurf using height information from a file:
+
+	gensurf dirty ground '40*s' '30*t' height.data 4 3 -s
+
+Where height.data contains the following:
+
+	10.35	15.78	13.33	12.15	10.72
+	11.77	14.55	14.15	13.37	12.20
+	12.21	14.31	14.93	13.75	13.71
+	11.35	14.05	14.75	12.91	13.35
+
+The formatting of the data file is irrelevant, but the number and ordering
+of points matters.  Since I have specified 20 points, which is (4+1)*(3+1),
+gensurf will interpret these as vertex heights rather than centroid heights.
+If I had given anything other than 12 or 20 points, gensurf would have
+reported an error.  The -s option performs surface normal interpolation
+for smoothing the data, but in any case 12 polygons would have been produced.
+
+If I wanted to take x and y coordinates from a data file as well, I would
+have used a command like:
+
+	gensurf ugly object object.data object.data object.data 4 3
+
+The file "object.data" should contain either 12 or 24 triplets (ie. 36 or
+72 floating point values) corresponding either to the centroid or vertex
+locations of each surface, respectively.  The triplets would appear as:
+
+	x0 y0 z0	x1 y1 z1	x2 y2 z2	...
+
+in the input file.  The repetition of the file name, although awkward,
+was done that way to avoid more compilcated argument specification and
+so that I could without too much trouble allow for separate coordinate
+input files if someone needed that in the future.
+
+In response to Philip's question about freadcolrs(), it is much faster than
+freadscan(), and when combined with setcolrgam() and colrs_gambs(), can do
+gamma correction as well on 24-bit pixels.  You can look at ra_skel.c in
+the src/px directory to see how this is done.
+
+-Greg
+
+<A NAME="COMPILATION">=============================================================</A>
+COMPILATION QUESTIONS
+
+From: desilva@ced.berkeley.edu
+Subject: compile
+To: greg@hobbes.lbl.gov
+Date: Thu, 18 Jun 92 21:12:52 PDT
+
+Hello again,
+
+I'm trying compile the new version on Irix 4.0 and I can't 
+get ximage to work. The error message I'm receiving is:
+
+X Error of filed request: BadMatch (invalid parameter attributes)
+  Major opcode of failed request: 1 (X_CreateWindow)
+  Serial number of failed request: 4
+  Current serial number in output stream: 18
+
+Rview appears to working just fine. Do any of the X app-defaults
+need to be set? 
+
+All of our irises have at least 16 megs of ram and a few have
+more than 24 megs. Should answer yes or no the "more than 24 megs?"
+question. We also just got one of the new SGI Crimsons with
+the 64bit R4000 CPU. I was using the Crimson to compile Radiance
+on it. I'm still in the process of setting it up and installing
+Irix 4.04 on all the other machines.
+
+Deanan
+
+Date: Fri, 19 Jun 92 08:45:21 PDT
+From: greg (Gregory J. Ward)
+To: desilva@ced.berkeley.edu
+Subject: Re:  compile
+
+Hi Deanan,
+
+You should pick up the revised files in the pub/patch directory to get
+rview and ximage to work better with the SGIs.  I would answer "yes" to
+the question about "more than 24 megs".  The only difference between
+version 3.x and 4.x of IRIX is the compiler switch to get K&R C and
+the fact that 3.x doesn't fully support X11.
+
+-Greg
+
+Date: Fri, 19 Jun 92 13:37:15 +0200
+From: pralong@gismo.cnet-pab.fr (Frederic PRALONG)
+To: greg@hobbes.lbl.gov
+Subject: Solicitation from a Radiance user on NeXTStation
+
+Hi greg,
+
+Do you know someone who have compile radiance2R1 on a NextStation ?
+
+Thanks
+FReD
+
+Date: Fri, 19 Jun 92 08:48:24 PDT
+From: greg (Gregory J. Ward)
+To: pralong@gismo.cnet-pab.fr
+Subject: Re:  Solicitation from a Radiance user on NeXTStation
+
+Hello Fred,
+
+Yes, I just recently exchange e-mail with someone struggling with Radiance
+2.1 on a NeXT.  There are a few bugaboos in the NeXT C compiler.  Following
+is my response:
+
+>From greg Mon Jun 15 16:25:44 1992
+Return-Path: <greg>
+Date: Mon, 15 Jun 92 16:25:41 PDT
+From: greg (Gregory J. Ward)
+To: linde@physics.Stanford.edu
+Subject: NeXT compilation
+Status: RO
+
+Well, what can I say?  The NeXT is not a very standard compiler.  I'm still
+amazed that it cannot manage to accept redefined library functions.  This
+runs counter to the very spirit of the C language.  Anyway, you can just
+add a -lrt to all the Rmakefile lines that resulted in the ld: Zstrcmp undef.
+errors.  The only other serious errors were the -n: unknown option problems,
+which can be resolved by removing -n from the corresponding lines in
+Rmakefile.  The rest is just bitching you can ignore.
+
+By the way, it seems that you do not have X11 installed on your NeXT machine.
+You need to read the instructions in noX11.help and follow them to avoid
+compiling the programs that won't work without it.
+
+Date: Wed, 1 Jul 1992 13:18:27 -0500
+From: guy@guy.b30.ingr.com (Guy Streeter)
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re:  how was textures.pic generated?
+
+Gregory J. Ward writes:
+ > Hello Guy,
+ > 
+ > Indeed, anything that reports a consistency error is highly suspicious.
+ > In theory, you should never get such an error, and it indicates an internal
+ > bug in the program.  What machine was your version of Radiance compiled on?
+
+I'm running Radiance on an Intergraph InterPro 2020, which is a RISC
+architecture (Intergraph Clipper C300 processor: 32-bit integer,
+64-bit float) SYSV R3 system.  I compiled it with GNU C v2.2.
+Although the system libraries are compiled with a different compiler,
+I've never encountered a compatibility problem.  rmake looks like:
+
+#!/bin/sh
+exec make "SPECIAL=" \
+	"CC=gcc -mc300 -fwritable-strings" \
+	"OPT=-O -s" \
+	"MACH= -DALIGN=double" \
+	ARCH= "COMPAT=bmalloc.o erf.o" \
+	INSTDIR=/usr/local/bin \
+	LIBDIR=/usr/local/lib/ray "$@" -f Rmakefile
+
+The only part of this I'm unsure of is the COMPAT definition.  I don't
+know what those modules are supposed to do.  I haven't changed any of
+the definitions (-DSMLFLT, etc.) so there couldn't be any internal
+compatibility problems there.
+
+I tried it again with the updated commandline you sent.  The results
+were the same.
+
+Among the peculiarities of my system, one that strikes me as a
+possible problem is the way subroutine arguments are passed.  The
+compiler always puts the first two integer or pointer arguments and
+the first two floating-point arguments into registers, and passes the
+rest on the stack.  This means that variable argument lists can only
+be handled by the varargs (or stdarg) facility.
+
+Date: Wed, 1 Jul 92 13:42:10 PDT
+From: greg (Gregory J. Ward)
+To: guy@guy.b30.ingr.com
+Subject: Re:  how was textures.pic generated?
+
+Hmmm.  I'm starting to suspect the GNU C compiler now.  The other fellow
+who was having troubles was also using GNU C.  I have never managed to
+compile anything using GNU C, so I gave up trying.  It's too nonstandard
+for my taste.  Do you have an alternative compiler available?
+
+The argument list strangeness shouldn't trip up Radiance, though I'll have
+to check and make sure.  The only time I ever play with the number of
+function arguments is when there are optional arguments at the end of the
+list.  They are always declared but only accessed under some conditions,
+when they must be passed by the caller.  This basic mechanism is described
+in K&R, so it is supported by all C compilers I've used.
+
+What happens when you pass fewer arguments than are declared in a GNU-compiled
+program?
+
+-Greg
+
+Date: Wed, 1 Jul 1992 16:09:20 -0500
+From: guy@guy.b30.ingr.com (Guy Streeter)
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re:  how was textures.pic generated?
+
+I believe I've discovered my problem.  There are a number of places in
+the Rmakefiles where an explicit command is used to compile a source
+file.  In those commands, 'cc' is used instead of '$(CC)', so my
+definition of 'CC' in rmake didn't matter.  A different compiler was
+used for those source files.  I don't know if there is something
+broken in that compiler, or a compatibility problem with other modules
+compiled with GNU C, but I changed all the Rmakefiles and rebuilt
+everything, making sure that all files were compiled with GNU.  I'm
+rerunning 'texture' right now, and it's at:
+
+2163454 rays, 18.33% done after 1.0092 hours
+
+which is better than twice as far as it got before.  So, unless you
+hear from me again you can assume the problem is fixed.
+
+thanks,
+Guy Streeter
+
+Date: Wed, 1 Jul 92 14:56:28 PDT
+From: greg (Gregory J. Ward)
+To: guy@guy.b30.ingr.com
+Subject: Re:  how was textures.pic generated?
+
+Great!  I should have thought of this myself, I suppose, but I'm glad that
+someone did!  I will go through my Rmakefile's and make sure they all
+reference $(CC) instead of cc, so future users don't have the same
+troubles.
+
+-Greg
+
+<A NAME="ANIMATION">=============================================================</A>
+ANIMATION SPLINES
+
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: animations w/ splines
+Date: Tue, 30 Jun 92 15:37:02 EDT
+From: Philip  Thompson <phils@Athena.MIT.EDU>
+
+Hi Greg,
+
+We're trying to borrow your spline animation technique from the
+cabin, and have figured out everything but the time parameter
+T().   In our first example we're just trying to fly through 4
+points.  My question is, if T is the time between keyframe i and i-1
+why are there an equal number as there are frames?
+
+Second, if we want the speed to be fairly constant, should this
+time be proportional to the distance?  When we set T() equal to the
+distance between points the animation started in the middle of the
+path, went to one end and doubled back.  Anyway here is what we are
+trying in keys.cal now -  but it seems awfully hit or miss.
+
+Px(i) = select(i, -6130, -4390, -2800, -2430);
+Py(i) = select(i, 1440, 740, 100, -40);
+Pz(i) = select(i, 500, 500, 500, 500);
+Dx(i) = select(i, 0.4, 0.4, 0.4, 0.4);
+Dy(i) = select(i, 0.9, 0.9, 0.9, 0.9);
+Dz(i) = select(i, -0.5, -0.5, -0.5, -0.5);
+Ux(i) = select(i, 0, 0, 0, 0);
+Uy(i) = select(i, 0, 0, 0, 0);
+Uz(i) = select(i, 1, 1, 1, 1);
+E(i) = select(i, 50, 50, 50, 50);
+T(i) = select(i, 0, 2, 2, 0);
+
+Thanks, Phil
+
+ps. I also noticed that in the cabin keys file you have "rview .... -t
+.35"
+where -t .35 seems to correspond to the T() values.  How did you
+get these?
+
+Date: Tue, 30 Jun 92 16:34:14 PDT
+From: greg (Gregory J. Ward)
+To: phils@Athena.MIT.EDU
+Subject: Re:  animations w/ splines
+
+Hi Phil,
+
+Yes, why indeed does T() have the same number of points as keyframes?  Because,
+the first one doesn't count!  I did it this way for convenience, I think.  A
+zero value is appropriate there.
+
+Yes, the value for each frame should be proportional to the distance, though
+I would slow down a bit when making turns if you don't want to get sick.  The
+viewfiles I created with the "view" command of rview, which allows you to tack
+whatever you like after the end of the view file name and it will be appended
+to the view line in the file.  This is merely for the convenience of annotating
+multiple views (eg. keyframes) written out to a single file.  The -t option is
+just what I decided to use for time.  Within rview, when I had found a view
+I thought would work for the next keyframe, I typed:
+
+	: view keyframes -t SECS
+
+where SECS was the decimal number of seconds I thought would work between the
+last view and this one.  You're right, it's a bit of a hit and miss process.
+I usually do an extremely low resolution (both in time and image size) 
+animation before starting the real thing just to check that I haven't done
+anything stupid.
+
+Good luck!
+-Greg
+
+<A NAME="RA_PICT">==========================================================</A>
+RA_PICT
+
+Date: Wed, 8 Jul 92 18:45:14 -0400
+From: Jim Callahan <jmc@ugrad.ee.ufl.edu>
+To: greg@hobbes.lbl.gov
+Subject:  PIC to PICT problems...
+
+Greg-
+
+	I think you mentioned that you use a Mac, so I thought you might
+know what I'm doing wrong.  I am trying to view some images produced by
+Radiance on a Mac II-fx.  These are the steps I took:
+
+1> in UNIX: "ra_pict test.pic test.pict"
+	
+2> Moved the PICT file via ftp (in bin mode) to the Mac
+
+3> Tried to view with many different viewers...
+
+	It seem that the Mac thinks "test.pict" is a document and refuses
+to load it.  Am I overlooking a step here?  Do I need some program which
+will make the OS realize it is a PICT?  Thanks for the help...
+
+	Anyway, I am going to send my GUI (based on InterViews) for
+Radiance to a number of beta testers this weekend.  Would you like to see
+it?  It allows the user to set all command line options for OCONV, RVIEW,
+and RPICT with sliders and other widgets.  In addition, it provides detailed
+control of image division and remote shelling over a network.  I hope it
+will make using Radiance easier, especially for new users.
+
+	Are you going to attend SIGGRAPH'92 later this month? It looks like
+a real "disney world" experience for the computer graphics addict...
+
+					-Jim
+                                (jmc@ugrad.ee.ufl.edu)
+
+Date: Wed, 8 Jul 92 18:06:55 PDT
+From: greg (Gregory J. Ward)
+To: jmc@ugrad.ee.ufl.edu
+Subject: Re:  PIC to PICT problems...
+
+Hi Jim,
+
+Yes, you need to modify the creator and type of the file before any tools
+will load it directly.  The desk accessory called "disktop" allows you to
+make such changes.  The type should be PICT and a good creator is 8BIM
+(used by Photoshop, I think).  If you have Photoshop, you can always use
+the "Open as..." dialog box to load the file, even without setting the type
+beforehand.
+
+I would like to see your interface.  Do you have a compiled version for a
+Sun or Silicon Graphics?  I don't have Interviews or C++, so it would be
+difficult for me to do the compilation.
+
+-Greg
+
+P.S.  Yes, I will be at Siggraph.  I'll be staying with Paul Heckbert at
+	the Hyatt if you want to get together.
+
+[Note that Siggraph will be in Orlando, home of Disney World, in '93...]
+
+<A NAME="LIGHT_SOURCES">=========================================================</A>
+LIGHT SOURCES
+
+From: chauvine@dingo.imag.fr (ROOT)
+Date: Mon, 6 Jul 92 10:32:52 MET DST
+Organization: IMAG Institute, University of Grenoble
+To: greg@hobbes.lbl.gov
+Subject: Radiance again
+
+Bonjour greg,
+
+ Thank you for your fast reply from your bed, we hope that
+your are in better shape now. We have done all that you
+have said, and it's working (light was !). We knew your
+warning but understood it in a wrong way.
+
+ We have a lot of things to ask you, but if you have no
+time, or if you are tired of us, don't hesitate to
+throw some of then.
+
+ 1- we don't understand why when we have two light
+    sources with the same power, the largest one
+    in size gives more light in the scene?
+ 2- we don't understand why there is a lost of
+    rays when rendering a scene from 100 unit or
+    more (we want to say that some objects appear with
+    holes in them instead of be plain)?
+ 3- Can you tell us how many sources of light
+    are allowed at maximum.
+
+Remark:
+  We have many black holes on object with plastic
+material, and that whatever is the size of the object.
+
+Last :
+  We have a great interest with anisotropic reflection,
+and we shall be very pleased if ther is a mean to get
+a copy of your SIGGRAPH'92 article.
+
+ Many thanks from a sunny Grenoble,
+ laurent & jacques.
+
+-- 
+-------------------------------------------------------------
+-  Chauvineau Laurent        -    Magistere Informatique    -
+-                            -   Ecole Univ. Info. -  UJF   -
+-  Laboratoire ARTEMIS                                      - 
+-       Projet Image de Synthese                            -
+-                                                           -
+-  e_mail: chauvine@dingo.imag.fr                           -
+-------------------------------------------------------------
+
+Date: Mon, 6 Jul 92 18:02:09 PDT
+From: greg (Gregory J. Ward)
+To: chauvine@dingo.imag.fr
+Subject: Re:  Radiance again
+
+Hello Laurent and Jacques,
+
+I was better, but then my brother visited this weekend and now I am
+sick again!  Oh, well.
+
+You're questions are not too difficult, so I will try to answer them.
+
+ 1- we don't understand why when we have two light
+    sources with the same power, the largest one
+    in size gives more light in the scene?
+
+The total output of a light source is (as you have noticed) the product
+of the source area and the output radiance.  Since radiance (the unit,
+not the software) is in watts/sr/m^2, you must multiply this by square
+area and solid angle to obtain power.  Look at it this way:  if you had
+a light filament that was as bright as the surface of the sun (as is
+a common quartz-halogen filament), it would have the same radiance as
+the sun but not the same output as has only about 10^-23 as much
+radiating area.  Thus, radiance is related to the visible brightness of
+an infinitesimal fraction of the surface.
+
+ 2- we don't understand why there is a lost of
+    rays when rendering a scene from 100 unit or
+    more (we want to say that some objects appear with
+    holes in them instead of be plain)?
+
+What version of Radiance are you running?  Version 2.0 has some problems
+with the -DSMLFLT option.  This compile switch is used if you answer yes
+to a certain question in makeall about rendering very large models.  You
+should be able to see it in the resulting rmake command placed in your
+Radiance bin directory.  If you have version 2.0, you should remove this
+rmake command and run "makeall clean" followed by "makeall install", this
+time answer "no" to the question about large models.  If you have version
+2.1 and are experiencing this problem, then I would like to know about it.
+
+ 3- Can you tell us how many sources of light
+    are allowed at maximum.
+
+There is no maximum to the number of light sources, although you will find
+that the calculation slows down more the more light sources you add.  It
+is best to represent your scene with as few light source surfaces as possible
+to obtain the fastest renderings.
+
+Last :
+  We have a great interest with anisotropic reflection,
+and we shall be very pleased if ther is a mean to get
+a copy of your SIGGRAPH'92 article.
+
+I will send you a preprint of this article when I get back to the office.
+
+-Greg
+
+From: chauvine@dingo.imag.fr (ROOT)
+Date: Thu, 9 Jul 92 10:24:46 MET DST
+To: greg@hobbes.lbl.gov
+Subject: Radiance version
+
+ Hello greg,
+
+ We are using version 2.1 and we still have this probleme.
+
+ Your new manual is very usefull and well made. Thank you for accepting
+to send us the preprint.
+
+ laurent & jacques.
+
+Date: Thu, 9 Jul 92 15:39:36 PDT
+From: greg (Gregory J. Ward)
+To: chauvine@dingo.imag.fr
+Subject: Re:  Radiance version
+
+Were you using the -DSMLFLT option?  I just tried it on my machine, and I
+ran into similar problems, so I tried decreasing the value of FTINY further.
+You should try modifying the FTINY value in common/fvect.h so it matches
+the following:
+
+/* Copyright (c) 1988 Regents of the University of California */
+
+/* SCCSid "@(#)fvect.h 2.3 7/9/92 LBL" */
+
+#ifdef  SMLFLT
+#define  FLOAT		float
+#define  FTINY		(1e-3)
+#else
+#define  FLOAT		double
+#define  FTINY		(1e-6)
+#endif
+#define  FHUGE		(1e10)
+
+/* and so on... */
+
+------------
+Then, try cleaning and recompiling everything and see if you still have
+troubles.  I noticed some small problems, but there's really no getting
+away from errors with short floating point numbers.
+
+-Greg
+
+<A NAME="HARTMANN">=======================================================</A>
+HARTMANN CONSTANT
+
+From: bcurrey@neumann.une.oz.au (The Ray)
+Subject: Radiance - bits and pieces
+To: GJWard@lbl.gov
+Date: Wed, 5 Aug 92 13:45:30 EST
+
+Hi Greg,
+
+   I have recently got your Radiance program through FTP and have successfully
+compiled to run on our DEC's here at Uni. I will say right now that the
+program is very comprehensive, and I wich I had more time o get to know
+it better. Anyway, I have two questions:
+
+  - One, where can I get some values for the Hartmann constant you refer
+    to in the manual regarding dielectrics. The Physics department here
+    was stumped when I asked them for data (in fact they had never even heard
+    of such a constant!)
+
+  - Two, since I have to keep this in a temp directory on this system (because
+    of the programs size) what files do I really need for the program to run.
+    I'm trying to cut down on disc usage as much as possible.
+
+                              Any help would be greatly appreciated.
+                              Boyd
+                              bcurrey@neumann.une.oz.au
+    
+Date: Wed, 5 Aug 92 09:17:23 PDT
+From: greg (Gregory J. Ward)
+To: bcurrey@neumann.une.oz.au
+Subject: Re:  Radiance - bits and pieces
+
+Hi Boyd,
+
+The Hartmann constant can be found in the handbook of Chemistry and Physics,
+or fitted manually based on a list of (wavelength,refractive_index) pairs.
+Basically, the final index of refraction is computed by:
+
+	n = n0 + Hartmann_constant/wavelength
+
+where wavelength is given in nanometers.  Note that this constant ONLY has
+effect for light scattered from light sources, and is normally irrelevant
+to the calculation.  That is why it is usually left as zero, ignoring the
+wavelength dependence of the index of refraction.
+
+As for your second question, only the binaries, the library directory
+(ray/lib in the distribution) and any models you want to use need be
+kept around.  The source code and the rest can be removed once the programs
+have been successfully compiled.
+
+-Greg
+
+<A NAME="SPOTLIGHTS">==========================================================</A>
+SPOTLIGHTS
+
+Sender: MAILER%PLWRTU11.BITNET
+Date:         Thu, 27 Aug 92 15:43:19 CET
+From: SJK%PLWRTU11.BITNET@Csa3.lbl.gov
+To: greg@hobbes.lbl.gov
+Subject: Spotlights in RADIANCE; antimatter
+     
+Hello Greg,
+     
+recently we (with Karol Myszkowski) spent some time experimenting
+with RADIANCE. Our goal is to compare accuracy/speed of RADIANCE
+with TBT using similar scenes. Actually Karol is absent (short
+holidays) so I continue investigations alone.
+     
+I am a novice in RADIANCE, so I apologize for asking about
+probably well known topics. I encountered some difficulties
+when I try to model directed light sources by means of spotlight
+(with RADIANCE 2.1) and I have not find answers to my questions
+neither in the manual nor in digest files.
+     
+     
+1. What focal distance means?
+     
+I am unable to see any difference between spotlights with the same
+angles but different lengths of orientation vectors.
+     
+     
+2. Visibility of spotlight.
+     
+I noticed that the spotlight is visible even when the observer
+is located at a point not illuminated by this light (see the
+picture below). Is it correct?
+     
+     
+3. Secondary spotlights.
+     
+The picture shows that a secondary spotlight acts as if it is
+undirected. The top face of the golden cube is illuminated only
+partly, however the illuminated area on the wall is produced by
+the whole square.
+     
+Below is the source file (tc.rad):
+------------------------------------
+void spotlight dir_source
+0 0
+7 10000 10000 10000 90 0 0 -1
+     
+void plastic white
+0
+0
+5 .7 .7 .7 0 0
+     
+void mirror polished_gold
+0 0
+3 .45 .25 .02
+     
+!genbox white room 10 10 10 -i
+     
+!genbox polished_gold gold_box 3 3 3.5 | xform -t 0 4 0
+     
+# Light source
+     
+dir_source ring light
+0 0
+8  5 3 9   0 0 -1  0 0.1
+-----------------------------
+     
+I have used the command
+     
+rpict -vf $(name).vf -x 300 -dr 1 -ab 1 -av 0.05 0.05 0.05 -t 10 \
+      $(name).oct >$(name).pic
+     
+with tc.vf containing:
+     
+rview -vtv -vp 9 9 5 -vd -1 -1 0 -vu 0 0 1 -vh 90 -vv 90 -vs 0 -vl 0
+--------------------------
+     
+     
+4. Are goniometric diagrams possible in RADIANCE?
+     
+In view of very general mechanism to specify reflectance and
+transmittance (BRTDfunc) I was surprised not found something like
+ULEDfunc (Unidirectional Light Emitting Distribution) to specify
+a dependency of power of a light source on emitting direction.
+     
+Is it possible to specify such dependency in some way? If not,
+maybe it is worth to include such possibility in future version?
+     
+     
+5. Antimatter remark.
+     
+The method to produce a hole with different surface material
+that You suggested in v2n2, lines 251--271 (ANTIMATTER, answer
+to David Jones, 17 Jan 92) do not work (I tried to make sphere hole
+in cubical object instead of cylinder). It do work (in my example)
+after the following changes of AMAT2 definition:
+     
+void antimatter AMAT2
+2 MAT2 MAT1
+0 0
+# The order of MAT2 MAT1 is significant!
+     
+     
+With best regards,
+Andrei Khodulev:                  sjk@plwrtu11.bitnet
+
+Date: Thu, 27 Aug 92 18:13:36 PDT
+From: greg (Gregory J. Ward)
+To: SJK%PLWRTU11.BITNET@Csa3.lbl.gov
+
+Hello Andrei,
+
+Thank you for your excellent questions.  I'm afraid that I will not be
+able to give you a complete answer right away.  Briefly,
+
+1.  The focal length produces only a subtle difference as it shifts the
+effective position of the source behind the actual emitting surface.
+A real spotlight has the effect of changing its falloff to being something
+less than r^-2 (where r is the distance to the emitter) in this way.
+The actual falloff is closer to (r+e)^-2, where e is the focal length
+of the spotlight's optics.  It is a minor concern, I admit.
+
+2.  This is the way the spotlight material behaves.  The spotlight type
+is primarily to make a more efficient calculation by ignoring that portion
+of a light's output that is insignificant.  It is usually used in conjunction
+with a light source pattern, described briefly in the answer to your
+question 4 (below).
+
+3.  Since I won't be able to run your file right away, I will have to
+answer this question later.
+
+4.  Yes, light source emissions are specified using the more general pattern
+types brightfunc or brightdata.  (Colorfunc and colordata may also be used
+if you wish to give your light source a color-dependent distribution.)
+A simple example is as follows:
+
+	void brightfunc cos3dist
+	2 cos(Dz)^3 .
+	0
+	0
+
+	cos3dist light con_light
+	0
+	0
+	3 100 100 100
+
+	con_light ring con_lamp
+	0
+	0
+	8	5 8 3	0 0 -1	0 .06
+
+You should look at the files in the ray/lib/source/ies directory for examples
+of the brightdata primitive and its application to light sources.
+
+5.  I'll have to go back and look at the question to which you refer.  Yes,
+order does matter.  The first material given is the one used at the antimatter
+boundary.
+
+-Greg
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 3</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

@@ -1,0 +1,887 @@
+<TITLE>
+Radiance Digest, v1n4
+</TITLE>
+<html>
+<a name="top"></a>
+<h2>Radiance Digest Volume 1, Number 4</h2>
+<hr>
+<body><pre>
+Dear Radiance User,
+
+Here is another culling of mail regarding Radiance.  There are many new
+users since the last mailing, and if you are one of them I would like to
+send you my welcome.  Also, if you would like back issues of this digest,
+just send me some mail.  (No one has asked for any yet -- should this be
+telling me something?)  Topics included in this digest are the following:
+
+	<A HREF="#GEOM">GEOM</A>	Geometric Primitives in Radiance
+	<A HREF="#ATMOS">ATMOS</A>	Simulating Atmospheric Effects
+	<A HREF="#LARGE">LARGE</A>	Large Radiance Models
+	<A HREF="#PORT">PORT</A>	Portability Issues (on the long side)
+	<A HREF="#PINTERP">PINTERP</A>	Uses for the Pinterp Program
+
+<A NAME="GEOM">=====================================================</A>
+GEOM	Geometric Primitives in Radiance
+
+Date: Sat, 8 Jun 91 17:24:43 NZT
+From: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: Polygon primitive
+To: GJWard@Csa2.lbl.gov
+
+Regarding my raving earlier about the ordering of polygons for the direction
+of facet normal...how about a special polygon primitive which is defined
+as double sided, it is really two polygons with the same vertices but one
+ordered clockwise and the other anticlockwise. It seems better to make this
+a primitive that the renderer "knows" about than to have the data files
+include both polygons. Does Radiance handle coincident polygons like that
+descibed above?
+Also I am fustrated by renderers which don't know about lines and therefore
+force me to turn lines into cylinders. It would seem nicer for the renderer
+to turn them into cylinders of radius = 1 pixel, ie: normally the modelling
+or translator software does not know the pixel size (image space not world) 
+
+	Paul D Bourke
+
+Date: Mon, 10 Jun 91 08:57:54 +0200
+From: greg (Greg Ward)
+To: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: Re:  Polygon primitive
+
+Hi Paul,
+
+As I said in an earlier mail, Radiance ignores polygon "sidedness" for all
+material types except dielectric.  Thus, most polygons in fact act as though
+they are two-sided during rendering.  Dielectric objects must be modeled as
+solids, since light refraction happens on entry and on exit, and a two-sided
+polygon would be equivalent to an infinitely thin volume, which should be
+modeled instead by the material "glass" that is designed for this purpose
+and that ignores surface orientation.
+
+The hack used by most scanline renderers of culling back-facing polygons
+does not really help that much in a ray tracer so I felt that all faces
+should be treated as two-sided in Radiance.  This makes the modelers job
+a lot easier (whether it be a modeler programmer like youself or some poor
+fool like me using a text editor).
+
+To answer your question, "does Radiance handle coincident surfaces?" I would
+have to say no.  There is a well-known problem in ray tracing which is 
+avoiding a reintersection with a surface upon reflection or refraction.
+For polygons, it is an easy decision not to test the intersected surface
+again for intersection, but spheres and other curved surfaces can have
+multiple intersection and the decision is not so straightforward.  The
+nicest way to avoid this problem is to insist that the first intersection
+be some minimum distance from the starting point, which precludes the
+possibility of properly handling coincident surfaces as well.  I could
+discuss this topic in more detail, but I see my letter running off the
+top of the screen and sense that I should move on.
+
+Drawing lines does not make sense for a physically-based rendering program
+because lines in fact do not exist.  I suppose true two-dimensional surfaces
+don't exist either, but for the purpose of light interaction they are a
+fair approximation of the real world.  Physics aside, it is not easy in
+a ray-tracer to decide which pixels to paint with a line because the
+rays go into the scene from the pixels and may not even be aware when
+they pass close to a line.  Line drawing works much better the other
+way where you start with the world coordinates of the line and draw
+a nice pixel-width object on the image.  Believe it or not, Radiance
+sometimes does not even know what the pixel size is because it is
+frequently used in a luminance mode where it is not generating an image
+but is being used instead to calculate light levels.  Also, since lines
+are non-physical, it would not be possible to shade them properly and
+they would wind up as these anomolous glowing objects in an otherwise
+natural-looking scene.
+
+For the purpose of rendering with a ray-tracer, it really makes the
+most sense to convert the lines into cylinders as you do and
+give them a radius that makes the most sense of the size of the
+object the lines are meant to represent, ie. grass or sticks or
+whatever.  The lines may show up as thicker up close and thinner
+(or dissappearing) at a distance, but this is the nature of physical
+reality.  Setting the line width proplerly usually means leaving it
+to the user.
+
+-Greg
+
+Date: Thu, 1 Aug 91 8:43:19 NZT
+From: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: A few questions
+To: GJWard@Csa2.lbl.gov
+
+I have been using radiance a bit now although generally in a simple minded
+way, I do have a question on which you may have some suggestions.
+
+What is the "nicest way" to include parameters in a scene description. For 
+example, define some constants which are used thoughout the scene description.
+This would allow the user to change the constants to meet his/her needs.
+A real example, I would like to define a constant called RADIUS say, this
+would be used thoughout the geometry description of cylinders and spheres.
+
+	Paul D Bourke
+
+From greg Fri Aug  2 08:38:51 1991
+Date: Fri, 2 Aug 91 08:38:50 +0200
+From: greg (Greg Ward)
+To: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: Re:  A few questions
+
+Hi Paul,
+
+I have considered from time to time adding variables to the scene description
+but never did it.  I guess I wanted to keep the job of parsing the scene
+files as simple as possible for other programs/programmers who might want
+to use the information.
+
+The first method that occurs to me for adding variables to the input file is
+with the C language preprocessor, /usr/lib/cpp, or better yet the macro
+processor m4.  This will allow you to define variables as well as (macro)
+functions with arguments.  I have not tried this myself, but I see no reason
+why it wouldn't work.
+
+-Greg
+
+Date: Sat, 3 Aug 91 14:31:53 NZT
+From: pdbourke%ccu1.aukuni.ac.nz@Lbl.Bitnet
+Subject: Radiance (of course)
+To: greg%lesosun1.epfl.ch@Lbl.Bitnet
+ 
+Thanks for the reply, I didn't think that parameters were possible in the
+Radiance scene description but thought I would check in case there were
+some as yet undocumented features.
+ 
+You may have noticed a new version of Vision3D in the Mac FTP folder. If not
+then you may want to change the file privileges.
+ 
+Has anyone else to your knowledge written a translator from Super3D (another
+Mac modeller, not all that powerful but widely used, it is to 3d modelling
+what Lotus is to speadsheets - the product to which others are compared). I
+have worked on one over the last week for a project here, before I develop
+it much further I would like to make sure there is not already something
+out there.
+ 
+I'll send you a GIF sometime soon of some 3D L-System plants I've been
+working on recently. They look quite good I think, the application that
+allows the user to specify the production rules, etc, exports to Radiance.
+
+	Paul D Bourke
+ 
+Date: Mon, 5 Aug 91 10:00:04 +0200
+From: greg (Greg Ward)
+To: pdbourke%ccu1.aukuni.ac.nz@Lbl.Bitnet
+Subject: Re:  Radiance (of course)
+
+Hi Paul,
+
+Thanks for the new version of Vision3D.  I did noticed it and renamed
+the files, getting rid of the old one and updating the README file.
+I have since made the README file in that directory writable so you
+can modify it if you like.
+
+I have had a student working (for some time) on translating the Renderman
+output of Sculp3D into Radiance format, but I don't know off hand of anyone
+who has worked with Super3D files.
+
+You can drop GIF (Targa, PICT, Sun rasterfile, Radiance pictures) off
+in the pub/xfer directory on hobbes with anonymous ftp.  Which reminds
+me, I need to write some new image format translators...  My prediction
+for computer science is that in two years the hardware industry will
+abandon the ASCII standard and the QWERTY keyboard and the few bitter
+programmers left will spend all their time hacking on new viruses.
+
+-Greg
+
+<A NAME="ATMOS">========================================================</A>
+ATMOS	Simulating Atmospheric Effects
+
+To: greg@hobbes.lbl.gov
+Subject: Atmospheric effects
+From: Jerrell Ballard  <ballard@mc1.wes.army.mil>
+Date: Thu, 13 Jun 91 11:31:34 EDT
+
+  Hello Greg,
+
+  Are you aware of any RADIANCE functions that *roughly* approximate
+  atmospheric effects ?  I have been generating some landscape scenes,
+  and then post-processing to add the atmospheric effects.  It would
+  handy to be able to add atmospherics at time of rendering. 
+
+  Jerrell Ballard
+  Geographical Information Systems Team
+  Waterways Experiment Station
+  United States Army Corp Engineers
+
+From greg Fri Jun 14 08:56:22 1991
+Date: Fri, 14 Jun 91 08:56:18 +0200
+From: greg (Greg Ward)
+Message-Id: <9106140656.AA06417@lesosun1.epfl.ch>
+To: ballard@mc1.wes.army.mil
+Subject: Re:  Atmospheric effects
+Status: RO
+
+Hi Jerrell,
+
+If by atmospheric effects you are referring to scattering, absorption, etc.,
+the answer is no, Radiance does not support it.  You can, however, model
+high clouds and other patterns in the sky directly in Radiance.  If this
+is what you are after, I can give you some hints and examples in another
+letter.  For now, I'll assume that what you want is the former.
+
+The best post-process to get a rough approximation to scattering (and/or
+absorption) would use the -z option of rpict to produce a file of pixel
+distances then use this information to modify the colors in the final
+picture.  This would be done most efficiently by a special purpose program,
+but you can do it also with the existing tools pvalue and pcomb.
+
+By way of example, let's say you want to imitate haze that fades to white
+as an exponential function of distance.  You would first render an ordinary
+image with rpict, using the -z option to produce a distance file, like so:
+
+% rpict -x 512 -y 480 -z scene.z scene.oct > scene.pic
+
+Then you would use pvalue together with pcomb to apply the desired function
+to the pixels based on their distance.  Pvalue is necessary to convert the
+machine floating point numbers in the z-file into a Radiance picture 
+because pcomb only works on this format.
+
+% pvalue -r -b -h -df -x 512 -y 480 scene.z | \
+	pcomb -e 'ro=f(ri(2));go=f(gi(2));bo=f(bi(2))' \
+		-e 'f(p)=c*p+1-c;c=exp(-gi(1)/udist)' \
+		-e 'udist=50.0' - scene.pic > scene.fade.pic
+
+Note that it is necessary to repeat the image size to pvalue so it knows
+what to do with scene.z.  The unit fade-out distance "udist" can be
+changed from 50.0 to whatever you like to provide the desired fade-out.
+
+If you tell me what kind of effects you desire (perhaps after some
+experimentation), I may even write a program to do it more efficiently
+for you (still as a post-process, though).  I never did much with
+atmospherics because most of my scenes are indoors, and I prefer to
+create accurate physical simulations rather than quick hacks.
+However, atmospherics is one thing I don't expect to be able to treat
+correctly within Radiance in the near future, so a hack is the best
+I can do.
+
+-Greg
+
+<A NAME="LARGE">=========================================================</A>
+LARGE	Large Radiance Models
+
+Date: Mon, 1 Jul 91 12:01:59 NZT
+From: arch2@ccu1.aukuni.ac.nz
+Subject: Large Radiance Models
+To: greg@hobbes.lbl.gov
+
+Hi,
+
+I have been trying to get Radiance to work with models containing
+about 10,000 spheres, stored in a text file of about 1M, and keep
+getting the "out of octree" space message from oconv.
+
+In your first Radiance digest you suggest ways of increasing the
+size of models oconv can handle. None of these seem to do the
+trick.
+
+I have tried these values:
+    MAXOBJBLK in object.h is 65535
+    MAXOBLK   in octree.h is 524287
+    OSTSIZ    in objset.c is 1047821 (It is prime)
+
+I also changed OBJECT to a long.
+
+oconv dies with this message:
+    oconv: system - out of octree space: Not enough space
+
+According to ps -l oconv uses up to about 2,500K of memory. (The machine has
+64M and I am allowed a maximum of 10M). The exit code is 2, if it helps.  
+
+Also, what does the '-n' parameter do. On my "smaller" models '-n 7' or
+similar stopped the error message.
+
+Thanks in advance,
+Russell (for Paul Bourke)
+
+Date: Mon, 8 Jul 91 11:22:47 +0200
+From: greg (Greg Ward)
+To: arch2@ccu1.aukuni.ac.nz
+Subject: Re:  Large Radiance Models
+
+Hi Russell (and Paul?),
+
+I think your problems with oconv must be due to memory limitations, since
+it is a malloc failure that is stopping the process.  If you can't find
+any other system variables or administrative things that our limiting
+your process size (Cray's operating system places limits on interactive
+sessions, for example), then you might try replacing the COMPAT=malloc.o
+to COMPAT=bmalloc.o in ray/src/{rt,ot}/Makefile and recompiling.  This
+will use the system version of malloc rather than my home-grown routines.
+Sometimes people do some pretty strange things with memory allocation.
+
+The -n parameter to oconv makes the octree place more surfaces into the
+octree voxels.  It is a good idea to increase this number for very complex
+scenes if memory is a problem.  You can jack it up to around 16 with little
+degradation in rendering time -- at least for spheres.
+
+-Greg
+
+Date: Tue, 16 Jul 91 17:46:33 NZT
+From: arch2@ccu1.aukuni.ac.nz
+Subject: Large Radiance Models
+To: greg@lesosun1.epfl.ch
+
+I am still having "fun" with my large models.
+
+Would splitting the .rad file into smaller pieces and using
+oconv to merge them together help?
+
+Some of the programs I ran today wanted 64M of memory -- they
+were run in batch mode where processes are allowed that much memory.
+
+Thanks,
+
+Russell
+
+Date: Tue, 16 Jul 91 17:47:45 NZT
+From: arch2@ccu1.aukuni.ac.nz
+To: greg@lesosun1.epfl.ch
+
+These are the statistics printed out (from the routine PrintMemStats):
+
+oconv-l: system - out of octree space: Not enough space
+Memory statistics:
+	bmalloc: 66437172 bytes allocated
+	bmalloc: 3936 bytes freed
+	bmalloc: 28696 bytes scrounged
+	malloc: 11931552 bytes allocated
+	malloc: 5796830 bytes wasted (48.6%)
+	malloc: 6006992 bytes freed
+	238 * 512
+	395 * 256
+	720 * 128
+	257 * 64
+	12 * 32
+	53 * 16
+	2 * 8
+	 346248 total bytes in free list
+
+Date: Tue, 16 Jul 91 10:05:02 +0200
+From: greg (Greg Ward)
+To: arch2@ccu1.aukuni.ac.nz
+Subject: Re:  Large Radiance Models
+
+Hi Russell,
+
+Thank you for the details on the oconv errors.  Oconv should be able to
+handle 10,000 non-intersecting spheres quite easily.  Your spheres must
+be intersecting an awful lot or you are using more spheres than you claim
+to be running over 64 Mbytes of memory!
+
+Things you can do about it:
+
+1) Change your scene generator so as to avoid generating so many
+intersecting spheres.
+
+2) Increase the -n parameter of oconv to 120.
+
+3) Decrease the -r parameter of oconv by half or so.  (This will
+cause a set overflow error if you decrease it too much.)
+
+4) Try generating the octree in stages (as you suggested) by giving
+oconv progressively more spheres to add to the scene.  You may have
+to use the -b option on the initial run of oconv to tell it what you
+expect the eventual scene boundaries to be.
+
+5) Use the Radiance instance type to duplicate sections of your scene
+rather than enumerating everything.  This is the best method to achieve
+geometric complexity without using up all available memory.  You simply
+create a fraction of the scene you want, then instantiate it throughout
+the environment.  Using heirarchical instancing, it is easy to create
+models with many millions of surfaces.
+
+Let me know if I can be of any more help.
+-Greg
+
+<A NAME="PORT">=============================================================</A>
+PORT	Portability Issues
+
+Date: Tue, 16 Jul 91 22:27:29 CDT
+From: stephens@minnie.wes.army.mil (Mike Stephens)
+To: GJWard@Csa2.lbl.gov
+Subject: radiance
+ 
+greg,
+this is mike stephens at waterways experiment station (wes) in vicksburg, miss.
+i just got the 5th release of your program radiance 1.4 and plan to use it
+for several projects we have going on at the scientific visualization center
+(svc).
+
+i have tried to compile it on our sgi (4D) boxes and have run into some
+problems. i was wondering what sgi machines you have successfully
+installed radiance on?
+
+i get errors in the 'malloc.c' routine (v_pageshift not defined)
+also things in tty.c get 'twisted' somehow.
+
+we are running irix ver 3.3.2 on our sgi's.
+
+any help on this would be greatly
+appreciated.
+
+thanks,
+mike
+(stephens@slowhand.wes.army.mil)
+
+Date: Wed, 17 Jul 91 08:57:27 +0200
+From: greg (Greg Ward)
+To: stephens@minnie.wes.army.mil
+Subject: Re:  radiance
+
+Hi Mike,
+
+You need to change the COMPAT=malloc.o to COMPAT=bmalloc.o in the
+Makefiles in the src/rt and src/ot directories.  The memory stuff
+has not been very well standardized under System V, so some of the
+definitions in my malloc.c cause trouble for some implementations.
+The routines in tty.c are really written for BSD derivatives, and
+don't work for any System V Unix's, but this module is only used
+by the AED 512 driver, which you probably don't need.  I guess I
+made an error in my makeall script and included this driver when
+I shouldn't have.  Anyway, it just won't be made properly --
+everything else should work fine.  If you want, you can change
+the line in makeall under the Silicon Graphics IRIS choice from
+special="aed" to special=
+
+I have never tried to compile 1.4 on an IRIS, just 1.3.  I no longer
+have easy access to an IRIS workstation.  (Actually, I have never
+had easy access to anything except a Sun 3/60.)
+
+Hope this helps!
+-Greg
+
+From: stephens@slowhand.wes.army.mil
+To: GJWard@Csa2.lbl.gov
+Subject: sgi's and radiance
+
+greg,
+
+many thanks for your quick response!
+the malloc problem could have been solved by yours truly if
+i had bothered to CAREFULLY read the comments in malloc.c.
+oh, well....
+
+instead of the bmalloc=>malloc solution for the sgi anyway
+i changed malloc.c so that getpagesize was called as a system
+routine (which it is on the sgi irix 3.3.2) and also added
+an include because as it wass it couldn't find the type 'daddr_t'
+which is in <sys/types.h> in irix 3.3.2.
+
+did this last night after i wrote to you and viola the main
+critters got made!! aed still didn't but at least i had the
+majority of the goodies to play with.
+
+went in first thing today (7/17) and drew a pretty daffodil!!!
+your code is pretty slick...thanks for your efforts...
+atta boy... and all that stuff.
+
+take care
+mike (stephens@slowhand.wes.army.mil)
+
+-----------
+Date: Wed, 17 Jul 1991 13:52 +0200
+From: "Sigge Ruschkowski email:f87-sir@nada.kth.se or kjr@ekab1.ericsson.se"
+ <KJR@kkeka1.ericsson.se>
+Subject: Radiance for the Mac
+To: greg@hobbes.lbl.gov
+
+
+	Hi Greg,
+
+	I read in RTNEWS that there is a version of Radiance
+	for the Mac. What kind of Macs does Radiance run on?
+
+	Sigge
+	Sweden
+
+Date: Wed, 17 Jul 91 17:28:48 +0200
+From: greg (Greg Ward)
+To: KJR@kkeka1.ericsson.se
+Subject: Re:  Radiance for the Mac
+
+Hi Sigge,
+
+Radiance runs under A/UX (Apple's UNIX) on the Mac II family.  Since
+most folks use the ordinary Mac OS, this doesn't do much good.  But,
+if you're interested in A/UX for the MacIntosh, it's not all that
+expensive and Radiance will run on it.  I've been using a Mac IIfx
+myself successfully to do animations using Radiance.
+
+A/UX costs around $500 in the US and X11 software is another $200 or so.
+The main drawback is that it requires 80+ Mbytes of disk space and X11
+doesn't run well unless you have at least 8 Mbytes of RAM.  Also,
+installation is difficult unless you buy it already installed on an
+Apple external drive (very expensive).  CD-ROM is the next best
+installation method.  You don't want the floppy disk product!
+
+-Greg
+
+Date: Thu, 18 Jul 1991 08:02 +0200
+From: "Sigge Ruschkowski email:f87-sir@nada.kth.se or kjr@ekab1.ericsson.se"
+ <KJR@kkeka1.ericsson.se>
+Subject: Re: Radiance for the Mac
+To: greg@lesosun1.epfl.ch
+
+
+    Hi Greg,
+
+    thank you for the answer!
+
+    As I am using my MacII/8/170 just for private things and 
+    am just a poor student, I can't afford to by AUX and a
+    80MB hard drive. We will soon have AUX on some of the 
+    Macs at school and I will get your ray-tracer and try
+    it out.
+
+    Have a nice life,
+    Sigge
+
+--------------
+To: greg@hobbes.lbl.gov
+Subject: Radiance1R4.tar.Z
+Date: Thu, 18 Jul 91 11:42:39 EDT
+From: Scott Hankin <hankin@osf.org>
+
+Howdy -
+
+    I've been trying to work with your latest release, and I appear to be
+missing some files.  When I try to build the cubspace model, make tells me it
+doesn't know how to make "proof" which the model depends upon.  When I try to
+run rview on anything, it fails because it can't open rayinit.cal.  I can't find
+rayinit.cal in the tree, I deleted the distribution after expanding it, and I am
+reluctant to ftp it again to see if it was indeed in the distribution, but
+deleted by one of the many makeall clean's I did while getting things going.
+
+    Can you help me out with these files?  I'd really appreciate it.  Thanks.
+
+- Scott
+
+Scott Hankin  (hankin@osf.org)
+Open Software Foundation
+
+Date: Fri, 19 Jul 91 08:54:05 +0200
+From: greg (Greg Ward)
+To: hankin@osf.org
+Subject: Re:  Radiance1R4.tar.Z
+
+Dear Scott,
+
+Sure enough, the critical file "proof" was missing from the distribution.
+An over-zealous cleanup job on my part, I'm afraid.  I've added it back
+in again -- thanks for bringing it to my attention.  To save you from
+ftp'ing it again (though it's small), I'll send you the file in the next
+message.
+
+The rayinit.cal file (and other essential library files) come in the ray/lib
+directory of the distribution.  They are not deleted by any cleanup procedure
+I wrote, but you may not have remembered to set the RAYPATH environment
+variable to tell the programs where to find this directory.  The makeall
+script is supposed to do this automatically, but it only works if you
+tell it to go ahead and install the library in the location you select.
+You can always set the RAYPATH variable manually with a line in your
+.login file like so:
+
+	setenv RAYPATH .:/installpath/ray/lib
+
+Where "installpath" is replaced with the place you installed the distribution.
+
+Hope this helps!
+-Greg
+
+To: "(Greg Ward)" <greg@lesosun1.epfl.ch>
+Subject: Re: Radiance1R4.tar.Z 
+Date: Fri, 19 Jul 91 09:47:43 EDT
+From: Scott Hankin <hankin@osf.org>
+
+    It does indeed.  Thanks for the info - things are up and running great even
+as we speak.  It seems that in a moment of insanity (and a temporary shortage of
+disk space) I removed the ray/lib subtree - for some reason I had decided it was
+generated during the build process.  I was obviously wrong.
+
+    Thanks for the help, the software, the work it involved - thanks for
+everything.  I never cease to be amazed at the effort folks like you will put
+into things they make available to the public.  You are one of the heroes of
+learning.  I know I will get a great deal out of using and examining Radiance. 
+Keep up the terrific work!
+
+- Scott
+
+Scott Hankin  (hankin@osf.org)
+Open Software Foundation
+
+-------------------
+The following message is not specifically about Radiance, but it does
+get around a bug in the 1.4 release of x11image so take note.  By the
+way, both x11image (now called just plain old "ximage") and xshowtrace
+have been fixed for the next release.
+
+Date: Sat, 20 Jul 91 12:23:12 PDT
+From: raja@robotics.berkeley.edu (Raja R. Kadiyala)
+To: robotics-users@robotics.berkeley.edu
+Subject: xdvi and openwindows
+
+Many have noticed that some programs such as xdvi and xfig do not work
+properly under openwindows -- they fail to accept input in the window.
+
+The fix is to tell the window manager to explicitely get input from the window
+this is done by putting the following lines in your
+.Xresourses/.Xdefaults/.Xdef (or wherever your applications resources are
+kept)
+
+xfig.Input: true
+xdvi.Input: true
+
+raja
+
+----------------------
+Date: Wed, 7 Aug 91 20:09:43 EDT
+From: chen@eleceng.ee.queensu.ca (Junan Chen)
+To: greg@hobbes.lbl.gov
+Subject: Radiance
+Status: RO
+
+Hi, Greg:
+
+Thanking you for your mail of July 31.  I tried to grab Radiance at midnight,
+and successfully got everything I need.
+
+After I installed the Radiance, I found *rview* didn't get compiled.  I also
+checked the *devtable.c*, and the default_driver is x11_init(), though I 
+replied "no x10 support" during the installation.  I modified default_driver
+of devtable.c to *sun*, but *make  rview* still doesn't work properly.
+
+The other thing is how to specify the focal length with the command *rpict*.
+I checked the reference manual and relevant manual pages, but couldn't find
+any direct way to do that. 
+
+Could you please give me some hint to my questions.
+
+BTW, we use a sparc-2 station with a 24-bit graphics adaptor which is compatible
+with CG8 and can be set up as 8-bit CG4 as well.  Most of the time we use it as
+a 8-bit CG4 workstation.
+
+I really appreciate your help.
+
+Junan Chen
+  
+Date: Thu, 8 Aug 91 09:46:06 +0200
+From: greg (Greg Ward)
+To: chen@eleceng.ee.queensu.ca
+Subject: Re:  Radiance
+
+Hi Junan,
+
+I have had this asked of me before, so I decided to make a little readme
+file explaining what to do if you don't have X11 support.  I've attached
+it to the end of this letter.  (When you answered "no" to X10 support,
+the script still assumed you had X11 support -- which is very different!)
+
+There is no adjustment for focal length, since the renderers do not have
+depth of field in their simple pinhole camera model.  If you want this,
+you will have to add it yourself.  [But see PINTERP topic below -G]
+
+-Greg
+
+--------------
+This Radiance distribution assumes that you have X11 support
+(ie.  a /usr/include/X11 directory and /usr/lib/libX11.a library).
+If this is not the case, you will have to make a couple of changes
+to the files in the src/rt directory to make "rview" compile properly.  
+If you are a thorough person, you can also make changes to the Makefile's
+in the src/util and src/px directory to avoid some other spurious but
+unimportant errors.
+
+The following diffs should be applied to Makefile and devtable.c in the
+src/rt subdirectory:
+
+============= rt/Makefile =============
+35c35
+< DOBJS = devtable.o devcomm.o editline.o x11.o x11twind.o \
+---
+> DOBJS = devtable.o devcomm.o \
+37c37
+< DSRC = devtable.c devcomm.c editline.c x11.c x11twind.c \
+---
+> DSRC = devtable.c devcomm.c \
+39c39
+< DLIBS = -lX11
+---
+> DLIBS = 
+
+============= rt/devtable.c =============
+15c15
+< char  dev_default[] = "x11";
+---
+> char  dev_default[] = "sun";
+17,18d16
+< extern struct driver  *x11_init();
+< 
+23c21
+< 	{"x11", "X11 color or greyscale display", x11_init},
+---
+> 	{"x11", "X11 color or greyscale display", comm_init},
+
+These changes may be applied to the Makefile's in the src/util and
+src/px subdirectories for cleaner compilation:
+
+=============== px/Makefile =============
+19c19
+< ra_t8 ra_bn ra_t16 pcomb pinterp ximage xshowtrace pflip
+---
+> ra_t8 ra_bn ra_t16 pcomb pinterp xshowtrace pflip
+
+=============== util/Makefile ============
+13c13
+< PROGS = makedist swaprasheader findglare xglaresrc glarendx
+---
+> PROGS = makedist swaprasheader findglare glarendx
+
+<A NAME="PINTERP">=========================================================</A>
+PINTERP	Uses for the Pinterp Program
+
+From: Frank Bennett <fwb@hpfcfwb.fc.hp.com>
+Subject: Radiance
+To: greg@hobbes.lbl.gov
+Date: Tue, 20 Aug 91 9:46:15 MDT
+
+Greg:
+	I just picked up Radiance. Look's interesting. I found the following
+missing:
+
+	obj/model.new/rayinit.cal
+	obj/cabin/tree.rad  - landscape wants to instanciate tree.oct
+	
+	I have done alot yet, did go back & pick up some .pic files
+	& pub/objects/gjward.tar.Z
+
+	I have not been able to assertain (from Raytracing News or your
+	package) whether you generate "lit" polygons with soft shadows,
+	which you can then walk through. The advantage of a Radiosity
+	system is you only need to recompute the sceen if the lights or
+	objects are moved, but not for camera moves.
+
+good work,
+
+Frank Bennett - Hewlett Packard 
+P.S. a plug: Our new Snake CPU love to raytrace, the aquarium from:
+
+ftp.ee.lbl.gov:RAY/aq.tar.Z
+
+	Spark2     52 hours
+	Cray YMP   18 hours
+	HP9000/720 17.5 hours
+	HP9000/750 13 hours
+
+Date: Wed, 21 Aug 91 08:26:06 +0200
+From: greg (Greg Ward)
+To: fwb@hpfcfwb.fc.hp.com
+Subject: Re:  Radiance
+
+Hello Frank,
+
+It sounds like you need to set the environment variable RAYPATH to
+the location of the library directory because it's not in the default
+location /usr/local/lib/ray.  The README file should explain it, but
+basically you need a line in your .login like:
+
+	setenv RAYPATH .:/my/radiance/path/lib
+
+Then the problems you mentioned should go away.
+
+As for soft shadows, the default options of rpict produce sharp shadows,
+but you can set the following if you want soft shadows:
+
+	-sp 1 -dj .5
+
+The -sp 1 value turns off image plane sampling, so the renderings will
+take substantially longer.  Also, if you don't do any anti-aliasing by
+running the result through pfilt and reducing the resolution, the shadows
+will appear noisy.
+
+I am aware that soft shadows and walk-through animations are big advantages
+of radiosity methods, but then you're stuck with simple polygonal scenes
+and diffuse surfaces, so it's a tradeoff.  I have implemented a z-buffer
+interpolation program, pinterp, for generating walk-through animations that
+makes ray tracing a reasonable way to go, actually.  It would be nice to
+store all that shadow information somehow in the scene, but the memory
+requirements are daunting.  We're running these programs on small machines,
+too you know.
+
+Thanks for your input.
+-Greg
+
+Date: Wed, 14 Aug 91 17:24:34 -0400
+From: hr3@prism.gatech.edu (RUSHMEIER,HOLLY E)
+To: greg@lesosun1.epfl.ch
+
+For our computer vision project, we are using Radiance to model a
+finite size pinhole by making lots of images from different points in
+the pinhole and then adding them up, accounting for the shifts in pixel
+location. Apart from writing new code, is this the only way to do this?
+
+Holly
+
+Date: Thu, 15 Aug 91 09:41:30 +0200
+From: greg (Greg Ward)
+To: hr3@prism.gatech.edu
+Subject: looking at the world through a pinhole
+
+Hi Holly,
+
+Regrettably, I can't think of any more direct way to do pinhole sampling
+than what you're doing already.  However, there is a way you can do it
+a little faster, I think.  Generate an image from the center using rpict
+with the -z option to generate a z-file.  Then, use pinterp with the
+following options to produce images at different points like so:
+
+	% rpict [opts] [view] -x xres -y yres -z scene.z scene.oct > scene.pic
+	% pinterp -vf scene.pic -vp x1 y1 z1 -vs h1 -vl v1 -x xres -y yres \
+		-ff -r "[opts] scene.oct" scene.pic scene.z > scene1.pic
+
+Pinterp just moves the pixels around according to the new viewpoint using
+a z-buffer approach and calling on rtrace (in this case) to compute
+pixels it cannot find.  The only problem with this technique is that it
+does not correctly follow specular reflections in the new image, so if
+you are trying to see depth of field in a reflection you need to wait
+for rpict.
+
+Also, you can use the view shift and lift parameters to do the pixel
+shifting for you.  You just have to compute the appropriate values based
+on the distance to your pinhole's image plane.  I would work out the
+formulas for you, but I'm sure I'd make some dumb error.
+
+Finally, I would recommend using pcomb to add the images up if you aren't
+using it already.  You can give a scalefactor of 1/N for each image
+and when you pass it through pfilt later you should get the correct
+radiance values.
+
+Let me know if I can be of any help, and thanks very much for sending
+the report and the announcement.
+
+-Greg
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 1, Number 4</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

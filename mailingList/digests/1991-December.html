@@ -1,0 +1,2700 @@
+<TITLE>
+Radiance Digest v2n0
+</TITLE>
+<html>
+<a name="top"></a><h2>RADIANCE Digest Volume 2, Number 0</h2>
+<hr>
+<pre><body>
+Hello Everyone,
+
+It's been a while since my last digest, judging by the amount of mail
+that's backed up.  I hope that everyone has seen the 2.0 release
+announcement by now.  A few of the enclosed messages are from
+people who were working with beta copies of release 2 and a few are
+from people who got the official release of 2, but most messages
+are from people who were still working with release 1.4.  The
+order may seem a bit strange at times, as I was trying mightily
+to collect together some sensible categories.
+
+	<A HREF="#MODELING">MODELING</A>	Textures, Surfaces and Lights
+	<A HREF="#IMAGES">IMAGES</A>		Image Translators and Animations
+	<A HREF="#GENERATORS">GENERATORS</A>	Some new generator contributions
+	<A HREF="#LUMFACTOR">LUMFACTOR</A>	Change in luminous efficacy factor
+	<A HREF="#MKILLUM">MKILLUM</A>		New program for computing distributions
+	<A HREF="#AUTOCAD">AUTOCAD</A>		CMU work on a new AutoCAD translator
+	<A HREF="#MODELS">MODELS</A>		Picking up and dropping off 3d models
+	<A HREF="#ART">ART</A>		Radiance in the arts
+	<A HREF="#RS6000">RS6000</A>		Compiling Radiance on the IBM RS/6000
+	<A HREF="#SUMANT">SUMANT</A>		Sumant Pattanaik's contributions
+	<A HREF="#NIGHTTIME">NIGHTTIME</A>	Rendering night time images
+	<A HREF="#COMPILE">COMPILE</A>		Compile problems related to X11 and malloc.c
+	<A HREF="#OPENWINDOWS">OPENWINDOWS</A>	Some nice additions for Sun's Open Windows
+
+Any future mail to me should be addressed to GJWard@lbl.gov or
+greg@hobbes.lbl.gov, as I have officially returned from Switzerland.
+
+-Greg	
+
+<A NAME="MODELING">===================================================================</A>
+MODELING	Textures, Surfaces and Light Sources
+
+Date: Wed, 18 Sep 91 10:55:54 +0200
+From: her@compel.dk (Helge Egelund Rasmussen)
+To: greg@hobbes.lbl.gov
+Subject: Some Radiance questions
+
+ Hi Greg,
+
+ I have a few questions for you about Radiance, but first I'll mention a 
+ little about the current state of the Amiga port of Radiance.
+
+ At the moment Per Bojsen has most of Radiance working on an Amiga 3000
+ with the latest version of the OS (2.0), while I work on an Amiga 2000
+ with an earlier version (1.3). 
+ There's major differences between two versions, and we've agreed to base
+ the port on version 2.0 when it becomes available for the 2000 in the near 
+ future. Because of this, the Amiga port probably won't be available before
+ October sometime.
+ Nearly all Radiance programs work (including pinterp and rview), 
+ and I've rendered most of the models found on hobbes.
+
+ Now for the questions:
+
+-I've created a 'cloud' pattern, and wanted to create an outdoor sceene with
+ nice clouds in the background.
+ My scene consist of a gensky source, and a big bubble with the cloud pattern
+ as a colorfunc. The bubble is made of translucent material so that the
+ gensky source and sun can pass it, and so that the cloud pattern is visible.
+
+ I however have some problems with this setup, for instance it is possible
+ for objects to make shadows on the sky! The radius of the bubble is 100, 
+ while the typical object size is 5. I haven't been able to create a larger
+ bubble because oconv then can't subdivide the objects.
+
+ Do you have any suggestions on how to do this kind of thing?
+
+-In the README file for the pod life model, you write:
+  Thanks goes to Seth Teller, who wrote the patch modeler that made this
+  all possible.  Coming up with the correct patch parameters otherwise
+  would have been a nightmare.
+ Is this modeller available? (I don't like to have nightmares :-)
+
+-I'm currently working on an Imagine to Radiance object converter.
+ Imagine is a commercial 3d modeller/renderer for the Amiga.
+ In Imagine you have full control over color (r,g,b), reflectance(r,g,b),
+ transmittance(r,g,b), specular reflection (r,g,b), index of refraction,
+ roughness and a few other things.
+ At the moment, I've hardcoded that certain intervals of the parameters lead
+ to certain Radiance materials. I would prefer to use a configuration file 
+ instead, but the scheme for configuration files given in the converters 
+ directory is too limited.
+ What I need is the possibility to say something like:
+
+   if reflectance < 10 or roughness 100 then
+     create plastic with same color as the Imagine object and roughness
+       given by some formula.
+
+ I've thought of using the calc routines for this, ie. writing a .cal
+ script which choses material type and parameters from the Imagine ditto.
+
+ Do you have any comments about this scheme?
+
+-I've created a modified version of the gensurf utility, which create
+ an Imagine object instead of a Radiance object. The program use the
+ Radiance calc library. I'd like to distribute this program (w. source)
+ to other Imagine users, but I'm not sure that I may.
+ So the question is: May I distribute the cal*.c source together with the
+ new Imagine gensurf  program? (I'll of course mention where the sources
+ came from!)
+
+I hope that you have time to answer all these silly questions..
+
+Helge
+---
+Helge E. Rasmussen  .  PHONE + 45 36 72 33 00  .  E-mail:  her@compel.dk
+Compel A/S          .  FAX   + 45 36 72 43 00  .  
+Copenhagen, Denmark
+
+From greg Wed Sep 18 11:57:55 1991
+Date: Wed, 18 Sep 91 11:57:54 +0200
+From: greg (Greg Ward)
+To: her@compel.dk
+Subject: Re:  Some Radiance questions
+
+Hello Helge,
+
+The delay in the Amiga port sounds to be worth the while.  I appreciate
+the care you and Per Bojsen are taking to make things work properly.
+By the way, did you contact the other people interested in Radiance at
+the university where Per works?
+
+I am glad that someone is finally doing something with clouds.  I have
+wanted to for some time, but haven't managed to squeeze it in.  I recommend
+that instead of a bubble, you should apply the colorfunc pattern to the
+sky directly.  Something like this should work:
+
+!gensky 6 17 12
+
+skyfunc colorfunc skybright
+( your arguments... )
+
+skybright glow skyglow
+0
+0
+4 .8 .8 1.2 0
+
+skyglow source sky
+0
+0
+4 0 0 1 180
+
+Note that your function must not use the ray parameters Px, Py and Pz, since
+they are not defined for an infinitely distant object.  You can use Dx,
+Dy and Dz, however.  The value that you give is multiplied by the brightness
+of the sky as computed by gensky's skybright function.  Where there are
+no clouds, your colorfunc should be (1,1,1), and inside a cloud it should
+be significantly greater than 1.  You could probably get by with using
+a brightfunc instead of a colorfunc if all you want to model is white clouds.
+
+I don't know about the status of Seth's modeler or if he would be willing
+to share it.  It was originally written as a demonstration program for the
+SGI IRIS workstation, so I doubt that it is very portable.  Rather than
+listen to my speculations, though, you should write to Seth directly.  His
+e-mail is seth@miro.berkeley.edu.  He left some message about his being
+in Isreal until the 22nd, so there may be a slight delay in his response.
+
+As for the Imagine converter, translating material parameters is always
+difficult, especially when the original parameters are non-physical (ie.
+not energy-balanced).  You can take a look at the nff2rad translator and
+see what I did there.  I don't think rcalc would work in this case, since
+the logic is too complicated.  I think a C program will probably be necessary.
+
+Please feel free to use whatever routines you like from the Radiance 
+distribution.  There are no legal problems as long as you do not resell the
+software as your own and turn a big profit.  Recognition is always welcome.
+
+-Greg
+
+To: greg@hobbes.lbl.gov
+Subject: Textures in RADIANCE
+From: Jerrell Ballard  <ballard@mc1.wes.army.mil>
+Date: Mon, 30 Sep 91 15:11:14 EDT
+
+  Hi Greg,
+
+     Is there a way to use a RADIANCE data file in a function to produce
+  a texture for a surface?  If so, is there a example I can examine? 
+
+  Thank you.
+
+  Jerrell Ballard
+  Geographical Information Systems Team
+  Waterways Experiment Station
+  United States Army Corp Engineers
+
+------------------------------------------------------------------------------
+  Waterways Experiment Station     | Internet: ballard@mc1.wes.army.mil     
+  ATTN: Jerrell R. Ballard, EN-A   |                                        
+  3909 Halls Ferry Road            | FAX:      (601) 634-3726               
+  Vicksburg, MS 39180              | Voice:    (601) 634-2946               
+------------------------------------------------------------------------------
+
+Date: Thu, 3 Oct 91 09:45:44 +0100
+From: greg (Greg Ward)
+To: ballard@mc1.wes.army.mil
+Subject: Re:  Textures in RADIANCE
+
+Hi Jerrell,
+
+Do you mean texture as in surface normal perturbation, or are you talking
+about a pattern which affects the reflectance of a surface?  In any case,
+I think the answer to your question is yes.  A Radiance picture or data file
+can be used to define a pattern, and a Radiance data file can be used to
+define a surface normal perturbation function.
+
+Please give me a few more specifics about your problem and I will try to
+furnish you with an appropriate example.
+
+-Greg
+
+To: greg@hobbes.lbl.gov
+Subject: Re: Textures in RADIANCE 
+Date: Thu, 03 Oct 91 10:23:54 EDT
+From: ballard@mc1.wes.army.mil
+ 
+ Hi Greg,
+
+ > Do you mean texture as in surface normal perturbation, or are you talking
+ > about a pattern which affects the reflectance of a surface?  
+   
+  My apologies for being vague. I am trying to create a texture for a polygon
+  that is a surface normal perturbation.  I have a large set of x,y,z data
+  points for a surface.  Using these data points I wanted to change a
+  flat surface into one with "hills" and "valleys".  I have approached the
+  problem by splitting the surface into little triangles, with the vertices
+  being defined by my data points, but I keep running out of memory in 
+  rendering.
+
+ > Please give me a few more specifics about your problem and I will try to
+ > furnish you with an appropriate example.
+
+  Here is a test case I was trying to get to work:
+
+  data file:
+  ------------------
+  2
+  0 100 3
+  0 100 4
+  
+  1.00    1.00   10.00   10.0
+  1.00   10.00   30.00   10.0
+  1.00    1.00   10.00   10.0
+
+  surface file:
+  -----------------
+  #
+  some_texture plastic some_material
+  0
+  0
+  5 .2 .8 .2 0 0
+  #
+  some_material polygon pertb_surface
+  0
+  0
+  12
+      0   0   0
+    100   0   0
+    100 100   0
+      0 100   0
+  #
+
+     The example data file when interpolated will cover the same area
+  as the defined polygon, so that a texture tiling is not necessary.
+
+     The data file would be interpolated to create pertubations on the 
+  polygon surface.  The data should make the surface appear to have
+  a "data spike" close to the center.
+
+     My purpose to this whole problem is to 1) be able to visualize
+  three dimensional statistics and 2) overlay satellite imagery onto
+  elevation data for a region.
+
+  Once again thank you for your help.
+
+  Jerrell Ballard
+  Geographical Information Systems Team
+  Waterways Experiment Station
+  United States Army Corp Engineers
+
+------------------------------------------------------------------------------
+  Waterways Experiment Station     | Internet: ballard@mc1.wes.army.mil     
+  ATTN: Jerrell R. Ballard, EN-A   |                                        
+  3909 Halls Ferry Road            | FAX:      (601) 634-3726               
+  Vicksburg, MS 39180              | Voice:    (601) 634-2946               
+------------------------------------------------------------------------------
+
+Date: Fri, 4 Oct 91 08:35:06 +0100
+From: greg (Greg Ward)
+To: ballard@mc1.wes.army.mil
+Subject: Re: Textures in RADIANCE
+
+Hi Jerrell,
+
+The problem with surface height data is that it doesn't really tell you
+about the surface orientation.  Even if you converted this information
+to surface orientations, you would not generate shadows or contours
+and you would still use quite a lot of memory.
+
+Have you heard of the RayShade package written by Craig Kolb at Yale
+University?  I think it contains code specifically for rendering large
+height fields for landscapes.  You might want to investigate that free
+package as a more practical alternative for your application.  Radiance
+was really designed more with architectural and lighting design
+applications in mind.
+
+If you have tried RayShade already unsuccessfully or have some other
+compelling reason to stick with Radiance for your purpose, I will try a
+little harder to think of some way to make it work.
+
+-Greg
+
+P.S.  RayShade is available via anonymous ftp from weedeater.math.yale.edu
+	(130.132.23.17)
+
+Date: Sat, 12 Oct 91 19:52:35 PDT
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+To: greg@hobbes.lbl.gov
+Subject: Source datafile questions
+
+Greg,
+
+I'm in the process of creating fixture descriptions using candlepower
+distribution on paper media (no IES magnetic media available.)  I need
+to know under which circumstances does one use the various functions
+in source.cal that have to do with illumination output.  For example,
+if my source object (type illum) is a sphere, do I need to use the
+flatcorr or the corr functions (or perhaps none at all)?  I've figured
+out that phi2 is bilaterally symmetrical and that phi4 is quadrlateral
+symmetrial output, but what is "type B photometry?"  I suppose that
+with a formal lighting design background I might know these answers,
+but if this question is quickly answerable, that would be great, but
+a reference to a good book would be fine too.
+
+Secondly, I'm concerned about the fixture looking as realistic as possible,
+so I am spending a good deal of time modelling the geometry of the fixtures.
+Undoubtable I run into situations in which I have to make the illum
+sphere larger than the actual fixture.  If the fixture is a pendant whose
+overall dimension is less than its distance from the ceiling, everything
+is fine.  But if the fixture is wall mounted or a pendant close to the
+ceiling, there is the issue of illuminating those surface that lie
+inside the envelope of the fixture-enclosing illum sphere.  My solution has
+been to put a small sphere entirely inside the fixture that "glows" with
+the intensity of the fixture itself.  It would be easier to simply give
+those surfaces of the fixture that appear bright the glow material directly,
+but since the "back" faces of the polygons face the non-illuminated
+surfaces of the wall/ceiling, something inside the fixture is still
+needed.  If I did apply the glow material to the individual surfaces
+that make up the fixture itself (several hundred) what is going to 
+happen to the distribution data?  Does it need to be altered to account
+for the fact that there are so many of these individual surfaces?
+For the case of the glowing sphere inside the fixture, what is the best
+way to describe its output.  Should I use the same output distribution
+pattern of the larger illum with a proper scaling factor for the smaller
+size of the sphere?  Or should I use a simple glow (no distribution)
+with the correct radiance value as calculated from the intensity of the
+lamps.  My reasong for wanting to do it the second way would be to minimize
+calculation times but my concern is that the distribution along the
+nearby surfaces would not be accurate.  This glow type will have a
+radius of effect just larger than the distance to the furthest intersection
+of the illum sphere with the nearby surface.  In the areas where this
+radius of effect is in fact greater than the bounds of the illum sphere,
+does that area become twice as bright as the fixture output distribution?
+My guess is that it does, and this is somewhat of a problem, except that
+for the most part, this whole area is going to be much brighter than the
+surrounding image and most likely not visible.  But, a better solution
+might be to give the illum material the ability to be opaque to source
+rays looking for particular light source material names/types just as
+the secondary source type mirror does.
+
+One other minor question.  From where does the radius of effect for the
+glow material take effect?  At the surface of the sphere? Or perhaps
+more easily understood would be from the center of the sphere?
+
+Well, there's a ethernet-packet-full to think about.  In regards to
+the work for my lighting designer client...I was 15 minutes late
+getting the images to her because the Kodak printer wouldn't print
+the last one...there seems to have been a problem in transfering it
+back from the macintosh where I edited it with Adobe Photoshop.
+
+Thanks for the help.  This might be a good one for general distribution.
+
+Chas
+
+Date: Mon, 14 Oct 91 10:53:24 +0100
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: Re:  Source datafile questions
+
+Hi Chas,
+
+Gee, so many questions.  I doubt this will be of general interest, since
+most folks will never have to get into the nitty-gritty of light source
+modeling (I hope!), but I will put it in the next digest just in case.
+
+Type B photometry is a different measurement scheme where a plane of evenly
+distributed photometers is used to measure the beam candlepower of a spotlight.
+This measurement technique is used most frequently on car headlamps, although
+you might find some floodlights measured this way as well.  For most interior
+fixtures, type A or type B photometry is used, and those differ only in the
+definition of angles.  A mediocre reference on the subject is the IES Lighting
+Handbook, Reference Volume.  (That is the only one I know of.)
+
+I think the only way to define your light source correctly is to use illum
+surfaces with the proper distribution, and have those surfaces enclose the
+actual geometric description for the fixture.  If you use a single sphere
+to enclose the fixture, then you should NOT use the flatcorr function
+defined in source.cal.  Use the corr function if you would like another
+place to insert a multiplier (A1), but I use the predefined noop function
+ordinarily.  If you enclose the fixture with polygons, then DO use the
+flatcorr function.  You may use the same material to modify all polygons,
+applying the lamp distribution to this material.  In any case, you must
+use the recipricol of the projected emitting area in square meters as you
+have defined it with your illum surfaces.  This determines the total
+light output of the combined fixture.
+
+As for the illumination of the fixture and wall/ceiling surfaces, you
+should get adequate results if you are careful in assigning glow
+surfaces and your enclosing illum geometry.  Make every attempt to
+enclose the fixture as tightly as possible so that surfaces above
+or behind the fixture are illuminated.  If a sphere would intersect
+a neighboring surface, use a box instead.  This will only increase
+computation time slightly.  Under no circumstances should you use
+a hundred light source polygons to describe your fixture.  Although it
+might work (and you could use the same distribution function for each),
+the cost would be enormous.  Use glow materials to modify your fixture
+geometry, with zero as the radius of influence.  (The radius is measured
+from the center of a sphere by the way.)
+
+If your light fixture is designed to be flush mounted, you may find it
+necessary to space it a short distance from the wall or ceiling in
+order to squeeze your illum surface between.  This is still preferable
+to putting an emitting glow surface inside the light source, I think.
+
+I hope that this answers most of your questions.  Getting detailed models
+of light fixtures is a real challenge!
+
+-Greg
+
+From: Krister Lagerstr|m <ksla@me.chalmers.se>
+Subject: Re: Radiance mailing list
+To: greg@lesosun1.epfl.ch
+Date: Thu, 24 Oct 91 15:03:51 GMT-1:00
+
+> 
+> Would you like for your name to be included on our mediated mailing list
+> for Radiance users?  To people on this list, I mail periodic summaries of
+> e-mail discussions with users as well as update announcements.
+> 
+> -Greg
+> 
+
+Yes, I'm interested in getting the mailing list. I haven't really used
+the package much yet, but it seems like one of the best public ray-
+tracers around.
+
+Another thing I'm interested in is some sort of CAD program that can
+use radiance's features and produce .rad-files. Perhaps something
+like the 'preview' program, but more interactive and user-friendly
+with the option to add objects, change colors and textures, and
+change views run-time. If you know of such a program, please let me
+know...
+
+	/ Krister Lagerstrom
+
+Date: Thu, 24 Oct 91 16:36:14 +0100
+From: greg (Greg Ward)
+To: ksla@me.chalmers.se
+Subject: Re: Radiance mailing list
+
+Hi Krister,
+
+Gee, I sure wish I did know of such a program!  There is an editor
+for the MacIntosh written by Paul Bourke of New Zealand and available
+on hobbes in the pub/mac directory that will edit and write out polygonal
+descriptions in Radiance format.  I know of no program tailored to
+Radiance's particular talents, but you can use AutoCAD to produce a
+DXF file then use either the AutoLISP converter written by Robert Amor
+or the C dxfcvt program written by Ning Zhang to get a Radiance file
+minus the material descriptions.  Both of these programs are included
+in the standard distribution.
+
+Jennifer Schuman has written a HyperCard-based interface to the arch2rad
+program for assigning and even defining materials to go with an Architrion
+description.  This is probably the most sophisticated translator we have,
+but it only works under A/UX on the MacIntosh at the moment.
+
+Next year I plan to do more work in the user interface area, but primarily
+for running the simulation and not so much for modeling.  It's just too
+difficult to work on modeling for me...
+
+-Greg
+
+From: malle@rpksun1.mach.uni-karlsruhe.de (Bernhard Malle)
+Subject: Architectural buildings
+To: greg@lesosun1.epfl.ch
+Date: Fri, 29 Nov 91 9:20:07 MET
+
+Hello Greg,
+
+I have built a house, with all the windows, doors and the garden (with the 
+help of our modeller).
+I would like to know, how did you specify the "environment" in the example
+picture that comes with the radiance-package, i.e. how did you define
+the sky? Is it a great sphere, whith the house right in the middle? ( I know
+from the testroom, how to define a window with the skyfunc ).
+
+Which material did you attach to the walls? I think there is no stone-
+material in radiance, what shoud I use instead (plastic or metal)
+
+Concerning the acis-modeller and the radiance package, I didn't have the
+time to take a closer look imot the code to see whether and how I could
+integrate the modeller-routines.
+
+But I hope I can start with it before christmas.
+
+Thanks for your help.
+
+Bernhard
+
+Date: Fri, 29 Nov 91 09:35:38 +0100
+From: greg (Greg Ward)
+To: malle@rpksun1.mach.uni-karlsruhe.de
+Subject: Re:  Architectural buildings
+
+Hello Bernhard,
+
+The description of the exterior is accomplished with glowing sources
+at an infinite distance, as shown in the example.rad file in the
+tutorial.  You should not use a sphere, as it is a finite object.
+
+However, you may want to put down a ground plane, to make the
+outdoor shadows appear correct.  I usually create a large polygon
+or disk with its center under the house and extending to some
+reasonable distance on all sides, say 5 times the size of your 
+structure.
+Unfortunately, I do not have a nice stone pattern, but if you have a picture
+you can digitize it and make it into a Radiance pattern with a little effort.
+The following will give you a rather featureless concrete:
+
+void brightfunc dirty
+2 dirt dirt.cal
+0
+1 .3
+
+dirty plastic concrete
+0
+0
+5 .3 .3 .3 0 0
+
+The dirt function gives at least a little variation on the surface
+appearance so it doesn't just look flat.
+
+-Greg
+
+From: malle@rpksun1.mach.uni-karlsruhe.de (Bernhard Malle)
+Subject: Re: Architectural buildings
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Mon, 9 Dec 91 20:06:58 MET
+
+Hello Greg,
+
+thanks for your answer and the hints. The example, that I mailed to
+you was just a very very simple small example. Normally the cone
+is replaced by a large houese with several rooms, windows stairs,
+the thin block is replaced by a garden shaped after a real
+existing landscape ( actually the house of my parents). So I do
+have the need to simulate daylight.
+
+I hope that I will have finished this example unitl chritsmas, as
+I hoped to present a real foto-realistic image as a present to
+my parents (apart from implementing the possibility to specify
+material conditions in our cad-system.)
+
+So I wish you a wonderful christmas.
+
+Bernhard
+
+ps I have succeded in unpacking and unstuffing most of the documentation of
+mac.sit.hqx. the only thing that is missing seems to be the flow of
+data ( a mac-draw-document)
+
+Date: Mon, 9 Dec 91 11:11:18 PST
+From: greg (Gregory J. Ward)
+To: malle@rpksun1.mach.uni-karlsruhe.de
+Subject: Re: Architectural buildings
+
+If you are serious about daylight, I recommend going through the tutorial
+(ray/doc/tutorial.1) and following those examples to learn how to do it right.
+
+<A NAME="IMAGES">====================================================================</A>
+IMAGES		Image Translators etc.
+
+Date: Sat, 12 Oct 91 11:23:40 NDT
+From: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: rpict and image size
+To: GJWard@Csa2.lbl.gov
+
+Scream...great gnashing of teeth...Am I correct in assuming that at the
+moment RPICT only generates square images? I get the a 256x256 image
+whether or not I do
+  -x 256 -y 256
+  -x 512 -y 256
+  -x 256 -y 512
+I want to generate a 324x244 quicktime animation, oh well I'll find another
+way of doing it.
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+
+Date: Sat, 12 Oct 91 20:03:04 NDT
+From: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: QuickTime movie
+To: GJWard@Csa2.lbl.gov
+
+You may know that QuickTime has been shipped to developers (beta release
+anyway!) I have been writing some QuickTime stuff over the last few days
+and have deposited(*) our first (and possibly the world first) QuickTime
+"movie" for which the frames were generated using Radiance. The scene was
+generated in a bit of a rush (don't know why there isn't a mirror above
+the sofa, we certainly think there should be one there) and the frames
+were put into a QT movie using very crude software of our own...but it
+kinda works. I'm doing a visualisation (flyaround) of a Steiner surface 
+next for the Maths department here.
+
+(*) it's been deposited in the Mac directory or course.
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+
+Date: Mon, 14 Oct 91 09:04:50 +0100
+From: greg (Greg Ward)
+To: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: Re:  QuickTime movie
+
+Hi Paul,
+
+I just read your blurb about QuickTime, and unfortunately we don't have
+new enough systems on our Mac's to run it right now.  (Drat!)
+
+Rpict by default adjusts the size of the image to guarantee square PIXELS,
+not square images.  If your pixels are not square, you may enter their
+aspect ratio (height/width) with the -p option, or if you specify -p 0,
+rpict will use the explicit x and y dimensions you give it.  Normally,
+rpict uses the x and y dimensions as a maximum rectangle in which to put
+a picture whose pixels have the given aspect ratio.
+
+If you are doing walk-through (or fly-through) animations, you really
+should avail yourself of the -z option of rpict and the pinterp picture
+interpolation program.  This is what I use for all my animation, and it
+has the potential to smooth animations at a very reasonable cost.  However,
+I'm not sure it's worth it at 9 frames/second.  It depends on what kind
+of delta you have between images.  I can send you a shar file example if
+you like.
+
+By the way, someone I know (Charles Ehrlich) has been using Russell's
+Super3D translator to great effect.
+
+-Greg
+
+P.S.  Sorry things have been slow getting the 3d-editor and converters
+	online.  We're waiting for some cooperation from the folks back
+	home...
+
+From: nfotis%theseas.ntua.gr@Csa2.lbl.gov (Nikolaos)
+Subject: About the Sun RasterFiles problem
+To: gjward@Csa2.lbl.gov (Greg Ward)
+Date: Mon, 14 Oct 91 17:13:45 EET
+Subject: Here's the solution with SunRast files
+
+Dear Mr. Ward,
+
+Remember when I talked about the strange behaviour of PBM+ tools with
+Sun 24-bit rasters produced from Radiance?
+
+Well, it seems that here's the solution:
+
+-- From the USENET comp.graphics group:
+
+Sven-Ove Westberg <sow@cad.luth.se> writes of problems with sunraster
+24-bit format: it's not clear whether the order of values in a pixel is
+R,G,B or B,G,R.
+
+Graeme Gill says:
+>	From my experience in getting the Portable Bit Map (pbm) utilities
+>and xloadimage to agree on sun raster files,  I came to the conclusion that
+>both were broken in coping with RGB and 32 bit format files. It seems probable
+>that other programs are also broken.
+
+I ran into this quite a while ago, and eventually got a definitive answer
+by asking on comp.sys.sun, or someplace like that.  It seems that BOTH
+orders are right --- Sun changed their mind at some point!
+
+I've already submitted a bug report to Poskanzer for PBMPLUS; it doesn't
+look like he's done anything about it in the latest release.
+
+>From my archives:
+
+To: Jef Poskanzer <jef@helios.ee.lbl.gov>
+Subject: Sun rasterfiles again
+Date: Thu, 21 Mar 91 15:57:23 EST
+Message-ID: <7473.669589043@G.GP.CS.CMU.EDU>
+>From: Tom.Lane@G.GP.CS.CMU.EDU
+
+This little tidbit indicates that you had better support *both*
+color orderings in 24-bit Sun rasterfiles.  Don't know if you
+were aware of that.
+				tom
+
+------- Forwarded Message
+>From: Bob Myers <unocal!stssram@sunkist.West.Sun.COM>
+Date: Thu, 21 Mar 1991 09:31:08 PST
+Organization: Unocal Science and Technology Division
+To: tgl@CS.CMU.EDU
+Subject: Re: Color assignment in Sun rasterfiles
+
+>From the man pages for SunOS4.1.1:
+
+NAME
+     redxblue - swap red and blue for a 24 or 32 bit rasterfile.
+
+SYNOPSIS
+     redxblue [-v] [-q] [inrasf|-] [outrasf]
+
+DESCRIPTION
+     redxblue converts an old-style 24 or 32 bit rasterfile  into
+     the newer, Sun-standard format.  The old format had the byte
+     ordering RGB for 24-bit  rasterfiles  and  XRGB  for  32-bit
+     rasterfiles.   The new format has BGR for 24-bit rasterfiles
+     and XBGR for 32-bit rasterfiles.
+
+     The conversion is performed simply by swapping the  red  and
+     blue bytes.
+
+     The primary use of this utility is to prepare rasterfiles in
+     the  old format for dithering with 24to8 or viewing with the
+     NeWS 'readcanvas' operator.
+
+     It is also possible to use this filter for converting from a
+     new style format into the old format.
+
+OPTIONS
+     -v   Verbose mode will print information as it processes the
+          image.  (The default is to be silent.)
+
+     -q   Query (prints list of options)
+
+SEE ALSO
+     24to8(1)
+
+
+- -- 
+Bob Myers					 [714] 528-7201 x2339
+Unocal Science & Technology Division               stssram@unocal.com
+Brea, California               myers%unocal.uucp@sunkist.west.sun.com
+------- End of Forwarded Message
+
+So there you have it: you may need to support both orders depending on the
+age of the software and/or image files you have.  Yech.
+
+-- 
+			tom lane
+Internet: tgl@cs.cmu.edu	BITNET: tgl%cs.cmu.edu@cmuccvma
+
+
+--- End of Usenet message.
+
+
+I think that it should be included in the next version of Radiance Docs,
+or in the next digest.
+Me? We've got back the H-P, but now the disk space is absent... :-(
+(I HATE multiple architectures, binaries and administration headaches!)
+
+Greetings,
+Nick.
+-- 
+Nikolaos Fotis			National Technical Univ. of Athens, Greece
+16 Esperidon St.,		UUCP:	mcsun!ariadne!theseas!nfotis
+Halandri, GR - 152 32		or InterNet : nfotis@theseas.ntua.gr
+Athens, GREECE			FAX: (+30 1) 77 84 578
+
+Date: Mon, 14 Oct 91 17:12:08 +0100
+From: greg (Greg Ward)
+To: nfotis%theseas.ntua.gr@Csa2.lbl.gov
+Subject: Re:  About the Sun RasterFiles problem
+
+Thanks for the information about Sun rasterfiles.  Ra_pr24 does support
+both formats on input, but only produces BGR ordering (the older format)
+on output.  Perhaps you are right, and I should provide an option to
+produce the RGB ordering, but this comes with a different value for the
+image type and some programs will still bomb.  Basically, there are
+programs out there that you MUST provide with a bogus rasterfile in
+order for them to function.  This I don't feel the need to support.
+
+Anyway, here is a new version of ra_pr24.c with a -rgb option for you:
+[included in release 2.0]
+
+Date: Sat, 19 Oct 91 17:41:41 NDT
+From: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: rad2pict
+To: GJWard@Csa2.lbl.gov
+
+I don't know if you have been informed but we have got a radiance to PICT
+converter going. It takes a Radiance image file and creates a 24bit PICT.
+
+Yesterday I wrote a flight path generator. It takes a file of key frames
+vp, vd, vu vectors and the number of tweens and any other rpict parameters.
+It generates a whole stack of rpict calls with the inbetween vp, vd, vu,
+the other rpict parameters are just replicated. Currently supports linear
+interpolation only, plan to do spline interpolation today. This is all
+for a really nice animation that is a flight over a landscape for the
+terrestial botanists here.
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+ 
+Date: Wed, 23 Oct 91 10:01:25 NDT
+From: pdbourke%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: ra2pict
+To: GJWard@Csa2.lbl.gov
+
+I have deposited the Radiance to PICT converter in the TRANSLATORS directory.
+It also includes a Radiance to RGB RAW converter.
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+
+From greg Wed Oct 23 09:44:06 1991
+Date: Wed, 23 Oct 91 09:44:05 +0100
+From: greg (Greg Ward)
+To: pdbourke%ccu1.aukuni.ac.nz@Lbl.Bitnet
+Subject: Re: rad2pict
+Status: RO
+
+Thanks very much for your ra2pict program.  With your permission, I would
+like to rename it ra_pict and include it with the standard distribution.
+I agree that ra2pict is a little nicer, but the convention I started with
+is to us this2that for CAD translators and this_that for image format
+translators.  Also, since most of the image translators I've written
+support translation both ways, the underscore seems a little more
+appropriate since it is a little less directional.
+
+By the way, I am curious why you found the need for the ra2raw program
+when pvalue can produce the same output with the -i and -h options?
+
+I have written a rather involved script for walk-through animation
+using pinterp for inbetweening and rcalc to compute Catmull-Rolm
+spline interpolated camera positions.  It is not with me at the
+moment, but I will bring it in tomorrow from home and mail you
+a shar file.  I have wanted to write a general animation controller
+for some time, but I do animations so infrequently that I don't really
+have it down well enough to warrent going away from a script.
+
+I was hoping that you might use some of what you find in the script to
+enhance the controller you're developing.
+
+-Greg
+
+Date: Thu, 24 Oct 91 7:55:45 NDT
+From: pdbourke%ccu1.aukuni.ac.nz@Lbl.Bitnet
+Subject: animation
+To: greg%lesosun1.epfl.ch@Lbl.Bitnet
+
+> By the way, I am curious why you found the need for the ra2raw program
+> when pvalue can produce the same output with the -i and -h options?
+ 
+I didn't know about these options for pvalue, but the real reason was
+to make sure we had something that correctly read Radiance image files.
+ 
+> I have written a rather involved script for walk-through animation
+> using pinterp for inbetweening and rcalc to compute Catmull-Rolm
+> spline interpolated camera positions.  It is not with me at the
+> moment, but I will bring it in tomorrow from home and mail you
+> a shar file.  I have wanted to write a general animation controller
+> for some time, but I do animations so infrequently that I don't really
+> have it down well enough to warrent going away from a script.
+ 
+I would like the maths for Catmull-Rolm spline...
+ 
+> I was hoping that you might use some of what you find in the script to
+> enhance the controller you're developing.
+ 
+I don't remember exactly how much of my flight path generator I described
+last time but here goes (possibly again)
+ 
+    Usage: flightpath keyframefile interpolation [rpict options] octfile
+ 
+where the key frame file contains one line per key frame with nine numbers
+(3 vectors) naemly vp vd and vu. The interpolation at the moment is either
+'l' or 'b' for linear or bezier. Might do some spline today, at least
+something that actually passes through the key frame points whereas bezier
+is inside the complex hull, more annoying than I thought. The rpict options
+just get copied into a file (name is hardwired at the moment) which contains
+a list of rpict calls. Oh yes I almost forgot, the first line of the
+keyframefile contains the number of inbetweens for each keyframe.
+Since I've written this for my needs at the moment, the ra2pict (ra_pict)
+calls are also placed after the rpict calls. We transfer these frames to
+the Mac as PICT files and convert them into either a QuickTime animation or
+merge them into MacroMind director. I intend to write a PICS converter
+maybe although it's not to high a priority.
+ 
+Anyway I had a animation generating last night, 100 frames of that terrain
+model I was talking about last time with 45000 polygons. Preliminary
+work looks real good and I am seeing the people I'm doing it for today so
+I had better sign off and see how it went.
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+ 
+Date: Thu, 24 Oct 91 14:24:16 +0100
+From: greg (Greg Ward)
+To: pdbourke%ccu1.aukuni.ac.nz@Lbl.Bitnet
+Subject: Re:  animation
+
+Hi Paul,
+
+At the end of this message is a shar file containing the script from my
+latest animation venture.  Note that the keyframes it takes are in a .cal
+file called keys.cal rather than a view file.  I wrote the view command
+in rview so that multiple views can be written to the same file, and this
+is how I selected the key frames.  The view command also takes any number
+of additional arguments after the view file name, and these are appended
+to the view specification which is itself appended (as I said) to the file.
+I use this feature to add a value for the time between the last frame and
+this one, usually in seconds.  I have found this to be the most intuitive
+way for me to control the spacing of keyframes.  Easier than thinking about
+the number of frames inbetween, since I don't know for sure what framing
+rate I might use later on.  Unfortunately, I do not currently have a
+method from going from the keyframe view file created with rview and the
+keys.cal file used by rcalc to generate the view parameters for rpict.
+
+Anyway, take a look at it.  The formulas for Catmull-Rolm interpolation are
+in the file spline.cal, if you can read it!  Take note of how pinterp is
+used in the script to generate 7 interpolated frames for every frame
+rendered directly by rpict.
+
+-Greg
+
+#! /bin/sh
+# This is a shell archive, meaning:
+# 1. Remove everything above the #! /bin/sh line.
+# 2. Save the resulting text in a file.
+# 3. Execute the file with /bin/sh (not csh) to create:
+#	script
+#	keys.cal
+#	view.fmt
+#	spline.cal
+# This archive created: Thu Oct 24 13:56:29 1991
+
+[The rest was deleted because it can be found in the ray/obj/cabin/anim1
+directory of the standard 2.0 distribution.]
+
+Date: Mon, 18 Nov 91 13:49:27 NDT
+From: russells%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: Image translators
+To: GJWard@Csa2.lbl.gov
+
+Hi Greg,
+  
+  I have made a few improvments to ra2pict -- removing potentially
+  nasty bugs, writing a man page, that sort of thing. If there
+  is any interest I will the new version sent over.
+  
+  There is one remaining problem, however.  Most of Radiance
+  is byte-order independent, right?  The files produced on different
+  types of machines may not be interchangable, but the code
+  works on any type.
+  
+  Unfortunately, PICT files expect their word and longs to be in the
+  big-endian order.  I am trying to find methods to tell the machine
+  type from header files and/or libraries, but with little success.
+  
+  As far as I can tell only things like ra_t8 (Targa format) depend
+  on byte orders. Does this program work on a little endian machine?
+  
+  
+  Also, is there any call for Radiance to GIF. I have the 87a and 89a
+  formats, and code for decoding 87a gifs (both 8 bit formats, as far
+  as I can work out).
+  
+  While I am at it, how about Radiance to rle (Utah Raster Toolkit RLE)?
+  ... to ppm? (Portable Pix maps)
+  ... to tiff?
+  ... X Windows bitmaps?
+  ... SG gl files?
+  ... IRIS images?
+  ... jpeg?
+  
+      (Just while I am in the mood.)
+  
+  I have some of these libraries available. In most cases if you
+  can turn the image into a stream of raw bytes there are
+  routines to translate these into the other formats. 
+  
+  Bye
+  -------------------------------------------------------------
+  Russell Street                     russells@ccu1.aukuni.ac.nz 
+  Auckland University, New Zealand
+  "Baldrick, I believe the phrase rhymes with 'clucking bell'."
+          -- Edmund Blackadder
+
+Date: Mon, 18 Nov 91 11:16:38 +0100
+From: greg (Greg Ward)
+To: russells%ccu1.aukuni.ac.nz@Csa2.lbl.gov
+Subject: Re:  Image translators
+Status: RO
+
+Hi Russell,
+
+Thank you for your letter and for all your work on Radiance translators!
+Of course, I am very interested in getting your latest version and man
+page for ra2pict.  I am presently putting together release 2.0 of the
+software, and would like to include ra2pict within the main distribution
+(with your permission) because it is such a useful program.  I have been
+using the older version myself without problems so far, but I am glad that
+you are a perfectionist in removing potential bugs.  Did you make the
+compiler compatibility changes I suggested to your version?  Also, there
+have been some minor changes to the calls to open a Radiance picture since
+you wrote your original version.  At the end of this letter I have included
+a skeletal translator using the new calls.
+
+Byte order is indeed a problem for some of the so-called "standard" image
+formats.  I have made all Radiance files byte-order independent, including
+the picture files, but the Sun rasterfile format used by ra_pr and ra_pr24
+does depend on byte ordering.  Fortunately, the Targa file format specifies
+byte ordering and is thus not dependent on machine differences in this
+regard.  If the PICT format specifies ordering, then we must follow.  It
+is not necessary to find out the byte ordering of the host machine, simply
+use getc() and putc() to do all your input and output and pack/unpack the
+words yourself as I do in ra_t8.c.
+
+I have indeed had requests for Radiance conversion to GIF format, but have
+not done anything about it myself.  GIF seems to me to be a rather nasty
+format and it varies between the PC and the Macintosh.  Also, since it is
+limited to 8 bits, I have decided to skip it.
+
+I have written translators between Radiance pictures and ppm as well as
+tiff.  For the latter, I used the excellent public domain library written
+by Sam Leffler.  I figure that you can go from these formats to many
+other formats by picking up the Utah Raster Toolkit and the pbmplus package.
+If you are really interested in writing direct translators, though, I think
+having one to GIF would be nice.
+
+Thanks again!
+-Greg
+
+[File deleted because it is include in 2.0 distribution under
+	ray/src/px/ra_skel.c]
+
+<A NAME="GENERATORS">===================================================================</A>
+GENERATORS	New object generators
+
+Date: Wed, 16 Oct 91 8:43:48 NDT
+From: pdbourke%ccu1.aukuni.ac.nz@Lbl.Bitnet
+To: greg%lesosun1.epfl.ch@Lbl.Bitnet
+
+> The generators sound nice.  I suppose they're all MacIntosh applications.
+ 
+No, actually I've started doing some programming under UNIX and I thought
+these would be a nice way to learn. They are modelled after genbox, xform
+etc. Also some of the things we've been doing require some higher level
+generators, for example, I will probably write a stairwell generator for
+someone here...floor height, number of landings, step size, width...etc
+Someone else also wants a column generator...?
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+
+<A NAME="LUMFACTOR">=======================================================================</A>
+LUMFACTOR	Luminous Efficacy changed from 470 to 179
+ 
+Date: Thu, 24 Oct 91 14:40:06 +0100
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: BUG!!!!
+
+Hi Chas,
+
+I just discovered to my dismay that I have been using the wrong value for
+the conversion from lumens to watts.  Remember, this was the subject of
+a recent mail exchange regarding the conversion for luminaires.  Anyway,
+470 is not the correct value, and neither is 683.  The correct value is
+(may I have the envelope, please): 179 lumens/watt.  This is the luminous
+efficacy (as it's called) of white light over the visible spectrum.  I
+don't know what I did before to get 470, but I obviously did it very badly.
+
+The good news is that this does not invalidate all of the previous work
+we have done or make the luminances we quoted to people less accurate.
+Fortunately, whatever value was used before was used twice, once when
+converting luminaire values to radiance, and again when converting the
+computed radiance values to luminances.  Thus, the two mistakes cancelled
+each other.  This is a good part of why I never knew the value was so far
+off.
+
+The bad news is that the next time you compile the Radiance sources, and
+in the official release of 2.0, the values in all the luminaire data files
+and all the gensky output will suddenly be wrong by a factor of roughly 2.6!
+Also, using the newer version of ximage on an older file will give the wrong
+luminance values with the 'l' command.  This is a major pain and it is
+really causing me great grief and remorse.  It would almost be better to
+leave everything alone and let the wrong value stand.  Progress, who needs it?
+
+Hobbes now has the updated versions of the source, but I have not compiled
+it there nor have I given you the corrected binaries for the Mac.  I thought
+you could wait until a quiet point to tell me when you wanted them, when you
+have time to make the correction to your luminaire data files.  Just divide
+all the values by 2.63 -- in vi you can go to the first line of data in each
+file and execute:
+
+:.,$!rcalc -e '$1=$1/2.63'
+
+-Greg
+
+[This change has been incorporated in version 2.0.  See the note in the
+file ray/doc/notes/ReleaseNotes for more information.]
+
+Date: Thu, 24 Oct 91 07:08:33 PDT
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+To: greg@lesosun1.epfl.ch
+Subject: Re:  BUG!!!!
+
+Greg,
+It just goes to show that we are all human and are all allowed
+to make mistakes.  Congratulations!
+
+Just a few clarifications.  
+
+When saying that previous work from gensky and such will be off
+by a factor of 2.63, does that mean when re-calculated, or only
+in the stored image files?
+
+Could this bug cause my sources appear too bright when using
+consistant older binaries?
+
+The luminarire data files in question are the *.dat files and
+not any of the .rad files that might contain brightfunc or
+illum definitions with correction factors?
+
+I haven't yet downloaded the Mac binaries.  I think this latest
+event is cause for me to get them.  Could you please update
+them and I will convert my luminaire data files pronto.
+
+This all reminds me of another suggestion that I've had
+a hard time justifying but always thought would be great
+to have, namely, a VERSION entry in output files.  That way
+ximage would know when an image was calculated with the older
+values.
+
+Another concern with regard to header entries...I wish there
+was a more exact way of quickly knowing the resolution of
+an image.  With the PIXASPECT and "maxima" definitions for
+the -x and -y options, one can not tell what the resolution
+of the store image is.  A RESOLUTION entry would solve that.
+
+The world will not focus on this one mistake and judge you
+and your work by it!  I still really believe in the work
+we're doing!
+
+Chas
+
+Date: Thu, 24 Oct 91 16:01:09 +0100
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: Re:  BUG!!!!
+
+Hi Chas,
+
+Do you ever sleep?  The problem with gensky is two-fold.  First, if
+you have files that were GENERATED by the old version of gensky, the
+radiance files therein will be in error, but consistent with the
+errors in the image display and analysis programs that give luminance.
+Second, pictures produced using these files by either the old software
+or the new software will be wrong in terms of absolute radiance.
+Scene files that merely contain a call to gensky (using an exclamation
+point) will give the correct results with the new software.
+
+Perhaps gensky is not so much of a concern.  Given the enormous variability
+of daylight conditions, a factor of 2 or 3 is not so huge.
+
+Much more concerning is what to do about pictures generated using luminaire
+data and older versions of ies2rad (or handmade files).  The pictures and
+data files will both be wrong when handed to the newer programs.  The only
+fix I can think of for the picture files is to manually edit the EXPOSURE
+value in the header with the following:
+
+% echo EXPOSURE=.381 > newpicture
+% cat picture >> newpicture
+
+The reason this works is because ximage applies the inverse of the exposure
+values stored in the file to get back the original absolute radiances
+before doing any conversion to luminance.  Thus, by claiming that we
+changed the values in the file by a factor of .381 when we really didn't,
+the new ximage will end up using corrected original values.  This also
+works for the -o options of pvalue, pcomb, etc.  It doesn't matter
+where the correction appears in the header -- they are all multiplied
+together.  I've added the following alias to my .cshrc file for convenience:
+
+alias pfixabs '( echo EXPOSURE=.381 ; cat \!:1 ) > \!:1.$$ ; mv \!:1.$$ \!:1'
+
+Note that this alias overwrites the existing file, so you may want to take
+off the mv command at the end if you don't want this to happen.
+
+To answer your other question, light sources should not "appear" too
+bright using the older versions.  The absolute values in fact do not
+affect appearance at all.  Only using the 'l' command in ximage or
+some other means to get at the actual numbers can you ever know
+the difference.  Again, using the old version of ximage with the old
+version of ies2rad or gensky will produce the same results as the
+new with the new.  It is only in mixing the new and the old that
+the results will be screwed up.
+
+There is now a -version option to the renderers that allows you to
+know exactly what you're working with.  This same version is also
+entered into the output picture in a SOFTWARE= line.  Check it out!
+
+The -d option of getinfo will tell you the exact resolution of an image,
+as well as the bounding cube of an octree.  I'm surprised you didn't
+know about it, but Radiance by this time has so many nooks and crannies
+I guess no one knows it all (including myself sometimes).
+
+-Greg
+
+<A NAME="MKILLUM">=================================================================</A>
+MKILLUM		New program to compute light distributions
+
+Date: Wed, 30 Oct 91 02:21:15 PST
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+To: greg@hobbes.lbl.gov
+Subject: mkillum
+
+Greg,
+
+I'm here with Deanan looking at the manual pages for
+mkillum.  It says that there is no default data file name.
+Why did you choose to do it this way.  It seems to make 
+a lot of sense to have the option to allow mkillum to automatically
+create data and dist files based on the name of the surface
+modifiers.  I understand that the best way of getting accurate
+results it to tweak the parameters for each surface, but for
+a good-enough first-run, this seems incredibly time consuming.
+
+Deanan says that mkillum is a great idea and I fully agree.
+I'm looking into this with Deanan at this time in preparation
+for the EEC project which will involve a lot of daylighting.
+Deanan is currently working on a fantastically detailed
+atrium space and is discouraged with the time it is taking to
+do a regular ambient calculation.
+
+What we were wondering is if it is reasonable to define a small
+number of somewhat large illum surfaces in our input scene file
+that we want to use as the eventual illum secondary sources of
+our mkillum processed scene file.  What I am anticipating as being
+a problem is what to define these temporary illum surfaces as if we
+have not yet done the mkillum process.  A catch-22.  In other words,
+we don't want to process the thousands of surfaces that comprise
+the surrounding walls of our atrium.  We instead want to define
+dummy walls made up of some invisible material that mkillum will
+not try to interpret during its pre-process as light sources.  Is
+this case handled by the illum type already? or do we need another
+"invisible" surface material type to deal with this scenario.
+
+Just to verify our understanding of how mkillum works...it creates
+a complete copy of the input scene file, right?  Does this new
+scene file then have to be re-oconv'd?  What if the "main" scene
+file is our "invisible" illum patches and then a bunch of instances
+and \!xforms of other parts of the scene.  We've already decided that
+we can just turn off mkillum just before all of the \!xforms, but
+is kmillum going to expand each of these such that the new scene
+file will have to re-oconv'ed (and all of its gory detail).  The
+scene as it is now can't even be oconv'd unless it is broken up
+and instanced, then put together.  Comprede?  If we have xform without
+the -e flag set, will mkillum not expand these?
+
+Well, I guess you weren't expecting this kind of feedback so soon, huh?
+
+Chas
+Deanan
+
+Date: Wed, 30 Oct 91 12:05:59 +0100
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: Re:  mkillum
+
+Hi Chas,
+
+I apologize for the wording in the mkillum manual page.  Thanks for reminding
+me to fix it.  (I had read it and been confused before myself!)  In fact,
+the data file is set automatically based on the material name as described
+for the m variable above.  The only reason the f option is there is so you
+can override the default naming.  Also, when the m option is used to name
+both the material name and the data file, the number of data files will
+grow with each rerun of mkillum, not deleting the old files.  I have this
+as a protection against overwriting files in the directory that happen to
+collide with the name chosen automatically by mkillum.  Using the f option
+is the best way to insure the names you want without gathering a whole lot
+of extra files on your system.  Also, the names are incremented so that
+you only need give this option once (at the beginning of the file) and
+then you can forget it.
+
+Good question on the invisible surfaces.  I guess I would recommend
+using a trans surface with a transmission of 1, color of 1 1 1, and
+transmitted specularity of 1 with roughness 0.  Such a surface would
+be completely invisible in Radiance.  Face the surface normals away
+from the walls so mkillum will create the sources you want.  Also,
+use the b option of mkillum to prevent the creation of light sources
+that have little or no output.  If your atrium walls are diffuse, you
+can set the d option to 0 so it will save time and create diffuse sources.
+Finally, you should create enough of these initial surfaces (using
+gensurf if you like) so that you don't have one big source on each
+interior facade that results in an inaccurate distribution.  I wouldn't
+consider using fewer than 16 sources per wall for a roughly cubical
+atrium space.
+
+You can switch mkillum "off" as you say, but it still expands all
+inline commands and requires rerunning oconv on the output.  The
+way I meant it to be used was on a separate file containing the
+surfaces you want changed into light sources using an octree with
+the basic description.  If you use transparent surfaces, you don't
+even have to include these in the original octree.  You can then
+add the output of mkillum to the octree incrementally, thus avoiding
+a complete rebuild.  For surfaces that do participate in the calculation
+(as most do), you can have two incremental branches of the base octree,
+one without illum sources and one with.  This also permits easy comparison
+of results and runtimes for the two approaches.  I will send you a
+shar file with the test scene I've been using.
+
+-Greg
+
+P.S.  I'm glad you're interested in mkillum.  I think it's pretty nifty,
+	if I do say so myself.
+
+Date: Wed, 30 Oct 91 23:54:42 PST
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+To: greg@hobbes.lbl.gov
+Subject: mkillum ...continued
+
+Thanks for the shar of the test mkillum scene file.
+
+Going back to the atrium problem.  The trans type definition is great
+and just what the architect ordered.  Another problem I anticipate has
+to do with the fact that these trans/illum surfaces will exist some
+distance from the face of the atrium walls.  The atrium walls are also
+varriegated, with balconies and catwalks connecting opposite sides.
+The problem of not being able to shape the illum to the exact contours
+of the source fixture (walls or pendants) comes up again.  It doesn't
+seem like defining a trans/illum box, or even a two-sided trans/illum
+will eliminate the inevitable black (or default ambient value) zones
+between where the illum intersects the catwalk and where the wall
+of the atrium and  catwalk actually intersect WITHOUT also making 
+the illumination of walls themselves inacurate.  If there was a source
+material type (as described in previous mail) that had the ability
+to NOT cast shadows (which also implies always being visible) within
+a certain radius of effect, our trans/illum surfaces could reside
+well inside the atrium walls thereby avoiding the illum/surface
+intersection problems.  Another solution might be to make a source
+material type that could be selectively visible to named materials.
+
+Deanen noticed a nice feature of mkillum.  If the temporary trans
+surface definitions (and also any #@mkillum declarations) are
+kept to the end of the scene file, mkillum does not expand the 
+\!xform parts of the scene (whether or not the -e flag of xform 
+is set.)  This seems like a very nice, and very possibly 
+unintentional feature, no?  I haven't actually tested this myself,
+but even if it did expand the xform parts of the scene, one could
+always delete the unwanted parts of the new scene file, then
+incorporate the new mkillum created parts into the original
+file with xform's intact then re-oconv the scene.  No problem, eh?
+
+Keep in touch,
+Chas
+
+Date: Thu, 31 Oct 91 13:35:52 +0100
+From: greg (Greg Ward)
+To: chas@hobbes.lbl.gov
+Subject: Re:  mkillum ...continued
+
+Hi Chas,
+
+In fact, I thought a little more about what I said about using a trans
+type and I realized that it was totally unnecessary.  You can just
+define surfaces with the modifier "void" that you never create an
+octree for at all.  This will be soley for input to mkillum, and it
+will create illum surfaces in their place with no alternate type.
+This is in fact much preferred to the stupid solution I suggested,
+and what I had in mind when I wrote the program.  I just forgot!
+
+I think that the best solution is really the one Deanan suggests of
+giving the actual wall surfaces to mkillum as the ones to modify.
+This will avoid the intersection problems that you anticipate (and
+rightly so) from using mkillum with a free floating surface.  As
+long as the wall surfaces are not in the hundreds and teeny-tiny or
+just one huge surface, things should work out.
+
+I just tested the expansion of files by mkillum and it does it
+unconditionally as I thought.  I made it this way so that illum
+objects and commands might appear in subfiles, but maybe this isn't
+optimal for large files.  I really didn't write mkillum with an ENTIRE
+scene description in mind.  It's much better if you can separate
+the relevant pieces into a separate file.  This might mean two runs
+of arch2rad with two different mapping files for example.
+
+-Greg
+
+<A NAME="AUTOCAD">================================================================</A>
+AUTOCAD		Carnegie Mellon working on DXF translator
+
+Date: Fri, 1 Nov 91 11:56:47 EST
+From: vanwyk@arc.cmu.edu (Skip Van Wyk)
+To: greg@lesosun1.epfl.ch
+Subject: xRAD
+
+Greg, I have just spent about 2.5-3 weeks on a new AutoCAD to Radiance
+translater.  It does not alter the drawing file, and does more than the
+one from down under.  I'll upload it in about a week, if all goes
+well.  I have the following questions, however.  Can you *not*
+distribute my stupidity to the globillum mailing list until we're
+ready?
+
+(1) I wonder if you would be willing to add an extruded polygon, much
+as you have an extruded circle=cylinder.  This would make our .rad
+files much much simpler and easy to read. Would "prism" be an
+appropriate name for this shape?
+
+(2) I force the use of "handles" in autoCAD and so the id of each
+entity is "entity-<handle>.<part> in your "mod polygon id" requirement.
+The part comes from my having to extrude sides, top, and bottom, for
+plines, etc.  (this makes the .rad files large and difficult to read
+and edit).  Is the id *really* required?  can they be redundant, in the
+event that different .rad files be brought into the scene.  I notice
+that you do check for the existance of this identifier, but I have no
+idea how you use it.
+
+(3)  The use of sphere/bubble, cylinder/tube etc., seem confusing.
+Could we formalize this to be something like sphere and -sphere,
+cylinder and -cylinder, prism and -prism, etc., to discuss inward
+versus outward pointing normals of solid primitives?
+
+(4)  Ring is essentially a surface primitive while cylinder is a line
+primitive.  What I like about ring is its "direction" and it would be
+so nice if it additionally handled "extrusion".  It seems to me that
+polygon, cone, cylinder, and ring could all be generalized to use this
+xdir,ydir,zdir feature with extrusion, -- and again, it would simplify
+the input files tremendously.
+
+(5)  As of today, my translator does not do traces, solids, insert,
+text, or block, but it does do line, point, circle, 3dpoly, 3dface,
+3dline, and parts of pline.  And, the interface allows one to query
+drawing entities, change files (for example, when outputing blocks to
+separate files), and to set system parameters, like default radius,
+extrusion length, and arc resolution.
+
+I hope these questions/suggestions are helpful.  I have spent so much
+time with my students building models that we have not had the time to
+really work with the Radiance software.  And so organization of models
+and automatically constructing .oconv files, material files, etc., has
+been a big objective of my translator.
+
+Let me know your feelings thus far.
+
+--Skip
+
+Date: Mon, 4 Nov 91 10:33:49 +0100
+From: greg (Greg Ward)
+To: vanwyk@arc.cmu.edu
+Subject: Re:  xRAD
+
+Hi Skip,
+
+Thanks for your input.  It sounds like you have done a lot of work on this
+translator.  I will respond to your questions in order
+
+(1) You can use the genprism command to get a more reasonable representation
+of a prism.  I have endeavored to keep the primitive surface types in
+Radiance as simple and basic as possible, with higher order surface types
+supported by external generator programs.  The following line in a Radiance
+scene file would expand to a collection of surfaces (aptly named) describing
+a 5-sided prism:
+
+	!genprism red_plastic prism 3  10 4  -3 1  6 12  -l 0 0 5
+
+The vertices of the base polygon lie in the XY plane, and are (10,4), (-3,1),
+and (6,12).  The extrusion is straight up in Z, length 5.  The ordering of
+the vertices means that this prism will have its surface normals pointing
+outwards.
+
+(2) The surface identifiers are used only in error messages so that the
+user can easily locate problematic sections of the input scene file.  If
+a few polygons in the file have the same name, the user may still be able
+to find the one causing difficulties, but if all the polygons are named "joe",
+it's hopeless.  Identifier names for modifier types (patterns, materials, etc.)
+are used to link to the surfaces they modify, but you may still reuse the
+modifier names if you choose.  The most recent definition of a modifier is
+always the one which is used.
+
+(3) I like your suggestion of naming surface types with inward normals
+using -sphere instead of bubble, etc., and I wish I'd thought of that
+when I wrote the input language seven years ago, but I think it's a
+little too late to be making such fundamental changes.  There are other
+decisions I would like to change as well, but out of respect for the
+work others have done with the software already, I leave well enough
+alone.  One thing I have done (for the next release) is made the input
+for spheres and cones more forgiving.  If given a negative radius for a
+sphere or bubble, for example, the programs invert the type and the
+radius and print a warning message instead of bombing.  The same goes
+for cylinders, tubes, cones and cups.  I did this with translator
+writers specifically in mind, following some suggestions made by Paul Bourke.
+
+(4) With the exception of the source and instance types, I see all the
+so-called surface types of Radiance as surface boundary primitives.
+The extrusion of a boundary would necessarily be a solid, and solids
+do not really have meaning in Radiance.  Are you really asking for
+cones and cylinders whose ends are cut at oblique angles?
+
+-Greg
+
+Date: Mon, 4 Nov 91 11:08:28 EST
+From: vanwyk@arc.cmu.edu (Skip Van Wyk)
+To: greg@lesosun1.epfl.ch
+Subject: Re: xRAD
+
+Thanks, Greg.
+
+The problem with genprism as it now stands is its lack of generality.
+The vertices, if extended to [x,y,z], along with -l vecx vecy vecz  or
+-l distance, could be very helpful to most modelers.  AutoCAD lets
+users establish an arbitrary coordinate system on which to construct
+objects . . . for me to rotate those back to a world coordinate system
+before using genprism means one transformation, genprism, and then
+another transformation or xform . . .
+
+I'll alter your genprism to a new "genprismx" to accomplish the above.
+And, I think this is also the kind of contribution you hope users
+make!
+
+By the way, I have to do some daylighting calibrations.  While in
+Stutgart at the Institut for Bauphysik, I was given a pre-release copy
+of their comparisons of Radiance with other lighting models.  Have you
+seen it yet?  And, I didn't really watch you very carefully this summer
+as you demonstrated "taking off" luminance values from the picture.  I
+assume that one mustdo a hemispheric view, from a specific point of
+interest.  Correct?
+
+Thanks, Skip
+
+Date: Mon, 4 Nov 91 17:15:36 +0100
+From: greg (Greg Ward)
+To: vanwyk@arc.cmu.edu
+Subject: Re: xRAD
+
+Hi Skip,
+
+It should be possible to use genprism and pipe the output to xform to
+get any prism orientation you want.  I don't know how easy it is to go
+from an AutoCAD coordinate system to the necessary translations and
+rotations for xform, but it should not be necessary to perform two
+transformations as I understand the problem.
+
+A cursor pick or drag followed by the 'l' command in ximage will display
+the luminance value for a point or area, respectively.  It is not necessary
+to do a hemispherical view unless you want to know the illuminance at a
+point.  In that case, you should probably use rtrace separately with the -i
+option.
+
+The next release of Radiance, which is due out this month, provides many
+more features for daylight calculation, including illuminance and daylight
+factor routines.
+
+I have not seen the Stuttgart report, which is surprising since we have
+been collaborating on this work for a couple of years now.  I suppose
+I should ask them to send me a copy.
+
+-Greg
+
+<A NAME="MODELS">===============================================================</A>
+MODELS		Scene model data bank
+
+Date: Mon,  4 Nov 91 15:29:21 Z
+From: Augusto Sousa <aa_sousa@inescn.pt>
+To: Greg Ward <greg@lesosun1.epfl.ch>
+Subject: NFF Files
+
+Dear Greg,
+
+How are you since the rendering workshop in Barcelona? I hope that you
+are well.
+
+I am sending you this email because (if I well understood) you have 
+3D scenes for Ray-Tracing in the NFF format that we could get by ftp.
+How can we get them and, perhaps, add some more?
+
+Awainting the favour of your reply,
+Kind regards,
+
+A. Augusto de Sousa
+
+P.S. Let me know if I can help you in any thing.
+
+Date: Tue, 5 Nov 91 09:41:39 +0100
+From: greg (Greg Ward)
+To: aa_sousa@inescn.pt
+Subject: Re:  NFF Files
+
+Dear Augusto,
+
+Thank you for your letter.  I do indeed have scene descriptions that you
+can pick up by anonymous ftp, but they are in my own Radiance format rather
+than NFF.  I have a translator to go from NFF to Radiance, but not vice versa.
+
+You can pick up both Radiance and the scene descriptions from hobbes.lbl.gov
+(128.3.12.38).  The README files should explain where everything is, but
+just to save time you should pick up ray1R4.tar.Z from the ftp directory
+if you want to run Radiance, and the scene descriptions are in various
+tar files in pub/models.  There is also a collection of Radiance objects
+(furniture and the like) in pub/objects/gjward.tar.Z.  I will send in a
+following message a PostScript form of the document describing Radiance's
+input format.
+
+If you have any descriptions to offer in NFF format, I invite you to deposit
+them in either the pub/models or pub/objects directories on hobbes.  Please
+follow the directions in the README files contained therein, or ask me if
+you have any additional questions.
+
+-Greg
+
+<A NAME="ART">=========================================================================</A>
+ART		Radiance in the Arts
+
+Date: Wed, 6 Nov 91 08:55:13 +0100
+From: greg (Greg Ward)
+To: raylist@hobbes.lbl.gov
+Subject: Radiance in the Arts
+
+Hello Everyone,
+
+Here is a question about Radiance in the art community that was sent to me
+today, and my response.  If anyone wants to contact this person, please address
+it or cc to his e-mail.  I would appreciate a copy also so I can post it
+later to the group.
+
+In related news, there is a fellow at IBM in New York (Dr. Cliff Pickover)
+who is collecting computer graphic art for a book.  I can put you in touch
+with him if you are interested.
+
+-Greg
+------------------------------
+
+From: axolotl@socs.uts.EDU.AU
+Subject: Radiance in the fine arts?
+To: greg@hobbes.lbl.gov
+Date: Wed, 6 Nov 91 16:17:48 EST
+
+Greg,
+
+  I was wondering if you knew of any examples where Radiance had been
+used in the fine arts?  I fired up the 'podlife' model, and it
+looked great.  So I'm curious to know if any more exist, or at least
+if Rad has been installed at any "fine arts" sites (whatever they
+may be)...
+
+  I'm reluctant to use Radiance because it doesn't have the kind of
+massively anti-aliased, polished output that I need.  (I know you can
+render it very large and scale it down, but this is clumsy, and
+isn't too good for animation).  The soda-store image in your (88?)
+paper looks good- that's the sort of thing I'm after.
+
+  I hear Sumant Pattanaik is going to use your modeling language for
+his PhD in Radiosity. Sounds good.
+
+-- 
+Iain Sinclair                University of Technology, Sydney
+axolotl@socs.uts.edu.au      +61 2 2812552
+irsincla@uts.edu.au          +61 2 3301807 (fax)
+
+>From greg Wed Nov  6 08:35:08 1991
+To: axolotl@socs.uts.EDU.AU
+Subject: Re:  Radiance in the fine arts?
+
+Hello Iain,
+
+Thanks for the complement on the Pod Life sculpture.  Cindy and I have
+done a couple of other "artsy" scenes, another (less sophisticated)
+sculpture and a decorated Christmas tree.
+
+There is a group in New Zealand that did some nice things with Radiance
+a long time ago.  I don't know if they're still using it as I haven't
+heard from them recently, but you might contact them and ask them about
+their experiences.  Here is their address:
+
+	Richard Cranenburgh
+	Auckland Technical Institute
+	Private Bag C.P.O Auckland
+	1 Wellesley St.
+	New Zealand
+
+I'm sorry, but I don't seem to have their e-mail or phone number, but maybe
+you can look it up.
+
+As for other "Art" colleges using the software, I don't know.  I'm afraid
+that I don't run in those circles and I don't really know an art college
+from a business school from a hole in the wall.  I will send your request
+to the mailing list, though, and perhaps we will get a response.
+
+I have done animations and high resolution anti-aliased images, and I don't
+really agree with your comments about Radiance not producing high quality
+output.  The separation of rendering from filtering seems quite natural
+once you get used to it, and it provides greater control over the
+time/quality tradeoffs.  I don't think that other programs do it any
+differently, they only take away some of the control.
+
+If you think Radiance is awkward for animation, you may be right.  I
+have a C-shell script I could send you that calls all the
+necessary programs for a walk-through animation.  At some point it
+would be nice to have a program to do it all from key frames, but
+for how often I would use it, it's probably not worth it for me.
+
+-Greg
+
+Date: Thu, 7 Nov 91 8:01:55 NDT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re: Radiance in the Arts
+To: greg@lesosun1.epfl.ch
+
+> >From: axolotl@socs.uts.EDU.AU
+> Subject: Radiance in the fine arts?
+> To: greg@hobbes.lbl.gov
+> Date: Wed, 6 Nov 91 16:17:48 EST
+> 
+> Greg,
+> 
+>   I was wondering if you knew of any examples where Radiance had been
+> used in the fine arts?  I fired up the 'podlife' model, and it
+> looked great.  So I'm curious to know if any more exist, or at least
+> if Rad has been installed at any "fine arts" sites (whatever they
+> may be)...
+
+Greg passed your note onto other possibly interested parties...
+
+We installed radiance about six months ago on our SG here. While we are
+one of the two Architecture Schools in NZ, we are known as the "design"
+school. An increasing number of strudents are looking at experimenting
+with Radiance although there has only been one "official" project being
+completed at the moment. We have written some generators, parametric
+textures, etc. 
+
+>   I'm reluctant to use Radiance because it doesn't have the kind of
+> massively anti-aliased, polished output that I need.  (I know you can
+> render it very large and scale it down, but this is clumsy, and
+> isn't too good for animation).
+
+I also originally thought that his method of antialiasing was not so
+hot but I've changed my mind, it gives the user much more control in
+the end.
+Regarding animation, we have done quite a bit of this using Radiance.
+At the moment I have done most of it for scientific visualisation work.
+Although it requires the writting of code there are some nice things that
+can be done. In particular because many forms can be generated by mathematical
+expression, it is possible to create animation that transform object shapes
+easily. Also, texture animation is easy. Most of the stuff I've done has
+been camera path animation, otherwaise known as flight path animation.
+I have written a frame generator which I will eventually install on Gregs
+site, it takes a file of key frames (vp, vd and vu) and generates n calls
+to rpict with either linear, bezier, or spline interpolation (except spline
+is not working yet) I play most of my animations with QuickTime on the Mac.
+
+We have written a Super3D translator if that helps...
+A student is about to look at particle systems, applications, etc...
+
+I have talked to John Fairclough at the Elam school of fine arts here, he
+is interested but they don't yet have ethernet to their building.
+------------------------------
+Paul D. Bourke
+pdbourke@ccu1.aukuni.ac.nz
+         (130.216.1.5)
+
+From: desilva@ced.berkeley.edu
+Subject: Radiance in the arts
+To: greg@hobbes.lbl.gov
+Date: Wed, 6 Nov 91 10:50:42 PST
+
+ Hi greg,
+ 
+ I don't know if you remember some stuff I did using radiance a 
+ about two years ago that involved a projecting slides onto a
+ floating sculpture sort of thing? Anyway, I only have one of those
+ images left on my mac and all the slides were sent off to competitions
+ and never returned. Oh well, I should have backed them up to tape!
+ I can definitely say that Radiance is definitely a powerful tool for 
+ artists. 
+ 
+ As for the animation stuff, appartently PD Bourke is working
+ on a flight path program that will interpolate splines from key frames.
+ How did you do the mmack animation?
+ 
+ I have a few questions about ambient calculations. 
+ Any hints at all about choosing the right ambient parameters
+ whould be of great help! 
+
+ I guess the the most basic question would be what options can
+ I change on the second pass? It seems most logical that you can 
+ only change the resolution but I tried changing the -av and got
+ some hatchlike marks in the shadow areas. 
+ 
+ When doing the first run I did it at a resolution of 200 x 200.
+ Too low? I appears that the resolution doesn't matter because on 
+ the second pass, ambient values are also added. Is this because of 
+ the change in resolution or does it add values for each run? If so,
+ then I suppose subsequent runs will increase the accuracy, albeit by 
+ small amounts.
+
+ And a few more:
+ Whats a good way of figuring out the -av value? 
+ Also, is -ab 2 worthwhile? and how what is the increase in time?
+ 
+ Oh, and one more:
+ 
+ In trying to properly estimate colors, I'm following the 
+ .3*r+.59*g+.11*b formula to get a reflectance value. 
+ The colors I'm getting are very saturated and not too close to 
+ my guess at what the reflectancy should be. Is there some
+ standard set of values that I can look up to approximate
+ the reflectancies? 
+ I also borrowed a light mate light meter that can be used to 
+ figure out the reflectivity of a surface by comparing it to a
+ reference surface. The manual for the meter suggests using a 
+ 100% reflective board. Does such a thing exist? I understand the
+ white paper is about 68% reflective. Also, would the reflectivity
+ value I get from the meter correspond to the formula above and radiance?
+ 
+ I apologize for unloading soooo many questions on you!
+ 
+ thanks,
+ 
+ deanan
+
+Date: Thu, 7 Nov 91 10:34:07 +0100
+From: greg (Greg Ward)
+To: desilva@ced.berkeley.edu
+Subject: Re:  Radiance in the arts
+
+Hi Deanan,
+
+Yes, I do remember your work with the famous art projections.  In fact, I
+did save some of the Radiance picture files on tape for myself.  I didn't
+keep everything, but I did keep the following:
+
+	40b1	Looking blue from ditch
+	40b2	Sculpture floating in blue
+	40b3	Closeup of sculpture in blue
+	40b4	Looking orange from ditch
+	40b5	Sculpture floating in orange
+	40b6	Closeup of sculpture in orange
+	40b7	View with robot arm
+	40o1	Long view of ditch
+	40o2	Looking down in ditch with Van Gough prominent
+
+Chas can get them off of tape if you like now, or I can get them when I
+get back.  They have taken away our film recorder, so buying a new one
+is high on my list.  When that happens, I can make as many copies as
+you like.  I know about submissions dissappearing!  Where is Xavier now,
+by the way?
+
+I did the mmack animation as well as a new animation sitting on 6 tapes
+in my desk drawer using a C-shell script.  I can send you a shar file
+if you are interested.  For fly-by animations, the program pinterp smooths
+out the animation at minimal cost by using z-buffer inbetweening.
+
+The only values that are safe to change on the second pass are -ad and -as.
+In fact, it may make sense to use slightly larger values for these parameters
+on the first pass so that you get more accurate results for the values that
+matter the most.
+
+I often use a resolution of only 64x64 on the first pass.  I'm sure that
+200x200 is more than adequate.  Additional values will be added with each
+pass because slightly different nooks and crevices will be sampled each
+time, and some of these may need new values.  The low-frequency first pass
+just puts in values that have a large field of influence, and these
+values are the most important for good appearance.
+
+Saturated colors are not very true to life.  I try and avoid them myself.
+The value you get from a reflectance meter should match the .3*r+.59*g+.11*b
+value you use in Radiance.  99% reflectance standards are available
+from LabSphere at a cost of around $180.  The address is in my file at
+LBL, but since I'm here in Switzerland that doesn't do me much good.
+
+-Greg
+
+From: Nick (Nikolaos) C. Fotis <nfotis@ithaca.ntua.gr>
+Subject: Re: Radiance in the Arts
+To: greg@lesosun1.epfl.ch
+Date: Fri, 8 Nov 91 18:08:26 EET
+
+> 
+> I have done animations and high resolution anti-aliased images, and I don't
+> really agree with your comments about Radiance not producing high quality
+> output.  The separation of rendering from anti-aliasing is quite natural
+> once you get used to it, and it provides greater control over the
+> time/quality tradeoffs.  I don't think that other programs do it any
+> differently, they only take away some of the control.
+
+It would be VERY nice if you could write a small giude in how to
+do a nice, antialiased image. It's somewhat necessary for us to
+have separated tutorials for these small, but important details.
+
+> 
+> If you think Radiance is awkward for animation, you may be right.  I
+> have some a C-shell script I could send you that calls all the
+> necessary programs for a walk-through animation.  At some point it
+> would be nice to have a program to do it all from key frames, which is
+> quite possible but for how often I use would use it, probably not worth
+> it for me.
+> 
+> -Greg
+
+Perhaps we (the Royal "WE") could make an interface to 2-3 animation programs.
+I'm waiting for the new version of BRL-CAD, which says that provides
+articulated animation, so I'm interested in building an interface to it.
+(And to Rayshade 4.0 or greater).
+
+Greetings,
+Nick.
+
+Date: Mon, 11 Nov 91 09:46:38 +0100
+From: greg (Greg Ward)
+To: nfotis@ithaca.ntua.gr
+Subject: Re: Radiance in the Arts
+
+Hi again.  I agree that there should be some better hints on generating
+nice images.  The so-called "ambient" calculation and its parameters are
+particularly difficult to master.  I keep hoping to find the time to
+document this stuff, but the task is daunting.  Next year I will be
+writing a real user interface to Radiance, and into it I will build
+a lot of my knowledge about how to properly run the programs.  Still,
+documentation is inevitable at some point -- the bane of all programmers!
+
+-Greg
+
+<A NAME="RS6000">=============================================================</A>
+RS6000		Compiling Radiance on the IBM RS/6000
+
+Date: 9 Nov 91 10:22:00 PST
+From: cvetp035@csupomona.edu ()
+Subject: Compiling Radiance on IBM RS6000
+To: gjward@Csa2.lbl.gov (gjward)
+
+Hi Greg,
+	Do you know if anyone has compiled Radiance on RS6000? I got a lot
+of errors when I tried to install it as a RISC machine. BTW, Radiance is
+running great on the Sun Sparcstation IPCs here. I'd love to run it on
+the RS6000 to compare the performance.
+
+Jack
+
+Date: Mon, 12 Aug 91 19:13:37 
+From: marc@innerdoor.austin.ibm.com (Marc Andreessen)
+To: GJWard@Csa2.lbl.gov
+Subject: Radiance on RS/6000
+
+Greg -
+
+Unpacked Radiance last night and got it working under AIX 3.1 on
+IBM RS/6000 with X11; if you're interested in the port, here's what
+it took:
+
+	o  Using defines -DBSD -D_BSD -DBSD_INCLUDES along with
+	   those for SGI (-DSTRUCTASSIGN and -DALIGN=double).
+	o  Adding -lbsd to the final link stage for each 
+	   executable.
+    	o  Possibly minor changes to source (#ifndef'ing out
+	   malloc decls, etc); these are probably not necessary
+	   since I moved to BSD emulation after I'd made these
+	   changes, which probably makes the changes useless.
+
+If you're interested in a genuine, clean-as-possible port I'll redo it and
+send you the results.
+
+Also, src/px/Makefile makes reference to 'glimage', but glimage.c
+is missing from the distribution; can I get my hands on that?
+Otherwise I'll write my own...
+
+The package looks great - thanks for making it available.
+
+Marc
+
+--
+Marc Andreessen
+Graphics Subsystem Development
+IBM Advanced Workstations Division
+marc@innerdoor.austin.ibm.com
+
+Date: Tue, 13 Aug 91 08:47:05 +0200
+From: greg (Greg Ward)
+To: marc@innerdoor.austin.ibm.com
+Subject: Re:  Radiance on RS/6000
+
+Hello Marc,
+
+Glad to hear that you got it running OK.  I've got some timings someone
+else did on the RS/6000 if you're interested:
+
+-----------------------
+>From emo@ogre.cica.indiana.edu Tue Feb 26 14:47:25 1991
+To: ray@hobbes.lbl.gov
+Subject: Misc. Radiance 1.3 benchmarks
+
+Program: rpict, version 1.3, 
+Date: February 22, 1991
+
+This benchmark involves the example 1000x1000 picture described in
+./ray/examples/textures as rendered from the associated makefile,
+./ray/examples/textures/Makefile.
+
+-----------------------------------------------------------------------------
+                                      (all times are in seconds)
+System                                  Real    User    System
+-----------------------------------------------------------------------------
+Sun-4/330 (ogre)                      10:27.9  8:10.5       8.5
+SGI Personal Iris (pico)              5:41.0  5:26.5       1.6
+-IBM RS6000 model 320 (off-site)      4:19.2  4:13.9       0.3
++Stardent Titan-3000 (tuna)     l     4:13.9  4:04.3       7.8
+-IBM RS6000 model 540 (off-site)      2:50.3  2:45.2       0.2
+*Stardent Titan-3000 (tuna)           1:52.2  1:45.7       4.8
+-----------------------------------------------------------------------------
+Legend:
++[Note: The entire image was rendered on 1 processor]
+*[Note: Each processor renders 1/4 image, so this is the MAX of all timings.
+        The -x, -y, -vv, and -vh parameters were adjusted accordingly.]
+-[Note: The IBM timings were performed by our IBM representative off-site.]
+
+
+System Configurations:
+
+Architecture          Operating System           RAM    Processor      #
+-----------------------------------------------------------------------------
+Sun-4/330             SunOS Release 4.0.3_CG9    24 MB  20 MhZ SPARC  (1)
+SGI Personal Iris     IRIX System V Release 3.2  16 MB  20 MhZ R3000  (1)
+Stardent Titan-3000   Unix System V Release 3.0  32 MB  25 MhZ R3000  (4)
+IBM RS6000 model 320  Unix System V Release ?    16 MB  20 MhZ RS6000 (1)
+IBM RS6000 model 540  Unix System V Release ?    ?? MB  30 MhZ RS6000 (1)
+-----------------------------------------------------------------------------
+
+I would be happy to answer any questions pertaining to these timings.
+In no way am I suggesting that these timings are the best possible for
+a given architecture;  rather, they were the ones I obtained and may or
+may not be repeatable at another site.  No special fine-tuning was done
+either to the system or to Radiance before performing these timings.
+Each system was relatively quiescent and therefore had a minimal load average.
+
+eric
+
+---------------------------
+I'm not sure how 1.3 compares to 1.4, but I don't expect there is much
+difference.
+
+I was wondering, though, why you chose to go the BSD route, when you could
+have more simply removed the BSD definition and gone from there?  Oh well,
+whatever works, I always say.
+
+For some reason, glimage.c was clobbered in this distribution.  It's
+not very sophisticated, so if you write a better one please let me know.
+
+-Greg
+
+Date: 13 Nov 91 13:18:00 PST
+From: cvetp035@csupomona.edu ()
+Subject: Compiling Radiance on RS6000
+To: gjward@Csa2.lbl.gov (gjward)
+
+Greg, thanks for forwarding the message from Marc Andreessen about
+compiling Radiance on RS6000. I've encountered serveral problems
+following his instructions, and my email doesn't seem to get through
+to him. I've included the email below.
+
+Hi Marc, Greg forwarded the message you sent him on how to compile
+Radiance 1.4 on the RS6000 running AIX 3.1. I followed your advice,
+but I ran into some problems. First, the compiler gave warnings about
+the macro fabs being redefined. I don't think this is serious. Then
+during the linking of psign, pvalue, pcompos, colorscale, prot, and
+pflip, the compiler complained that .logb, .scalb, and .finite were
+unresolved variables. Thus those programs were not made. Could you 
+help me out? Thanks.
+
+Jack
+cvetp035@csupomona.edu
+
+PS, should I send questions about Radiance to ray@lbl.gov instead of
+directly to you?
+
+Date: Mon, 18 Nov 91 09:40:39 +0100
+From: greg (Greg Ward)
+To: cvetp035@csupomona.edu
+Subject: Re:  Compiling Radiance on RS6000
+
+Hi Jack,
+
+I'm afraid that I know next to nothing about the IBM RS/6000.  Perhaps
+you are not linking to all the necessary libraries.  I suspect that you
+should add -lm to the compilation of those programs.  On most Unix 
+implementations it is unecessary, but on the IBM, who knows?
+
+-Greg
+
+Date: Mon, 18 Nov 91 10:19:56 +0100
+From: greg (Greg Ward)
+To: csw22@seq1.keele.ac.uk
+Subject: Re: compile problems
+
+On some C compilers, there should be a space between the -L option and
+its argument.  Try changing the -L../lib lines in the Makefiles to
+-L ../lib and see what happens.  Also, did you install the library in
+the src/common subdirectory first?  Makeall does this automatically, at
+least it should.
+
+-Greg
+
+<A NAME="NIGHTTIME">=============================================================</A>
+NIGHTTIME	Nighttime renderings
+
+From: Alexander Keith Barber <barber@ravl.rice.edu>
+Subject: night time rendering; mailing list
+To: greg@hobbes.lbl.gov
+Date: Fri, 15 Nov 91 3:43:28 CST
+
+Greg-
+
+Dwayne Fontenot and I have been using Radiance here at Rice U for the past few
+weeks, and it is exactly what we've been looking for.  Dwayne works here at 
+RAVL - the Rice Advanced Visualizaion Lab - and I'm a junior architecture
+major.  We've been using the Radiance program to render projects that I've
+rendered in IBM's AES modeler.  Radiance beats everything else by far for
+interior views! The raytracer in AES is powerful, but the setup to get a
+photorealistic rendered image is a pain in a the ass and then some.  I still
+haven't produced any ray-traced images that look like I want them to.  There
+is RayShadev.4, a great program, but it "just" rayshades; trying to render an
+image with natural light or with an interior view from external sources of
+light is not what RayShade was written for.  Now that we have Radiance to 
+play with, producing images of buildings that I or anyone else has designed
+is going to be a lot easier.
+
+I wanted to ask you about using Radiance with NIGHT TIME images.  That is, we
+would like to try to render at night using the moon for a light source, along
+with any artificial lights that a particular building would need.  I recently
+saw an issue of the French architecture magazine "L'architecure d'Aujourd'hui"
+- today's architecture - that had a lengthly special on night and light.
+There were pictures from old black and white films, there were shots of
+Notre-Dame in Paris lit by different schemes designed by local and inter-
+national firms, there were free-form projects throwing light around a pitch
+black setting.  All of this got me very interested in reproding this kind of
+setting in Radiance.  I would LOVE to render my last project from an exterior
+and interior point of view at night; it would be great to see them.  We 
+would like to know, therefore, how we should set up this kind of scene in
+Radiance.  Any help you can give would be great.  
+
+The other part of my subject is the mailing list.  I would just like to be
+added to the list of users of Radiance and receive any info you send out to
+them.  My physical mailing address here at school is:
+
+	Alex Barber
+	School of Architecture
+	Rice University
+	6100 S Main
+	Houston, TX 77005
+	
+My home phone is currently 713.795.4402.  I can be emailed at barber@spanish.
+rice.edu.
+
+I would just like to finish by telling you that there has been nothing like 
+seeing the views in Radiance of my projects, since this is the closest I will
+get to being "built" until I work for a firm someday.  There is nothing like
+the confirmation of your architectural ideas and how you "see" your building
+than having a detailed rendering on the computer that matches your "vision" 
+for that building.  Thank you for writing this program and making it 
+available over the Internet.
+
+-Alex Barber
+ 
+Date: Mon, 18 Nov 91 10:57:17 +0100
+From: greg (Greg Ward)
+To: barber@ravl.rice.edu
+Subject: Re:  night time rendering; mailing list
+
+Hi Alex,
+
+Thank you for your kind letter and words of encouragement.  I have added
+your name and Dwayne's to the mailing list and you will get the announcement
+when I release version 2.0 of Radiance later this week.
+
+Regarding night time scenes in Radiance, you can define the moon like so:
+
+void light moon_brightness
+0
+0
+3 12 12 12
+
+moon_brightness source moon
+0
+0
+4 xdir ydir zdir 0.5
+
+Unfortunately, I have no idea how to calculate the actual location of the
+moon based on time of night and year.  I only know its approximate radiance
+and size.  You will have to figure out the xdir, ydir and zdir values
+yourself (or fake them for your convenience).
+
+What other information do you need for your night renderings?  Do you need
+to know about light sources?  That is a more complicated topic.  I have
+included some example electric lights in the lib/source/ies subdirectory
+from which you can pick and choose.  If you have a particular light fixture
+in mind, you will need to get an IES data file from the manufacturer and
+translate it using ies2rad, or build up the Radiance input files yourself
+by hand (a little tricky).  You may also use the new 2.0 program lampcolor
+to compute the radiance of diffuse light sources if you just want something
+approximate.
+
+Let me know where you need further help.
+
+-Greg
+
+<A NAME="SUMANT">=============================================================</A>
+SUMANT		Sumant Pattanaik's contributions
+
+From daemon Thu Nov 14 13:13:35 1991
+To: "(Greg Ward)" <greg@lesosun1.epfl.ch>
+Subject: 
+Date: Thu, 14 Nov 91 17:34:18 +0530
+From: sumant@shakti.ernet.in
+Status: RO
+
+Dear Greg,
+
+Its a very long time since I last communicated with U.
+Had some problems. (Occupational hazards U know.)
+Things have not straightened out yet.
+
+Got some breathing time for last two days.
+Managed to make a bit of progress in that radiosity stuff.
+One version is ready. I think I should release it to the
+Radiance users now. At least if the pressure from user group
+builds up I'll be able to add things to it. Otherwise
+it does not progress at all.
+
+One small thing. It'll be better if I generate output in
+the radiance output format. All I support now are UTAH RLE format,
+binary (<rgb><rgb>....) and text (<r g b> <r g b>....).
+I am not too sure about radiance output format.
+If U have a write up handy pl mail it to me.
+Or any pointer to the radiance source would do.
+
+My distribution will have following things:
+	1. previewer ---- A better version of the earlier
+			previewer.
+	2. rad       ---- The radiosity package.
+			It does full-matrix solution.
+			I think I'll also be able to include the progressive
+			solution soon.
+	2. radfilter ---- To convert radiance input data
+			to the input format understood by "rad".
+
+Earlier I promised to send U the PostScript version of my MonteCarlo
+paper. Sorry that I havenot sent it yet. It is 167K.
+Shall I break it down and send it in pieces ?
+
+I dont hear much from HOBBES these days. Have U removed
+me from the mailing list ?
+----
+sumant
+(email : sumant@shakti.ernet.in)
+------------------------------------------------------------------
+Sumant Narayan Pattanaik
+N.C.S.T.
+Juhu, Bombay 400 049
+
+From greg Mon Nov 18 10:10:40 1991
+Date: Mon, 18 Nov 91 10:10:40 +0100
+From: greg (Greg Ward)
+To: sumant@shakti.ernet.in
+Subject: Re:  
+Status: RO
+
+Hello Sumant,
+
+Of course I haven't removed you from the mailing list!  Maybe I had the
+wrong address, though.  I changed it to sumant@shakti.ernet.in now.  Did you
+get the announcement about test simulations available from hobbes?  I mentioned
+you as a possible contributor.  Did you ever finish your comparison runs?  Do
+you subscribe to the global illumination mailing list?  If not, you should
+write to Paul Heckbert <ph@duticg.tudelft.nl> and tell him I said you should
+be on it.
+
+I am about to release version 2.0 of Radiance.  If you want to distribute
+your radiosity package from hobbes as well, I would be honored.  I agree
+that having a user base forces you to be a little more thorough...
+
+As for your request on how to write Radiance pictures, below is a skeletal
+program to write out a floating point picture.  You will need to link to the
+Radiance library, or individually to color.o, resolu.o and header.o.  All
+this will make more sense when you pick up your copy of 2.0 (available both
+from hobbes and from dasun2.epfl.ch <128.178.62.2> by anonymous ftp).  You
+might want to wait a few days, as I plan to make a couple of minor changes
+before announcing it.
+
+/*-----------------------------------------*/
+#include  <stdio.h>
+#include  "color.h"
+#include  "resolu.h"
+
+computepicture(xmax, ymax, fp)		/* compute and write picture */
+int  xmax, ymax;		/* image resolution */
+FILE  *fp;			/* output file */
+{
+	COLOR	*scanout;
+	int	y;
+	register int	x;
+				/* put format and resolution */
+	fputformat(COLRFMT, fp);
+	putc('\n', fp);
+	fprtresolu(xmax, ymax, fp);
+						/* allocate scanline */
+	scanout = (COLOR *)malloc(xmax*sizeof(COLOR));
+	if (scanout == NULL)
+		quiterr("out of memory");
+						/* produce image */
+	for (y = ymax-1; y >= 0; y--) {
+						/* compute this scanline */
+		computscan(scanout, xmax, y);
+						/* write it out */
+		if (fwritescan(scanout, xmax, fp) < 0)
+			quiterr("error writing Radiance picture");
+	}
+						/* clean up */
+	free((char *)scanout);
+	if (fclose(fp) < 0)
+		quiterr("error closing Radiance picture");
+}
+/*------------------------------------*/
+
+Please do send me your paper, either whole or in pieces.  Thanks!
+
+-Greg
+
+<A NAME="COMPILE">====================================================================</A>
+COMPILE		Compile problems relating to X11 and malloc.c
+
+From: dirty@engin.umich.edu (Cameron Javad Esfahani)
+Date: Fri, 22 Nov 91 16:27:39 EST
+To: GJWard@Csa2.lbl.gov
+Subject: How to get Radiance to work with X11
+
+Hello,
+  In the makeall script, it asks you whether you
+have support for X10.  If you answer no, and insert
+x11 in the "special" commandline arguments, I am getting
+a large number of errors.  If I answer yes, I get a few
+errors.  So my question is, if we have X11R4, what should
+I do to get it run under that?  Do you know if the errors
+I am getting when I say yes when asked if I have support
+for X10 are just local errors?  Thank you for any information
+you can give me.
+
+----------------------------------------------------------------------------
+Cameron Esfahani			What can we do?
+dirty@engin.umich.edu			We can go to the center of darkness.
+VizLab, USENET, Macintosh,		Where's that?
+X-windows CAEN Support			New Jersey.
+
+From greg Mon Nov 25 10:30:14 1991
+Date: Mon, 25 Nov 91 10:30:08 +0100
+From: greg (Greg Ward)
+To: dirty@engin.umich.edu
+Subject: Re:  How to get Radiance to work with X11
+Status: RO
+
+I'm sorry for the confusion.  Just answer "no" to the X10 question,
+makeall makes the programs for X11 by default.  I should have made
+this more clear.
+
+-Greg
+
+Date: Mon, 25 Nov 91 05:05:28 -0500
+From: ugli <dirty@engin.umich.edu>
+To: "(Greg Ward)" <greg@lesosun1.epfl.ch>
+Subject: Re: How to get Radiance to work with X11
+Status: RO
+
+Actually, i tried that right after I mailed you.  I feel a little sheepish
+now.  I do wonder if there is better documentation other than the 
+quick tutorial and the man pages.  I haven't looked at the macintosh
+document.  Does this tell me what I need to know about Radiance?
+
+Thanks
+
+-------------------------------------------------------------------------------
+Cameron Esfahani			What can we do?
+dirty@engin.umich.edu			We can go to the center of darkness.
+VizLab, USENET, Macintosh,		Where's that?
+X-windows CAEN Support			New Jersey.
+
+From: apian@ise.fhg.de (Peter Apian-Bennewitz)
+Subject: rpict fails on hp720
+To: gjward@Csa2.lbl.gov (Greg Ward)
+Date: Sat, 7 Dec 91 14:35:42 MEZ
+
+Dear Greg,
+
+rpict fails with bus error in src/common/readfargs.c line 80 .
+
+Workaround: ln -s ../common/bmalloc.c malloc.c  in the rt directory.
+
+Hm. I guess you introduced you own malloc routines to speed things 
+up. Please excuse my ignorance, but does it pay ?
+
+Peter
+
+Date: Sat, 7 Dec 91 08:57:22 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  rpict fails on hp720
+
+Hi Peter,
+
+I'm really surprised that my malloc is not working on your HP.  Do you know
+what the alignment size is?  Do you know what the size of a double is?  Can
+you run the following program on your machine for me?
+
+main()
+{
+	printf("%d\n", sizeof(double));
+}
+
+If the result is more than 8, then I might know what the problem is.  
+Otherwise, I can only suppose that there is a bug unless you forgot to
+specify an HP when you ran makeall and the define -DALIGN=double did not
+get into the rmake command.  Just to check, are you running make manually
+instead of rmake?  This might explain why the correct definitions are not
+going in for your machine.
+
+-Greg
+
+Date: Sat, 7 Dec 91 09:18:37 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  rpict fails on hp720
+
+Hi Peter,
+
+In reply to your question about malloc, I wrote my own both for
+speed and storage efficiency reasons.  As it turns out, there are some
+very good and some very bad implementations of malloc on the systems
+out there.  I don't claim that mine is the best, or even that it's much
+better than average.  It just performs well with my programs, which
+differentiate between memory that might be freed later and memory that
+will be kept for the life of the process (malloc vs. bmalloc).  It also
+avoids some of the computational overhead in some of the more primitive
+malloc's and some of the unreasonable storage overhead in others.  Last
+time I checked, BSD 4.3 was using a version of malloc that for requests
+just near half the system page size (4k requests on the Sun) ended up
+using twice the system page size.  That's a memory utilization of 25%!
+
+On average, my version of malloc gets a memory utilization of 75%,
+which isn't wonderful, but it makes up for this in raw speed, processing
+memory requests and free's and realloc calls faster than any other
+malloc that I know of.  And the alternative call, bmalloc, is not
+only fast, but it gets nearly 100% memory utilization, limited only by
+the alignment size of the machine.
+
+The best malloc I've seen is the one currently used by Sun, which
+is reasonably fast while providing very good memory utilization.
+Best of all, the Sun implementation coalesces memory as it is freed,
+something that is pretty difficult to do.  I only recently added this
+capability to my malloc routines, and it doesn't work nearly as well
+as Sun's code.  Unfortunately, the Sun routines are very complicated
+and not everybody uses their algorithm so I figure I'm better off
+being conservative on other people's machines.
+
+-Greg
+
+From: Peter Apian-Bennewitz <apian@ise.fhg.de>
+Subject: Re:  rpict fails on hp720
+To: "Gregory J. Ward" <greg@hobbes.lbl.gov>
+Date: Sun, 8 Dec 91 15:08:02 MEZ
+
+Dear Greg,
+
+> what the alignment size is?  Do you know what the size of a double is?  Can
+> you run the following program on your machine for me?
+
+here's the output: (looks pretty normal to me)
+
+   datatype                    bytes
+Size of Integer              : 4
+Size of short Integer        : 2
+Size of long Integer         : 4
+Size of unsigned Integer     : 4
+Size of long unsigned Integer: 4
+Size of char                 : 1
+Size of float                : 4
+Size of double               : 8
+
+
+I haven't checked the bus error in detail, however when using xdb
+its possible to check the contents of the variable without error.
+a read acces seems to work !??!?!?! 
+Currently its all WIHIH to me (WhatInHellIsHappening).
+When running, the programs complains about "exp: range error". ??
+
+Yet another question: The Hp720 b/w flavour comes with X11 visual
+type "GrayScale", same thing as "PseudoColor" (8 planes), but b/w.
+That's the only visual the server supports.
+I'd be more than happy to write an add-on, but before jumping into
+source code, how much work would that be (beside the X11 stuff).
+
+Thanks a lot for the malloc explanation, it looked like an xtra
+to me, but your program does use incredible small amounts of memory
+when running, so it's probably a good thing.
+
+Peter
+-- 
+
+Date: Sun, 8 Dec 91 18:30:45 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: Re:  rpict fails on hp720
+
+Hi Peter,
+
+The only thing I can think of is that you compiled with make instead of
+rmake or makeall and the wrong defines were used on malloc.c.  Did you
+check this possibility?  You can remove malloc.o and run rmake in the
+rt subdirectory and you should get a cc line with -DALIGN=double in it.
+(Don't forget to relink malloc.c instead of bmalloc.c.)  Were you serious
+about Radiance not using much memory?  Obviously, you haven't gotten to
+any of the larger models.
+
+What model were you rendering when you got the exp range error?  This
+message often shows up when there is an underflow condition, something
+we would all like to ignore (eg. exp(-500) = 0), but some math
+libraries won't let us.  Were you using a model with a call to exp()
+in a library file, or were you using gensky?  It could have come from
+that.  If it is coming from internal underflows of exp(), I would like
+to know about it so I could avoid this message in the future.
+
+With regards to the GrayScale visual, I should be checking for that in
+x11.c I suppose, but I just assumed that all grayscale servers would
+accept the PseudoColor visual type.  Rview and ximage should work with
+greyscale displays using the -b options of each.  Unless you add in a
+test to allow for it, though, both programs will insist on getting
+PseudoColor visuals.  Personally, I think the way X11 handles the various
+display possibilities sucks.  Testing for every possible configuration
+is a programming nightmare.  Since I'm not exactly sure how a grayscale
+monitor is supposed to map its values, I don't know if you would have
+to add anything besides the one test to rt/x11.c and px/x11raster.c.
+
+-Greg
+
+<A NAME="OPENWINDOWS">=====================================================================</A>
+OPENWINDOWS
+ 
+Date: Fri, 11 Oct 91 16:03:28 Z
+From: Environmental Design Unit <edu@leicester-poly.ac.uk>
+To: greg@lesosun1.epfl.ch
+Subject: RADIANCE
+
+Greg,
+
+I've got v2.0 up and running, no trouble at all thanks
+to your installation script.  I haven't had the time to
+do anything interesting with it yet - other (thermal)
+work has taken priority - but I hope to start a programme
+of daylighting simulation work in the near future.
+In the meantime could you advise on the best way to get hold
+of the PLINK translator.  My supervisor, Kevin Lomas, spoke to
+Raphael Compagnon about this at the PLEA conference.
+Perhaps we should also get hold of SUPERLITE and include it
+in any validation work we may do.  Any ideas?
+
+The DF contour in RADIANCE v2.0 is a great help.  However,
+for direct visual comparison of different cases, fixing of
+the contour levels, at say 1, 2, 4, 10, 20, 40%, would make
+evaluation much easier.  I think i've figured out how the
+routine works, but I can't see how the levels could be fixed.
+
+On a more trivial note, users of OpenWindows may find some
+bindings helpful.  So far, i've bound *.pic, *.rad & *.oct
+to their own icons.  Application ximage is bound to *.pic
+and getinfo to *.oct (which of course appears in the console).
+Simple stuff, but it does speed things up being able to
+use the file manager to browse through pic files and 'get the info'
+on oct files.  You may wish to pass this on to Sun - SunOS 4.1.1
+users of RADIANCE.
+
+Hope you enjoyed your vist to the UK.
+
+-John
+
+Date: Mon, 14 Oct 91 12:18:30 +0100
+From: greg (Greg Ward)
+To: edu@leicester-poly.ac.uk
+Subject: Re:  RADIANCE
+
+Hi John,
+
+I did have a pleasant visit to the UK.  I'm sorry again that our schedules
+didn't work well together.  I have forwarded your request for a copy of
+PLINK and Superlite to Raphael, and he should send you one shortly.  I
+forget whether you need to go through official channels or if we can just
+send you a copy.  It would be nice to include it in your validation studies.
+
+I am glad you have had some luck with the dayfact script.  I have been rather
+disappointed in the output I have gotten, which seems to be of low quality
+due to the abnormal use of pfilt to enlarge a tiny image.  Anyway, I think
+you are right that control of the output is critical for comparisons, so
+here is a fixed-up version of the script that always sets the maximum
+value to 100%.  You can alter this to whatever you like with the -s option
+(see the falsecolor manual page), and the -n option will determine how
+many contours you will get.
+
+I know zip-diddley about OpenWindows, but I will put your suggestions in
+the next digest.  Thanks!
+
+-Greg
+
+Date: Mon, 21 Oct 91 15:19:00 Z
+From: Environmental Design Unit <edu@leicester-poly.ac.uk>
+To: greg@lesosun1.epfl.ch
+Subject: RADIANCE and OpenWindows
+
+Hi Greg,
+
+Here's the trivial mods (accelerators?) to the OpenWindows filemanager.
+
+The aesthetics of the icons are questionable!
+
+Yours,
+
+-John
+
+Using RADIANCE in OpenWindows                            21 Oct 1991
+-----------------------------
+
+Modifications to filemanager bindings
+
+Edit the file rad.filetype giving the applications "ximage" and
+"getinfo" the correct path name from root.  Do the same for the icons
+pic, rad and oct.  Copy rad.filetype to your home directory and put the
+icons in your icon directory.  Goto your home directory and type the
+command:
+
+      cat .filetype rad.filetype >> .filetype
+
+Then remove rad.filetype.
+
+Quit the filemanager (if you have one running) and restart it.  All
+*.pic, *.rad and *.oct files will be identified by their own icon.
+Double clicking (SELECTING) with the left mouse button on a *.pic icon
+in the filemanager will execute "ximage" and put that picture up on the
+screen.  The same on an *.oct icon will execute "getinfo", writing the
+output to the console.  To all *.rad files the print script "pr"
+(paging) has been added.
+
+You can change the colours by re-setting rgb values (5th argument on
+each line).
+
+(You can assign whatever applications, print-scripts and icons to a
+file which, by default appears as a "text" file in the filemanager.
+Giving executables new icons may cause the icon to almost fade-out,
+depending on the colour set, when selected - instead of changing to
+black like it should.  This appears to be a bug, originating deep in
+the system software.)
+
+
+-John Mardaljevic     e-mail:   edu@uk.ac.leicp
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 0</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+</h5>
+</html>

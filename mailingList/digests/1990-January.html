@@ -1,0 +1,603 @@
+<TITLE>
+Radiance Digest v1n1
+</TITLE>
+<body>
+<a name="top"><h2>RADIANCE Digest Volume 1, Number 1</h2></a>
+<hr><pre>
+
+Hello folks,
+
+Since I've gone to the trouble of setting up this mailing list of Radiance
+users, I might as well use it for something.  (By the way, feel free to
+send mail directly to the group yourself -- it's ray@hobbes.lbl.gov.)
+
+This is the first edition of a digest of correspondence between myself and
+other program users.  I just take what I think might be interesting to
+the general populace, not everthing.  (You're welcome.)  If you send me
+mail that you don't want shared in this fashion, please tell me so at
+the time.
+
+I will start with mail I received (or sent) this year -- I think the older
+stuff is too out of date now, anyway.  In this digest, you will find
+discussions on the following topics:
+
+	<A HREF="#OPTIONS">New options and programs (-p, -z, pinterp)</A>
+	<A HREF="#PENUMBRAS">Penumbras and source sampling</A>
+	<A HREF="#MODELS">Modeling software</A>
+	<A HREF="#DRIVER">Radiance display drivers</A>
+	<A HREF="#LIGHT">Pfilt and ies2rad light sources</A>
+	<A HREF="#SIZE">Modifiying source for huge scenes</A>
+	<A HREF="#COURSE">Radiance course possibility</A>
+
+<A NAME="OPTIONS">--------------</A>
+OPTIONS
+
+From greg Thu Jan 11 12:18:04 1990
+Date: Thu, 11 Jan 90 12:17:59 PST
+Subject: new programs and options
+
+Dear Radiance users,
+
+There is a new rview driver for X11 (written by Anat Gryberg) and a new
+program for interpolating new views from images, called pinterp.  There is
+also a new option for rpict and pfilt to set the pixel aspect ratio of the
+output picture, and rview no longer takes x and y resolution arguments.
+Under X10 at least, you will notice that rview now responds to resize
+requests.
+
+Here are some release notes on the changes:
+
+Added a -p option to rpict and pfilt to set the pixel aspect ratio for
+output.  Instead of giving the absolute x and y resolutions, the user
+now gives rpict and pfilt the maximum desired resolution for x and y
+and the pixel aspect ratio is used along with the given view to
+calculate appropriate values within this boundary.  This makes for
+much more natural view specifications.  For example, for a 512x400
+device with a pixel aspect ratio of 1.0, the pfilt command:
+
+	pfilt -x 512 -y 400 -p 1
+
+will always produce the appropriate output, regardless of the aspect
+ratio of the input picture.  If necessary, the x or y output resolution
+will be reduced to accommodate the device's resolution.  A square image
+would occupy a region of 400x400 pixels.
+
+View shift and lift options were added to the list of standard view
+parameters, for specifying views for panoramas and holograms.
+
+Rview no longer takes options for x and y resolution, but instead
+gets them from the device driver along with the pixel ratio.  This
+makes it much easier to change the view aspect ratio (with the vh
+and vv parameters).
+
+A -z option was added to rpict to write out the distances for each
+pixel in an image.  This may be useful for z-buffer operations, and
+is used by the new program pinterp, described below.
+
+A program called pinterp, was added to the burgeoning list of
+picture filters and converters.  This program is designed primarily
+to interpolate animated frames for walk-throughs of static scenes,
+but it has a number of other useful functions besides.  It takes as
+its input one or more rendered pictures (with their corresponding z
+value files) and desired viewpoint (hopefully not too far afield from
+the given images).  Pinterp then takes the input frames and moves the
+pixels to their new computed location.  Filling operations make sure
+that the final image does not have large unpainted regions.
+
+-Greg
+
+From greg Tue Jan 16 08:48:57 1990
+Date: Tue, 16 Jan 90 08:48:48 PST
+To: dasilva%ced.Berkeley.EDU@jade.berkeley.edu
+Subject: Re:  recovering rpicts
+
+Hello Deanan,
+
+The -x and -y options have not been replaced in rpict, -vs and -vl are new
+options.  There is another new option, -p, which you will need to set to 0
+to get your recovery operation to work.  Simply add -p 0 to every rpict
+command in your makefile.  This wouldn't normally be required, except that
+you are recovering files you created with the old rpict, which didn't pay
+attention to pixel aspect ratios.  Read the new manual page for rpict to
+understand what I'm talking about.
+
+The -z option of rpict is easy to use.  Simply give it the name of the
+file where you want to store the z buffer information, then stand back!
+The z-file can be quite large, since it stores 4 bytes for every pixel.
+For a 512x512 image, that's already 1 megabyte.  You don't need to do
+anything special to recover z-file information, just use the option as
+you did in the aborted rendering.
+
+Good luck, and let me know if you have any other questions.
+
+-Greg
+
+<A NAME="PENUMBRAS">-----------</A>
+PENUMBRAS
+
+From greg Fri Jan 19 11:36:32 1990
+Date: Fri, 19 Jan 90 11:36:25 PST
+To: anderdla@cs.uoregon.edu
+Subject: penumbras
+
+Dear Darren,
+
+Thank you for your letter.
+
+You don't need to change your scene description at all to generate
+penumbras, only the options to rpict (or rview).  Set -dj to some
+value less than 1.  For most scenes, a value of .5 will do nicely.
+If the value is too close to 1, strange things may happen for
+irregularly shaped light sources (see the BUGS section of the rpict
+manual page).  Spherical light sources work best, but rings and nearly
+square polygons work also as area light sources.  Note that if your
+light source is small in relation to the ratio of the obstruction-
+shadow vs source-shadow distance, then the penumbras will not be
+very pronounced (ie. the shadows will be sharp).
+
+I am glad to hear that you are using the software!
+
+-Greg
+
+From greg Fri Jan 19 11:39:57 1990
+To: anderdla@cs.uoregon.edu
+
+There is one other thing I should mention.  When you generate penumbras,
+image sampling may start to cause problems.  You may need to set the -sp
+option to 1, which will result in longer rendering times.  This is why
+direct jitter is not turned on normally (rpict -defaults).
+
+-Greg
+
+From anderdla@cs.uoregon.edu Mon, 22 Jan 90 13:07:12 PST
+To: greg@hobbes.lbl.gov
+Subject: More questions!
+
+Well, thanks for telling me about -dj!  There is a real nasty side
+effect,though.  It seems the as I increase shadow jitter, the picture
+becomes increasingly grainy.  I have tried changing the -sj, and -sp
+parameters to overcome this.  I have also tried using pfilt to no
+avail.  Do you know how to overcome this problem??
+
+Thanks.
+Darren Anderson
+
+From greg Mon Jan 22 13:26:05 1990
+To: anderdla@cs.uoregon.edu
+Subject: Re:  More questions!
+
+Are your light sources very long and narrow?  This can cause big
+problems for the -sj algorithm.  You must break up any long sources
+into smaller, more square pieces.  Even if your light sources have
+an aspect ratio around 1 (ideal), you still should not use a value
+for -dj greater than about .7 .
+
+A modest amount of graininess is to be expected of any Monte Carlo
+sampling technique.  In this case, it is caused by the angle between
+the surface and the light source direction varying with the source
+sampling.  To reduce the amount of graniness, either lower -dj
+(cheap) or raise the resolution for rpict and use pfilt to antialias
+down to the final picture resolution (accurate):
+
+	rpict -dj .5 -sp 1 -x 1024 -y 1024 octree > rpict.pic
+	pfilt -x 512 -y 512 -r .7 rpict.pic > pfilt.pic
+
+The -r option of pfilt uses a Gaussian filter, which looks slightly
+better than the default box filter.  If you have adjusted your
+light sources to give you the picture brightness you want straight
+out of rpict, you can use the -1 option of pfilt to speed it up.
+If you don't want to produce an intermediate file (rpict.pic), you
+can pipe the output of rpict directly into pfilt.
+
+-Greg
+
+<A NAME="MODELS">-----------</A>
+MODELS
+
+From hchen@gumbo.age.lsu.edu Tue Apr 10 07:34:56 1990
+To: gjward@Csa1.lbl.gov
+Subject: CAD programs
+
+Dear Mr. Ward,
+
+1.  We read your RADIANCE Tutorial within RADIANCE package, it says that 
+the input model may contain many thousands of surfaces, and is often 
+produced by a separate CAD program'.  We would like to know what kind of 
+CAD programs can be used in this situation.  Can we use AutoCAD as a mean 
+to produce a model?  If so, how?
+
+2.  I try to run the examples under examples/conf subdirectory using make 
+command.   It give me the error message of "chair1.oct not found".  The 
+original Makefile is as:
+
+   #
+   # Makefile for the conference room
+   #
+
+   VIEW = -vf vf/current
+   SCENE = test
+   #DEV = X
+   DEV = sundev
+   AMB = -av .02 .02 .02
+   OCTOPTS = -f
+
+   view:   $(SCENE).oct
+           rview $(VIEW) -o $(DEV) $(AMB) $(SCENE).oct
+
+Actually, octree file 'chair.oct' sits under current directory. I don't 
+know why the programs couldn't find it.
+
+Thank you for your help.
+
+Huaiming Chen
+
+From greg Tue Apr 10 12:04:25 1990
+To: hchen@gumbo.age.lsu.edu
+Subject: Re:  CAD programs
+
+The conference model is probably not working because you haven't set your
+RAYPATH variable to include the current directory ".".  Radiance uses this
+environment variable to determine where to look for auxiliary files (incl.
+instance octrees).  The default value is ".:/usr/local/lib/ray", which
+includes the current working directory.
+
+There is currently no translator from AutoCAD, but we expect to have one
+sometime in the near future.  For it to work, the model would have to 
+have been created with surfaces, rather than lines.
+
+We have a translator for GDS (from McDonnell Douglas) and may have one
+for MacArchitrion soon as well.
+
+Right now, genbox, genrev and gensurf are the most useful surface description
+generators (oh, not to forget genprism, one of my personal favorites).
+
+-Greg
+
+<A NAME="DRIVER">----------</A>
+DRIVER
+
+From mb@cs.albany.edu Thu Jun 21 12:50:30 1990
+To: GJWard@Csa1.lbl.gov
+Subject: RADIANCE
+
+Dear Mr Ward,
+
+   We have a network of sun3's and sun4's running sunos 4.0.3. We
+just installed RADIANCE on both architectures but we're having some
+problems getting it to run. The installation process seemed fairly
+simple - a matter of placing binaries and library files in the right
+places, and so we did not recompile anything. Following the tutorial
+given we get error messages when tyring to invoke rview. These are
+the messsages:
+
+     rview: cannot  open X-windows; DISPLAY variable set?
+     rview: fatal - cannot initalize X
+
+The display variable is set to unix:0.0 for any user, it was not clear
+that this had to be changed in any way. And these messages occurred
+while in X (we run XllR4). If you could give some help in this matter
+we would appreciate it, as we would very much like to use this software.
+
+                                  Thank you,
+
+                                   Michele Buselli
+                                   State University of New York - Albany
+                                   (518) 442-4279
+
+...some back and forth, then:
+
+From greg Wed Jun 27 11:23:12 1990
+To: mb@cs.albany.edu
+Subject: Re:  RADIANCE
+
+Michele,
+
+Since you are already linking the X11 driver into rview directly, there
+is no need to compile the separate driver program x11dev.  Just remove
+it from the DRIVERS definition in your Makefile.  (If you were going to
+build x11dev, you would have to add one more special compile similar to
+that for x10.o, but as I said, it would be redundant in your case.)
+
+If you don't use X10 at all, you should remove the line for x10dev from
+devtable.c.  Rview will still compile with it in, but without building
+x10dev, this driver would not function.
+
+Perhaps I should better explain how drivers work in rview.  A driver
+is an interface to the rview program that provides a few basic graphics
+input and output functions, which are described in driver.h in some
+detail.  There are two basic driver types, drivers that are linked to
+rview directly, and standalone programs that talk to rview via a pair
+of UNIX pipes.  Due to efficiency considerations, linked drivers are usually
+preferred, but there are a few reasons for having standalone drivers
+instead:
+
+	1) The libraries used by the driver are incompatible with
+		other program requirements or drivers.  (Eg. sunview
+		libraries prevent the use of UNIX signal facilities,
+		and X10 and X11 calls interfere.)
+
+	2) The libraries are only supported on certain machines.
+
+	3) The driver's libraries result in a huge program.  (Eg. when
+		I attempted to link rview to sunview in the past, the
+		compiled program quadrupled in size!)
+
+	4) Standalone drivers can be compiled without changing any of
+		the code for rview, thus avoiding the need for source
+		recompilation.
+
+In your case, you will still need to compile sundev as a standalone
+driver, but you can link to x11 directly (as your Makefile does already).
+Compile x10dev only if you are still using X10 on some machines.
+
+-Greg
+
+From mb@cs.albany.edu Wed Jun 27 14:54:11 1990
+To: greg@hobbes.lbl.gov
+Subject:  RADIANCE
+
+Hi Greg,
+
+Thanks very much. The Makefile compiled just fine. I'm in the process
+of looking through the rest to see if I need to make any changes. At
+first glance, there doesn't seem to be a need for this. Just out of
+curiosity, what kind of environment do you run Radiance under?
+
+Michele
+
+From greg Wed Jun 27 15:05:57 1990
+To: mb@cs.albany.edu
+Subject: Re:  RADIANCE
+
+Hi Michele,
+
+The environment here is sunny most of the summer, although we do get some
+fog in the mornings (which is nice because things cool down then).
+Oh -- I guess you mean what kind of computer environment, huh?
+
+I have a single Sun-3/60 running SunOS 3.5 and X10R4, and it hasn't
+changed much in the two years since I bought it.  We recently received
+a grant from Apple and have been running the programs on a MacIntosh
+IIcx running A/UX 1.1.1 and X11R3.  (We have just ordered A/UX 2.0.)
+The architecture department at UCB, which has been using Radiance quite
+a bit, is running mostly Sun computers, although they were recently
+given about 10 Silicon Graphics IRIS workstations and I am in the
+process of getting drivers up on those machines.
+
+I don't use sunview much myself, though I have easy access to it.  By far
+the environment Radiance has been used and tested in most heavily is Sun-3's
+running SunOS 3.5 or 4.0 and X10.  I wish I had better contact with people
+using the software on different systems, so I could incorporate their
+modifications and additions back into the distributed code, but I don't
+communicate much with folks outside of UCB.
+
+-Greg
+
+<A NAME="LIGHT">----------</A>
+LIGHT
+
+From emo@cica.indiana.edu Wed Aug 15 07:41:29 1990
+To: greg@hobbes.lbl.gov
+Subject: why luminance intensities so low???
+
+Why is it the case that the radiance values output from ies2rad
+seem to be woefully low?  It's not unusual for the initial values
+to have to be increased by factors of 3-10.  Is there some trick
+I'm missing that can be played with the '-dX' option to ies2rad?
+
+For instance, if one were to set up an actual IES lighting device
+10 feet from a white wall the visual impact of that illumination
+is much more profound than that obtained by simulating the same IES
+light source in Radiance projected onto a white wall 10' away.
+
+Any clues/suggestions?
+
+eric
+
+From greg Wed Aug 15 07:54:00 1990
+To: emo@cica.indiana.edu
+Subject: Re:  why luminance intensities so low???
+
+Hi Eric,
+
+Thanks for spotting the inconsistency in func.c!  I will fix it on
+future distributions.  (I think only one other went out with the wrong
+version.)
+
+As far as the low light levels are concerned, you must specify the
+same units to ies2rad with the -dX option as you are using in your
+scene.  Other than that, you must also realize that the image you
+get from rpict is not exposure-adjusted, and you will probably have
+to use pfilt to get a nice picture.  The pixel values in the file
+correspond to radiance, which is not always in the right range for
+display.  Pfilt fixes that.
+
+-Greg
+
+From emo@cica.indiana.edu Wed Aug 15 09:06:00 1990
+To: greg@hobbes.lbl.gov
+Subject: using pfilt
+
+Could you send me a bit more info on using 'pfilt' to obtain
+an exposure-adjusted image?  Is the 'one-pass' option better
+in this regard?  What about using the other 'filtering' functions?
+
+eric
+
+From greg Wed Aug 15 18:22:53 1990
+To: emo@cica.indiana.edu
+Subject: Re:  using pfilt
+
+Pfilt without any options just does an automatic exposure adjustment.
+The -1 option is faster, but only works if you know already what
+exposure to set.  If you had run pfilt before, then getinfo printed
+a line from the final picture saying:
+
+	EXPOSURE=3.52
+
+then you could run pfilt -1 -e 3.52 the next time and get the same
+picture a little bit faster.
+
+The other options are for anti-aliasing and rely on turning a big,
+high-resolution picture into a smaller, anti-aliased picture.  The
+-r option (with a value of .6 or so) produces a nicer image at a
+slightly higher processing cost.
+
+-Greg
+
+<A NAME="SIZE">---------</A>
+SIZE
+
+From emo@cica.indiana.edu Sun Sep  2 14:55:54 1990
+To: greg@hobbes.lbl.gov
+Subject: large polyhedra
+
+Greetings Greg.
+
+Another of the projects I am working on involves some astronomers who
+produce large-ish data sets, on the order of 65x65x15 (symmetric about
+x-z plane).  We then use a modified marching-cubes 3D contouring algorithm 
+to resolve certain polyhedra of interest, e.g. surfaces w/ specific gas density.
+These polyhedra are sometimes composed of 40,000+ discrete polygons
+(actually, triangles).  Converted to Radiance 'polygon' format,
+this file becomes ~9+ Mb and 'oconv' crashes when producing the .oct
+file, indicating that it is out of 'object space'.
+
+Thus, I have two questions:
+
+1. by modifying MAXOBJBLK in object.h and recompiling 'oconv' can
+I increase the available space for object storage and thereby permit
+the loading of my 9+ Mb polyhedra specification?
+
+2. alternatively, I would like to simply be able to load a .geom
+file, composed of a vertex table and edge list for each discrete
+polygon.  Looking at the code in 'readobj.c', it's not clear how
+I can go about implementing the code to interface to this new kind
+of 'object'.  What would you suggest?
+
+As always, thanks for the support!
+
+eric
+
+From emo@cica.indiana.edu Sun Sep  2 14:58:24 1990
+To: greg@hobbes.lbl.gov
+Subject: polyhedra size
+
+I just discovered that some of the contour surface have upwards of 80,000
+polygons in their specification.
+
+One more question:  when approaching 100K polygons, am I going to run into
+performance bottlenecks in Radiance's implementation.  In other words,
+is it realistic to expect rapid renderings, esp. using 'rview', of
+such large polyhedra?
+
+Thanks.
+
+eric
+
+From greg Sun Sep  2 16:16:10 1990
+To: emo@cica.indiana.edu
+Subject: Re:  polyhedra size
+
+Hi Eric,
+
+I was wondering when someone would want to start working with huge models.
+The main concern is, do you have enough memory?  The performance of oconv
+O(N), meaning 100,000 surfaces should take 100 longer than 1000 surfaces
+to convert.  That is actually going to be your main cost in terms of time.
+Rview and rpict have an O(n^.33) intersection algorithm, so 100,000 surfaces
+in general will take roughly 4.5 times longer than 1000 surfaces.
+
+I don't recommend implementing a vertex sharing polygon structure.  I have
+considered such a model, and it doesn't save much space -- especially for
+triangles.  You are better off just changing the definitions as you suggested.
+
+Besides increasing MAXOBJBLK in object.h (you might try 2047 or 4095 to start),
+you will have to change the type of OBJECT from short to int (or long).  Also,
+you will probably need to increase MAXOBLK in octree.h to 8191 or more or you
+will run out of octree space when running oconv.  Also, for better performance,
+you should probably increase OSTSIZ in objset.c a like amount, using a prime
+number.  (I suggest you start with 12329.)
+
+I hope you have done a "back of the envelope" calculation to figure out how
+much memory this is all going to take.  You may find yourself in over your
+head in a hurry.  For example, I have 16M on my machine, and it starts to
+choke on models of around 18,000 surfaces.
+
+Let me know how it goes and if you run into any other errors.
+
+-Greg
+
+<A NAME="COURSE">-------------</A>
+COURSE
+
+From arthur@abies.cfnr.colostate.edu Mon Oct  8 23:04:48 1990
+To: GJWard@Csa1.lbl.gov
+Subject: RADIANCE
+
+Hello Greg;
+
+	If you recall, I first made contact with you last winter.
+I have recently attempted to tackle RADIANCE again.  The Tutorial
+available in the updated version gave me hope!  I do find it very
+cryptic, however.  Do you offer short courses in RADIANCE ?  I would
+gladly fly out for instruction.  I am unable to progress rapidly
+enough. ANy suggestions?
+
+
+D. Arthur Sampson
+Dept. Forest and Wood Sciences
+Colorado State University
+
+Ph.D. Student
+
+From greg Tue Oct  9 10:45:02 1990
+To: arthur@abies.cfnr.colostate.edu
+Subject: Re:  RADIANCE
+
+We are going to have a meeting on Radiance and Superlite (a daylighting
+analysis program) this January at LBL, and might be able to work a short
+tutorial into it.  If that's too far away for you, and you have a little
+money to spend, I might be able to recommend someone who has an excellent
+background in using the software to serve up some private lessons.
+
+-Greg
+
+From arthur@abies.CFNR.ColoState.EDU Tue Oct  9 11:53:43 1990
+To: greg@hobbes.lbl.gov
+Subject: RADIANCE meeting
+
+Hi;
+	I would be interested in seeing an agenda for the meeting,
+or if a Tutorial is appropriate for my request (Would I be 
+welcome in the meeting?), that would work nicely. Also, of 
+interest now is this Superlite program you mentioned.
+
+Arthur
+
+------------
+End of Radiance Digest v1n1
+
+Let me know if this has been useful to you.  It is not my intention to
+flood people's boxes with unread mail.
+
+-Greg
+</PRE>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 1, Number 1</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</body>

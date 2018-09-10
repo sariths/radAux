@@ -1,0 +1,2121 @@
+<TITLE>
+Radiance Digest, v2n2
+</TITLE>
+<html>
+<a name="top"><h2>Radiance Digest Volume 2, Number 2</h2></a>
+<hr>
+<pre><body>
+Dear Radiance Users,
+
+Here is the latest backlogged collection of electronic mail exchanges on
+various topics of hopeful interest.  As always, you can search for the
+subjects you want.
+
+	<A HREF="#STRANGE_VIEWS">STRANGE_VIEWS</A>		Methods for generating odd images
+	<A HREF="#SMLFLT_OPTION">SMLFLT_OPTION</A>		Problems with SMLFLT compile switch in 2.0
+	<A HREF="#ANTIMATTER">ANTIMATTER</A>		How to use antimatter type
+	<A HREF="#DAYLIGHT_SIMULATION">DAYLIGHT_SIMULATION</A>	Understanding daylight simulation options
+	<A HREF="#LUMINOUS_EFFICACY">LUMINOUS_EFFICACY</A>	Change in luminous efficacy between 1.4 and 2.0
+	<A HREF="#RPICT_PARAMETERS">RPICT_PARAMETERS</A>	What are the useful ranges of rpict parameters?
+	<A HREF="#GENSURF">GENSURF</A>			New gensurf capabilities and making teapots
+	<A HREF="#ALIASING">ALIASING</A>		Aliasing and image representation
+	<A HREF="#SHARED_PICTURES">SHARED_PICTURES</A>		Sharing picture files
+	<A HREF="#AMIGA_PORT">AMIGA_PORT</A>		New port available for Amiga
+	<A HREF="#DECSTATION">DECSTATION</A>		Problems running on DECstations
+	<A HREF="#INFRARED">INFRARED</A>		Using Radiance in infrared spectrum
+	<A HREF="#SPECULARITY_BUG">SPECULARITY_BUG</A>		Bug in specular highlights of 2.0
+	<A HREF="#VIEW_INFO">VIEW_INFO</A>		Getting view information from files
+	<A HREF="#BACKGROUND_COLOR">BACKGROUND_COLOR</A>	Changing the background color
+	<A HREF="#UPFRONT_TRANSLATOR">UPFRONT_TRANSLATOR</A>	Translator now available for Alias UpFront!
+	<A HREF="#SCENE_FLATTENING">SCENE_FLATTENING</A>	Flatting Radiance scene descriptions
+
+I intend to release version 2.1 shortly, and will make an announcement
+at the appropriate time.
+
+-Greg
+
+<A NAME="STRANGE_VIEWS">==========================================================================</A>
+STRANGE_VIEWS
+
+Date: Wed, 15 Jan 92 16:25:30 -0500
+From: David Jones  <djones@lightning.McRCIM.McGill.EDU>
+To: Greg Ward <greg@hobbes.lbl.gov>
+Subject: Radiance question
+
+Hi Greg,
+
+I would like to generate an image which, instead of pixels indexed
+by X and Y on an image PLANE, would have pixels indexed by angles
+of azimuth and elevation.  I know I could work out some
+transformation to take a rendered image and "warp" it, but it would be
+much more efficient to do it directly.
+
+Any suggestions?
+
+thanks,
+  Dave
+
+Date: Wed, 15 Jan 92 16:06:30 PST
+From: greg (Gregory J. Ward)
+To: djones@lightning.McRCIM.McGill.EDU
+Subject: Re:  Radiance question
+
+Hi Dave,
+
+Nice to hear from you again.  How have you been getting on in your new
+position?
+
+I assume by your question that the -vta fisheye view type is not satisfactory
+for your purposes.  This option does produce an image with similar properties
+to those you are asking for, but the center of the image corresponds to a
+polar angle of 0 and surrounding pixels correspond to a polar angle that is
+proportional to the distance from the image center.  Azimuth angle can be
+measured as distance (in radians) about a circle whose center is the center
+of the image.  I can give you the equations for theta and phi as a function
+of pixel location for this type of image if you like.
+
+To produce an image whose upper left corner is (theta,phi)=(0,0) (theta is
+the polar angle and phi is the azimuth), and whose upper right corner is
+(theta,phi) = (0,2pi), and whose lower left corner is (pi/2,0), use the
+following command (setting the -e values to suit):
+
+	% cnt 256 512 | rcalc -e 'xres:512;yres:256' \
+		-e 'vpx:0;vpy:0;vpz:0' \
+		-e 'vdx:1;vdy:0;vdz:0' \
+		-e 'vux:0;vuy:0;vuz:1' -f polar.cal \
+		| rtrace [options] -faf octree \
+		| pvalue -r -df -y 256 +x 512 > polar.pic
+
+Here is the file polar.cal:
+
+{
+	Compute polar directions for a given
+	view point, direction and up vector
+}
+	{ compute right and top vectors }
+rux : vdy*vuz - vdz*vuy;
+ruy : vdz*vux - vdx*vuz;
+ruz : vdx*vuy - vdy*vux;
+lru : sqrt(rux*rux+ruy*ruy+ruz*ruz);
+rx : rux/lru; ry : ruy/lru; rz : ruz/lru;
+lvd : sqrt(vdx*vdx+vdy*vdy+vdz*vdz);
+dx : vdx/lvd; dy : vdy/lvd; dz : vdz/lvd;
+tx : ry*dz - rz*dy;
+ty : rz*dx - rx*dz;
+tz : rx*dy - ry*dx;
+
+	{ get input pixel values }
+x = $2; y = $1;
+
+	{ comute theta, phi directions }
+theta = PI/2 * (y+.5)/yres;
+phi = 2*PI * (x+.5)/xres;
+ct = cos(theta); st = sin(theta);
+cp = cos(phi); sp = sin(phi);
+
+	{ output view point }
+$1 = vpx; $2 = vpy; $3 = vpz;
+
+	{ output view direction }
+$4 = dx*ct + rx*cp*st + tx*sp*st;
+$5 = dy*ct + ry*cp*st + ty*sp*st;
+$6 = dz*ct + rz*cp*st + tz*sp*st;
+
+----------------------------------
+I gave the above a try and it seems to work for my simple example.  I hope
+that changes of view and output resolution are clear, and I think
+you can figure out how to modify it for different ranges of theta and phi.
+
+If you don't have version 2.0 of Radiance, this is not going to work
+without some modifications.  Let me know how it turns out!
+
+-Greg
+
+<A NAME="SMLFLT_OPTION">===================================================================</A>
+SMLFLT_OPTION
+
+Date: Thu, 16 Jan 92 18:22:19 -0500
+From: David Jones  <djones@lightning.McRCIM.McGill.EDU>
+To: Greg Ward <greg@hobbes.lbl.gov>
+Subject: trouble with lighting
+
+I know I've enountered this problem before, but I forget the solution.
+Some of my surfaces look speckled.  I have deposited a file
+in hobbes:/pub/xfer/speckle.pic.Z.
+I dumped this out of rview.  Do you have any sugestions?
+
+dj
+
+Date: Thu, 16 Jan 92 15:47:17 PST
+From: greg (Gregory J. Ward)
+To: djones@lightning.McRCIM.McGill.EDU
+Subject: Re:  trouble with lighting
+
+Hi David,
+
+Actually, I don't think you've run into this exact problem before.  There
+are other instances where using the -dj option can cause black spots, but
+I don't think that's the case here.  The problem (my guess) is that you
+said you wanted to use huge models during the Q&A session before building
+the 2.0 distribution.  Answering yes to this particular question can (as
+you were warned) result in some artifacts.  This is the price of using
+single rather than double precision numbers for the geometry calculations.
+I don't recommend it unless memory is really at a premium, for obvious
+reasons.
+
+To rebuild the distribution using double precision arithmatic throughout,
+do a makeall clean followed by a makeall install.  Say "yes" to the question
+about modifying the rmake command, and remove the -DSMLFLT option therein.
+
+If -DSMLFLT is not in your rmake file, then I'm wrong and I'll have to
+think a little harder to figure out what's going on.
+
+-Greg
+
+Date: Thu, 16 Jan 92 19:43:56 -0500
+From: David Jones  <djones@lightning.McRCIM.McGill.EDU>
+To: greg@hobbes.lbl.gov
+Subject: Re:  trouble with lighting
+
+and have you done away with "x11dev" ?
+I can't tell whether I botched the install or
+whether an script I use explicitly refers to x11dev when it is no
+longer needed.  I the old x11dev from before and it seems to work.
+I seem to have trouble changing the viewpoint.  For example,
+I would change it to 100 100 50 and then it would
+be 3.399, 3.399, 1.777 (or something else way off).  If this persists
+after the SMLFLT change, I'll let you know.  Otherwise don't worry about it
+unless it sounds familiar.
+
+dj
+
+Date: Fri, 17 Jan 92 09:33:21 PST
+From: greg (Gregory J. Ward)
+To: djones@lightning.McRCIM.McGill.EDU
+Subject: Re:  trouble with lighting
+
+Hi Dave,
+
+Thanks for pointing out the problem with viewpoint changes.  It's a bug
+associated with the SMLFLT option that I hadn't caught.  It will be fixed
+in the next distribution.  I don't think enough people are using this
+compile switch to make it worth sending out a patch.
+
+The X11 driver is now built in as the default in rview, so you can either
+specify no -o option or use -o x11 if you want to be explicit.  The old
+x11dev separate program driver will still work, but it's less efficient.
+
+-Greg
+
+<A NAME="ANTIMATTER">============================================================</A>
+ANTIMATTER
+
+Date: Fri, 17 Jan 92 13:34:09 -0500
+From: David Jones  <djones@lightning.McRCIM.McGill.EDU>
+To: greg@hobbes.lbl.gov
+Subject: Re:  I may be right ...
+
+Sorry for all the questions today, but ...
+
+I want to construct a shape and I think antimatter is appropriate, though
+I have never been able to get antimatter to work.  I don't think I
+understand the instructions in ray.1
+
+I want to start with a cylinder CYL1 made of material MAT1
+and then take another cylinder CYL2 which intersects CYL1 and cut out
+the intersection.  I don't want CYL2 visible, but when a ray passes
+from the invisible CYL2 into the volume of CYL1 I want a surface to 
+be visible and made of MAT2.
+
+Can I do this with antimatter?
+
+dj
+
+Date: Fri, 17 Jan 92 13:54:48 -0500
+From: David Jones  <djones@lightning.McRCIM.McGill.EDU>
+To: Greg Ward <greg@hobbes.lbl.gov>
+Subject: last one for today I hope
+
+Greg,
+
+So now I have a complicated scene with lots of Radiance description files.
+I get the following error message:
+
+oconv room2.r > room2.oct
+xform: (standard input): unknown object type "xform"
+xform: (standard input): unknown object type "xform"
+
+
+I know this will be easy to fix but where the heck in all the files
+oconv has looked does this error occur?  Would it be easy
+to add a "-v" option to "oconv" that printed all the file names
+as things were opened and closed?  This will pinpoint where this
+xform error message is coming from.
+
+dj
+
+Date: Fri, 17 Jan 92 11:18:32 PST
+From: greg (Gregory J. Ward)
+To: djones@lightning.McRCIM.McGill.EDU
+Subject: Re:  I may be right ...
+
+MAT1 cylinder CYL1
+0 0 7 ...
+
+void antimatter AMAT2
+1 MAT2
+0 0
+
+AMAT2 cylinder CYL2
+0 0 7 ...
+
+AMAT2 ring CYL2.cap1
+0 0 8 ...
+
+AMAT2 ring CYL2.cap2
+0 0 8 ...
+
+The above should work as you describe.  The rings at each end are necessary
+to make CYL2 an enclosed solid.  Remember that the materials MAT1 and MAT2
+cannot be of type trans or glass, and that the viewpoint must be outside of
+all volumes involved.
+
+The second problem is more difficult.  I suppose a verbose option could
+be added that would mention every opening of a file or starting of a
+command in oconv and xform, but the output would be voluminous to say the
+least.  I recommend instead that you use the following command to try to
+localize the error:
+
+	% xform -e room2.r |& more
+
+The error message will appear shortly before the correspoding point in
+the expanded file.
+
+-Greg
+
+Date: Sun, 19 Jan 92 16:26:00 -0500
+From: David Jones  <djones@Olympus.McRCIM.McGill.EDU>
+To: Greg Ward <greg@hobbes.lbl.gov>
+Subject: "popen" woes
+
+So I can't tell whether this is the fault of my radiance description
+files (though I really doubt it) or a bug in Radiance or
+some problem with our SPARCs.
+
+I am still getting difficulties with "oconv file.r" when "file.r"
+contains a lot of recursive "! cat otherfile.r | xform ...".
+
+The new twist is that I am printing out debugging messages
+to trace your popen() and pclose() calls.
+
+The symptom is that "oconv" just hangs midway through its job, but
+only sometimes.  If I kill the process, delete the ".oct" file and
+restart it, then it might work the next time.
+
+How would oconv react if the system ran out of process-table entries
+or max # of open files, or something like that.  Would it silently hang?
+
+dj
+
+Date: Sun, 19 Jan 92 15:33:35 PST
+From: greg (Gregory J. Ward)
+To: djones@Olympus.McRCIM.McGill.EDU
+Subject: Re:  "popen" woes
+
+Hi Dave,
+
+You shouldn't even be using "cat file | xform [args]" -- "xform [args] file"
+is much more efficient and involves fewer processes.  You should also include
+"-e" as the first optiont to xform to reduce the number of open processes.
+I don't know what happens when the system runs out of process table entries
+under SunOS.  If you run out of open file entries (although a depth up to
+32 is safe on most machines), then oconv will report an error message.
+
+The most common reason for oconv to hang is if you forgot to give xform or
+some other command an input file and it is trying therefore to read from the
+standard input.  This has unpredictable results, which is consistent with the
+behavior you are reporting.  Look out for commands such as "cat | xform .."
+or "xform [args]" without a file name.
+
+I hope this helps.
+-Greg
+
+<A NAME="DAYLIGHT_SIMULATION">=================================================================</A>
+DAYLIGHT_SIMULATION
+
+
+Date: Fri, 17 Jan 92 09:42:41 PST
+From: kovach@ise.fhg.de
+Subject: Radiance
+To: GJward@lbl.gov
+
+Hi Greg, 
+
+I just left LBL and already I have more questions.  I just
+talked to Peter Ap. about radiance and I have a few questions about
+it.  I think it would be a great tool to use to get an idea on
+the irradiation distribution on a outer building surface and where
+the best place would be for PV modules.  
+
+I have two questions to that point:
+
+1. I need the values of incident irradiation and are these available
+as an output of the program?  (Or could an extension to the program
+be written to obtain a output data file (for example) with the incident
+irradiations in it??)  How much work would it entail?  Would the 
+person have to be very familiar with the code of the entire program
+or just a part of it?
+
+2. How long would it take to simulate the exterior of a building
+with a few overhangs, neighboring buildings , ambient conditions
+(eg. reflection from white surfaces) and with a resolution of
+6 " in real space??  How about the same conditions with a 
+resolution of 12 " in real space?
+
+A rough estimate to these questions would be helpful!  (P.S. Peter
+Jaegle and I tried the 'talk' command but were unable to make
+a connection!)
+
+Thanks ,   Anne Kovach
+
+From: greg (Gregory J. Ward)
+To: kovach@ise.fhg.de
+Subject: Re:  Radiance
+
+Hi Anne,
+
+I think that it wouldn't be too difficult to use Radiance for the purpose
+you describe.  With version 2.0, it is possible to get either individual
+irradiance values or irradiance pictures using rtrace and rpict, respectively.
+It is not necessary to do any programming.  I will be happy to help you with
+the right commands at the appropriate time.
+
+In reference to your second question, the time required for geometric
+modeling depends on whether or not you use a CAD program to do it and
+how familiar you are with this type of work.  Assuming that you are just
+a beginner and have no CAD program or modeling experience (but keeping
+in mind that you are a bright woman), I would guess that it will take
+you between a few days and a week to get the exterior model shaped up
+using a text editor and working directly with Radiance.  I don't think
+the resolution will make that much difference in the modeling time.
+
+-Greg
+
+From: sick@ise.fhg.de
+Subject: falsecolor units
+To: greg@hobbes.lbl.gov (gregory ward)
+Date: Tue, 21 Jan 92 11:03:43 MEZ
+
+Hello,
+
+I started working with Radiance a few weeks ago. Peter Apian-Bennewitz
+was a great help in getting started.
+
+I used the new falsecolor program which might be very helpful for me since
+I often need quantities (numbers) rather than qualities (nice realistic
+pictures). Now here is my problem:
+
+I do not know the "old luminance unit" (dictionary) nit. How does it
+convert to lm/m*m-sr ?  I am also confused with the options "s" and
+"m": Is the value of s a multiplier of 1000 or replaces it 1000?
+Should it be set to the highest expected value of , well, luminance,
+illuminance radiance or irradiance?  If I change the multiplier for a
+unit conversion, I assume that s is not affected. Correct?  Finally, to
+make me get both a quick correct result and an example to follow the
+conversions, could you tell me how to produce a falsecolor picture with
+values of irradiance in W/m*m?
+
+I really appreciate your efforts. The work I am currently doing will be part
+of a presentation at an IEA SHCP Task 16 meeting in Madrid at the beginning
+of February. Depending on the outcome of the discussion, Radiance might become
+a major tool for the group. So much as an incentive for you ...
+
+Sincerely,
+
+		Fred Sick
+
+Date: Tue, 21 Jan 92 08:51:46 PST
+From: greg (Gregory J. Ward)
+To: sick@ise.fhg.de
+Subject: Re:  falsecolor units
+
+Hello Friedrich,
+
+The "scale" value of falsecolor as set by the -s option determines only the
+maximum charted value in the image.  This is as you supposed unaffected by
+the -m "multiplier" option which determines the units being charted.
+
+The luminance unit of 1 nit is in fact 1 lumen/steradian/m^2, so it is already
+in SI units.  A multiplier of -m 1 produces values in the native unit of
+Radiance, which is watts/steradian/m^2.
+
+The only way to correctly produce illuminance or irradiance values is by
+rendering the image with the -i option of rpict.  Then, simply apply
+falsecolor as you would have to produce luminance or radiance values.
+
+If any of this is still not clear to you, please do not hesitate to ask
+me further questions.
+
+-Greg
+
+Date: Mon, 27 Jan 1992 18:38:06 EST
+From: MICHAEL DONN <donnmr@matai.vuw.ac.nz>
+To: greg@hobbes.lbl.gov
+Subject: Daylighting models in RADIANCE 2.0
+
+We are trying to model the "real" sky using radiance and wish to test a
+couple of simple buildings against our artificial sky (a mirror box) which
+we have evaluated against real measurements in a real building we analysed
+for the architects last year. Our difficulty is knowing exactly what gensky is
+modelling. As we are using an artificial sky, there are all the usual problems
+of defining what is typical overcast cloudy sky luminance, and what its
+distribution is. 
+
+Some of our problem is in knowing exactly what the -av parameter does in Rpict;
+it is also in knowing what parameters to input to skyfunc in order to 
+properly model the sky clearness etc; and, it is also to model the sun's
+luminance allowing for local conditions as precisely as we can.
+
+In summary, in order to calibrate RADIANCE, we are modelling a simple grey box
+with one window, and comparing the daylight factors, and the actual light
+levels predicted against each other, and need to know as much about the 
+assumptions behind the RADIANCE values as we do about the other mirror box 
+values.
+
+From greg Mon Jan 27 09:02:00 1992
+Return-Path: <greg>
+Date: Mon, 27 Jan 92 09:01:53 PST
+From: greg (Gregory J. Ward)
+To: donnmr@matai.vuw.ac.nz
+Subject: Re:  Daylighting models in RADIANCE 2.0
+Status: RO
+
+The gensky program in Radiance uses the standard CIE distributions for
+clear and overcast skies.  The precise formulas used are in the source
+file ray/src/gen/gensky.c and ray/src/gen/sun.c and the function file
+ray/lib/skybright.cal.  This function file is where the actual distribution
+is calculated, using the zenith luminance and ground luminance values
+plus the sun direction given by gensky.
+
+Zenith brightness is calculated from the solar altitude and atmospheric
+turbidity using a formula developed from data gathered in San Francisco,
+which may not be very accurate for other places on the globe.  For better
+control, it is preferable to measure or assume a certain zenith brightness
+and give it directly to gensky using the -b option.
+
+It is not too difficult to develop your own function file to specify
+whatever sky distribution you like.  Gensky is provided only as a basic
+skylight approximation.
+
+-Greg
+
+Date: Mon, 16 Mar 92 18:46:08 PST
+From: greg (Gregory J. Ward)
+To: edu@leicester-poly.ac.uk
+Subject: Re:  daylighting
+
+Hi John,
+
+Thanks for your recent letter.  I will attempt to answer your questions:
+
+> a)  Having used mkillum for the windows, will one or more ambient bounces for
+> the interior space only re-distribute light in the space (necessary if
+> light-shelves etc. are present) or will the mkiwindow description allow more
+> light from the outside to enter the space messing up the calculation?
+> Perhaps a note could be added to the Tutorial about this.
+
+The illum created by mkillum will block all "ambient" rays during the
+calculation, maintaining the correct energy balance.  You can set the
+-ab parameter to whatever value you like, as it will only be used to
+compute interreflection within the space.  (That is, assuming you don't
+have any cracks or other places where light might leak through.)  I will
+try and add an appropriate note to the tutorial, as you suggest.
+
+> b)  I would appreciate some guidance about appropriate values of av to use 
+>     in a simulation and how they are determined.
+
+I wish I had a definitive answer to this question.  Unfortunately, there is
+no general way to set the ambient value that works for every scene.  My best
+recommendation is to use rview in the following manner.  Start the program
+with the -ab parameter set to 1.  Run it for a short while at an appropriate
+viewpoint, then set ab to zero using the command "set ab 0".  Immediately
+afterwards, try setting the av parameter to different values until the
+new pixels being computed seem to match fairly well to the original ones
+computed when the interreflection calculation was on.  (If you're clever,
+you can figure out a ballpark starting value but I think I'd have to 
+show you how.)  I suggest that you set a grey ambient value for the most
+natural color rendering (eg. av .5 .5 .5).
+
+Alternatively, it is possible to compute an approximate value for the
+-av parameter based on room reflectances and light source intensities,
+but this does not work very well in daylight situations.
+
+> c)  The dayfact script.  
+> I have been looking at ways of speeding this up, using
+> a coarser grid and larger radius for filtering is a possibility (I suspect i'm
+> not using the most efficient a* settings either).  On the practical side I
+> have modified it produce 10 contour levels up to a maximum of DF = 10, 20 or
+> 40, depending on the users expectation.  Also, it's worth keeping the pic file
+> in the event of a poorly chosen range of levels.  Since, i'd prefer lines,
+> and since these appear mid-way between markers, i'll try to find a way to set
+> the marker to match the contour level directly above.   Do you want me to send
+> you the end product?  Also, the conversion factor to Lux is 470, should it
+> be 179?
+
+Didn't I send you my repaired version of dayfact?  I thought I had fixed the
+incorrect value of 470 and also made it keep the pic files around.  I can
+send the latest for you to work on if you like.  I would like to see your
+finished product, but it would be better if you started with the most current
+version!
+
+> d)  Am I right in thinking that I can use the indirect calculation as long as
+> I don't have any reflecting surfaces exterior to the building?  Or do I just
+> have to get rid of the ground plane.
+
+You should always be able to use the indirect calculation, it just so happens
+that it doesn't work very well when you have a large ground plane due to the
+adaptive sampling algorithm used in 2.0.  (Thank you, by the way, for showing
+me just how bad it can be!)  You are better off getting rid of the groundplane
+and just using a light source or illum for the window with the skyfunc
+distribution, which already accounts for reflection from a groundplane.
+If you have external reflecting surfaces, then you must either use mkillum
+(recommended) or an interreflection calculation.  If you use an interreflection
+calculation with 2.0, then you had better make the ground plane small or get
+rid of it altogether.  If you want to have other external surfaces, that
+should still work.  (I apologize for this rather convoluted answer.
+I hope you managed to untangle my meaning.)
+
+-Greg
+
+From: Environmental Design Unit <edu@leicester-poly.ac.uk>
+Date: Mon, 30 Mar 92 14:03:03 BST
+To: greg@hobbes.lbl.gov
+Subject: Daylighting Calculations
+
+Hello Greg,
+
+A hue-sat color wheel would be nice addition, especially for colour matching
+paint samples.  In the meantime, a cut-down list of colours from rgb.txt
+does fine.
+
+Just for a change, i'd like to ask you some questions about daylighting
+calculations.
+
+
+a)  Sky models and conversions factors.
+
+The zenith radiance is evaluated in "gensky.c" as 
+
+              if (cloudy) {
+                      zenithbr = 8.6*sundir[2] + .123;
+                      zenithbr *= 1000.0/SKYEFFICACY;
+              } else {
+
+and ground radiance as
+
+      if (cloudy) {
+              groundbr = zenithbr*0.777778;
+              printf("# Ground ambient level: %f\n", groundbr);
+      } else {
+
+
+and horizontal illuminance in lux is simply
+
+ground ambient level * PI * luminous efficacy.
+
+O.K. so far, but the luminous efficacy definitions in "color.h"
+have me confused -
+
+				/* luminous efficacies over visible spectrum */
+#define  MAXEFFICACY		683.		/* defined maximum at 550 nm */
+#define  WHTEFFICACY		179.		/* uniform white light */
+#define  D65EFFICACY		203.		/* standard illuminant D65 */
+#define  INCEFFICACY		160.		/* illuminant A (incand.) */
+#define  SUNEFFICACY		208.		/* illuminant B (solar dir.) */
+#define  SKYEFFICACY		D65EFFICACY	/* skylight */
+#define  DAYEFFICACY		D65EFFICACY	/* combined sky and solar */
+
+It looks as if the zenithbr for a cloudy sky is defined in terms of
+lum eff = 203 lum/W, whilst the multiplier in "dayfact" is 179 lum/W.
+Am I missing the point somewhere?  I have tried, without much success, to
+locate papers/texts on sky models and luminous efficacy values for my own
+notes.  I would appreciate some recommendations if you have them to hand.
+
+b)  Dayfact output.
+
+The "dayfact" pictures showing daylight factors and lux levels for our
+new engineering building (floor plan 25m by 7m, 56 windows and light
+shelves) was not terribly satisfactory - bands (and lines) were broken
+and it was difficult to determine the areas they enclosed.  However,
+gaussian filtering of the saved illuminance picture improved matters
+greatly.  Single pass filtering with r=3 proved enough for bands - pictures
+with lines were even better.  Do you want me to mail you results as a
+uuencoded tar.Z file? [size < 1Mb]
+
+I wanted to compare the effects of filtering at different radii in one
+picture by using "pcompos" to put four illuminance pictures in columns to
+make one illuminance picture file for "dayfact".  This strategy would be
+useful for comparing the consequences of the different a options
+for "rtrace".  To my surprise, "dayfact" determined lux values for the
+combined pictures approx 1/4 what they were for individual pics!  So,
+stroke monolith, toss bone in air... four pics, 1/4 the lux values, something
+to do with the area or num of pics?  Looked closely at "falsecolor"
+and "dayfact" scripts, but couldn't find where picture area was significant.
+
+c)  Changes to dayfact.
+
+For my own use i've set ten bands/lines for df and lux
+pics and default maximum values for both.  Lines do show up better than bands,
+especially after r=3 filtering, but the problem remains about the values 
+appearing midway.  
+Could you suggest a fix for this.  For a linear scale, adding the smallest
+value to each of the values in the list would cure it, as long as we remember
+that the number refers to the line above.  The scales would come out better also
+e.g 0.5, 1.0, 1.5... instead of 0.25, 0.75, 1.25... ( for -s 10 -n 10 ).  
+I would like to use "dayfact" on multiple illuminance pictures of the same 
+scene, if you confirm that it simply scales with the number of pics in the 
+composite I will add a multiplier option also.  Not forgetting, large radius 
+filtering to smooth the illuminance picture.
+
+I think this is everything .... for the moment.
+
+As always, thanks for the continued support.
+
+-John Mardaljevic    edu@leicp.ac.uk
+
+Date: Mon, 6 Apr 92 17:55:27 PDT
+From: greg (Gregory J. Ward)
+To: edu@leicester-poly.ac.uk
+Subject: Re:  Daylighting Calculations
+
+Hello John,
+
+Sorry for the delay in my response.  I was away at a meeting.
+
+a) Sky models and conversion factors
+
+The efficacy values listed in color.h are over the visible spectrum only,
+so may disagree with some other values you have seen.  You are correct
+in pointing out the discrepancy between the value used in gensky.c vs.
+the value used in the dayfact script.  To reproduce the original photmetric
+values, these two factors should be identical if a grey sky were used.  Since
+the sky is not white, we should be using a different value to account for
+the relative efficiency of the sky's spectrum, coupled with an appropriate
+RGB multiplier on the source in the scene file.  Unfortunately, I did not
+have a good spectral curve for the sky, so I used the CIE standard for the
+combined sun and sky, D65.  Now that you raised the topic for reexamination,
+though, I see that the choice of D65EFFICACY was not a good one because
+the efficacy of the sky should be lower than white light due to its
+bluish tint, not higher.
+
+The correct sky efficacy should be something like 162, which when combined
+with an RGB color of .8 .9 1.3 would yeild approximately the correct result.
+Since I don't know what it really should be, you can adjust your RGB color
+to 1 1.126 1.626 and you should get the right luminances, anyway.
+
+I should change this stuff.  I only wish I had some decent references myself.
+
+b) Dayfact output
+
+I do not know where the factor of 1/4 could be coming from.  Please send
+me a more detailed description of this problem, using "getinfo" to send
+me the headers of the resulting renegade pictures.
+
+c) Changes to dayfact
+
+I have modified the script px/falsecolor.csh to put the contour lines
+on the values rather than between.  I should have done it this way to
+begin with.  You only need to change the following line from:
+
+	boundary(a,b) : neq(floor(ndivs*a),floor(ndivs*b));
+
+to:
+
+	boundary(a,b) : neq(floor(ndivs*a+.5),floor(ndivs*b+.5));
+
+Then copy the file to falsecolor in your executable directory.
+
+-Greg
+
+<A NAME="LUMINOUS_EFFICACY">=================================================================</A>
+LUMINOUS_EFFICACY
+
+Date: Wed, 29 Jan 92 07:42:35 EST
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+To: gjward@lbl.gov
+Subject: Differences in Radiance v2.0?
+
+Greg, we've been testing Radiance v2.0 (the scanline-fixed version) and have
+come up with some differences in how images look.  In specific, light sources
+seem to be brighter in version 2.0 than in version 1.4.
+
+I can upload a pair of images, both calculated with the same script, one under
+1.4 and one under 2.0, if you'd like to look at them, to get a better idea of
+what I mean.  
+
+I honestly don't know if it is an enhancement (read: the 1.4 method wasn't 
+correct) or if it is a bug (read: the 2.0 method isn't correct) so I'd like to
+understand why these images are different.
+
+Stephen N. Spencer  		     |                      Ride Bike!  ,__o
+ACCAD - The Ohio State University    |                                _-\_<,
+1224 Kinnear Road Columbus OH 43212  | Indigo Girls Mailing List:    (*)/'(*)
+spencer@cgrg.ohio-state.edu	     | indigo-girls-request@cgrg.ohio-state.edu
+       "Usenet is like Tetris for people who still remember how to read."
+
+Date: Wed, 29 Jan 92 09:11:40 PST
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  Differences in Radiance v2.0?
+
+Hi Steve,
+
+Before you upload your images and scripts, let me suggest a possible cause
+and you can decide if this is what's happening.
+
+Between version 1.4 and 2.0, I corrected the value for the luminous efficacy
+of white light from 470 lumens/watt down to 179 lumens/watt.  This value
+is used at two points in a normal calculation.  First, to convert light
+fixture lumens to watts in ies2rad or a manual conversion process.  Second,
+to convert watts back to lumens in ximage or similar programs that display
+luminance values.  Since the conversion value is used in a reciprical
+fashion in these two steps, the overall effect is null as long as the
+same value is used each time.
+
+However, if you are judging by picture "brightness", ie. exposure value
+and screen brightness, using the same initial IES file as version 1.4 of
+Radiance, you will see a difference because version 2.0 uses a smaller
+value for luminous efficacy and thus produces brighter images.  The new
+version is more correct.
+
+You can read about this change a bit more in the ReleaseNotes file in the
+ray/doc/notes subdirectory of the distribution.
+
+-Greg
+
+<A NAME="RPICT_PARAMETERS">===================================================================</A>
+RPICT_PARAMETERS
+
+Date: Thu, 30 Jan 92 11:41:57 PST
+From: greg (Gregory J. Ward)
+FAXnumber: 01149866933541
+FAXfrom: "Greg Ward, Lighting Research, LBL, (510) 486-4757, fax 4089"
+FAXto: "Martin Mock, ABT ASIV43/LIZ"
+
+Hi Martin,
+
+Here goes with my best shot at explaining the rpict parameters.  The
+"min" value gives the fastest, crudest rendering.  It is not
+necessarily the smallest value numerically.  The "fast" value gives
+a reasonably fast rendering.  The "accur" value gives a reasonably
+accurate rendering.  The "max" value gives the ultimate in accuracy.
+
+Param	Description		Min	Fast	Accur	Max	Notes
+=====	====================	=====	=====	=====	=====	=====
+-sp	pixel sampling rate	16	8	4	1
+-st	sampling threshold	1	.15	.05	0
+-sj	anti-aliasing jitter	0	.6	.9	1	A
+-dj	source jitter		0	0	.7	1	B
+-ds	source substructuring	0	.5	.15	.02
+-dt	direct thresholding	1	.5	.05	0
+-dc	direct certainty	0	.25	.5	1
+
+NOTES:
+	A) This option does not affect the rendering time
+	B) This option adversely affects image sampling (ie. use -sp 1)
+
+In the next version of Radiance (2.1), the options -sp, -sj and -st will
+be renamed -ps, -pj and -pt, respectively.  This is to avoid conflict
+with some new options that will be added for sampling semi-specular
+reflections.
+
+In general, jittering is a way to reduce image artifacts by
+introducing Monte Carlo sampling into the rendering process.  This
+technique was introduced by Rob Cook in his landmark paper on
+"Distributed Ray Tracing" in the 1984 Siggraph proceedings.
+
+If you want more information on the sampling techniques used in the
+direct lighting calculation, you should read the paper I wrote for
+the 1991 Eurographics Rendering Workshop.  I have sent you a copy.
+
+Hope this helps explain things a little.
+-Greg
+
+<A NAME="GENSURF">========================================================================</A>
+GENSURF
+
+To: greg@hobbes.lbl.gov
+Date: Fri, 31 Jan 92 8:38:23 CST
+From: scoggins@mc1.wes.army.mil
+
+Hi Greg:
+
+I would be interested in trying out you new gensurf.  Jerry Ballard and
+I are working on rendering outside scenes using measured terrain elevation
+data.  We have been using Radiance and some code Jerry wrote to create
+triangular and rectangular polygons.  However the code is not as flexable
+as you new gensurf, I'm sure. While your on the line, I would like to ask
+you a couple of questions.
+
+I am using Radiance to make images of painted surfaces; panels, cylinders,
+etc.  These are included in backgrounds of terrain and trees and used to
+get an idea about how well camouflage paints work.  One of the primary
+interest is in what are termed gloss levels of the paints.  I think this is
+the degree of specularity.  Anyway, the people who make the measurements
+record the 'glossyness' as a number from 1 to 1000 using a reflectometer
+with fixed angles.  They use black glass as a standard which is defined as
+a gloss level of 1000.  Do you have any thoughts on how to relate
+specularity and roughness to gloss level, or any literature references that
+might be helpful ?  I have been doing the work using extremes of
+specularity and roughness to simulate paints at different ends of the gloss
+level spectrum.
+
+
+Another application of Radiance.  I'm also working to try and simulate
+surface temperatures of outdoor stuff, landscapes, trees, etc., using
+models for conduction and surface energy flux.  One of the biggest
+components of the surface energy flux is solar radiation, both direct and
+ambient.  I would like to do this for 3-D surface descriptions of the
+objects.  I plan to use Radiance to calculate the irradiance at sample
+points on the surface of the ground and trees and other things.  I have
+made a small modification to rtrace so that I can call it from a C program
+with location and surface orientation as arguments and total irradiance as
+returned value.  I guess this is not so much of a question as a statement,
+but I thought you might have some comments on this.
+
+Thanks for the note on gensurf.  Jerry may have already sent you a request
+and if so I can just get a copy from him.  Your software has really been a
+boost to our work around here and you sure can't beat the price.  Look
+forward to your new releases.   Bye for now.
+
+One last thing, in the off-the-wall category, do you know of any ftp sources
+for L-systems software ?
+
+
+
+					Randy Scoggins
+					US Army Engineer
+					Waterways Experiment Station
+
+					scoggins@mc1.wes.army.mil
+					
+
+Date: Fri, 31 Jan 92 09:47:17 PST
+From: greg (Gregory J. Ward)
+To: scoggins@mc1.wes.army.mil
+Subject: gensurf and misc.
+
+Hi Randy,
+
+I sent Jerrell a copy of the new gensurf program.  I actually thought of
+you folks right away as possible testers, but wasn't sure if you had the
+time.
+
+I have only one reference on gloss and how it is measured, and I'm not
+sure how to relate it to any physical surface parameters.  The measurement
+technique is strictly relative, and doesn't really correlate to anything
+but itself.  The fact that it combines overall specular reflectance with
+polish is a real problem.  In effect, you have a single measurement where
+two are required at the very least.  If you can make some assumptions about
+the index of refraction of the material involved, then you may be able to
+back this out since specular reflectance can be calculated from Fresnel's law.
+What you will discover is that non-metals never have a specularity greater
+than .05 or so.
+
+Calling rtrace from a program is quite useful, and I do it in several of my
+programs.  You can check out the module ray/src/util/glareval.c and
+also ray/src/gen/mkillum2.c.  I use the communication routines in
+ray/src/common/process.c to connect to rtrace via dual pipes, so I don't
+have to have a separate compiled version of the program.
+
+As for L-systems, I only know of the Mac program made available by Paul
+Bourke of New Zealand.  You can pick it up from the pub/mac directory
+on hobbes.lbl.gov (128.3.12.38) via anonymous ftp.  I don't know about
+source code, but you might try contacting Paul directly.  His e-mail
+is  pdbourke@ccu1.aukuni.ac.nz.
+
+Let me know if you have any success with gensurf!
+
+-Greg
+
+Date: Tue, 4 Feb 92 13:59:49 PST
+From: Chris Toshok <toshok901@snake.cs.uidaho.edu>
+To: greg@hobbes.lbl.gov
+
+
+  Hi Greg.
+
+   I am working on tracing Newell's teapot using radiance (it would make a 
+ very interesting object) but am have trouble understanding how to implement
+ bezier patches using gensurf.  I have all the controls points for the patches,
+ and they are cubic, which is what gensurf uses (i hope), but I can't figure
+ out what the five values gensurf wants for each bezier curve.  I have mapped
+ out all the control points onto 4x4 grids which I was going to use, but not
+ all the coordinates have the same x,y, or z values.  How can I generate a 
+ patch with gensurf when only 5 values can be given for each function x,y and
+ z.  Is gensurf capable of producing representations of three dimensional 
+ cubic bezier patches? If not, I'll have to write one, and although I am up to
+ the task, I would much rather use gensurf.
+						Help....
+					           Chris 
+ 
+
+Date: Tue, 4 Feb 92 20:40:03 PST
+From: greg (Gregory J. Ward)
+To: toshok901@snake.cs.uidaho.edu
+Subject: The Teapot
+
+Hi Chris,
+
+The bezier function defined by gensurf is merely the 1-dimensional Bezier
+polynomial.  It is up to you, the user, to make it into a 2-dimensional
+patch and give it the control points.  This is not too difficult to do,
+provided that you know something about the language that gensurf (and
+many other programs in Radiance) use.  Unfortunately, I haven't documented
+the language very well, so here are some pointers.
+
+Start with the following file to define a 3-dimensional bicubic Bezier
+surface in terms of the 1-dimensional Bezier polynomial:
+::::::::::
+bezier.cal
+::::::::::
+{
+	Bicubic Bezier Patch
+
+	02Mar90
+
+	Define Px(i,j), Py(i,j), Pz(i,j)
+}
+
+x(s,t) = bezier(P2x(s,1), P2x(s,2), P2x(s,3), P2x(s,4), t);
+y(s,t) = bezier(P2y(s,1), P2y(s,2), P2y(s,3), P2y(s,4), t);
+z(s,t) = bezier(P2z(s,1), P2z(s,2), P2z(s,3), P2z(s,4), t);
+
+P2x(s,j) = bezier(Px(1,j), Px(2,j), Px(3,j), Px(4,j), s);
+P2y(s,j) = bezier(Py(1,j), Py(2,j), Py(3,j), Py(4,j), s);
+P2z(s,j) = bezier(Pz(1,j), Pz(2,j), Pz(3,j), Pz(4,j), s);
+
+{ I have commented out the definition of the Bezier polynomial below, since it
+	is defined internally by gensurf and executes a little faster there. }
+{
+bezier(p1, p2, p3, p4, t) = 	p1 * (1+t*(-3+t*(3-t))) +
+				p2 * 3*t*(1+t*(-2+t)) +
+				p3 * 3*t*t*(1-t) +
+				p4 * t*t*t ;
+}
+_EOF_
+
+Then, you must create a separate file for each bicubic patch on the teapot,
+using the following format:
+::::::::::
+patchN.cal
+::::::::::
+{
+	Bicubic Bezier patch number N
+}
+Px(i,j) = select((i-1)*4+j,		{ first index major, second minor }
+	3.51, 89.218, 15.38, 17.38,
+	5.81, 83.11, 19.635, 14.91,
+	6.38, 75.83, 25.183, 18.18,
+	7.91, 70.31, 22.83, 19.83
+	);
+Py(i,j) = select((i-1)*4+j,
+	{ 16 more Bezier points }
+	);
+Py(i,j) = select((i-1)*4+j,
+	{ and another 16 }
+	);
+_EOF_
+
+You'll notice that it is necessary to manipulate the data in order to get
+the points in a form that can be easily digested by gensurf.  A short
+C program should do the trick.
+
+Once you have all your patch files together, you can create the actual
+Radiance input file for the teapot, which will look something like this:
+::::::::::
+teapot.rad
+::::::::::
+#
+# The (in)famous Utah Teapot
+#
+
+void metal copper
+0
+0
+5 .8 .5 .02 .9 0
+
+!gensurf copper patch1 'x(s,t)' 'y(s,t)' 'z(s,t)' 8 8 -s \
+		-f bezier.cal -f patch1.cal
+
+!gensurf copper patch2 'x(s,t)' 'y(s,t)' 'z(s,t)' 8 8 -s \
+		-f bezier.cal -f patch2.cal
+
+!gensurf copper patch3 'x(s,t)' 'y(s,t)' 'z(s,t)' 8 8 -s \
+		-f bezier.cal -f patch3.cal
+
+# and so on...
+_EOF_
+
+The -s option to gensurf will create smoother-looking patches by using
+Phong surface normal interpolation.  You may also want to create this
+file using a C program.
+
+Let me know if I can be of any further assistance.
+-Greg
+
+<A NAME="ALIASING">==================================================================</A>
+ALIASING
+
+From: Nick (Nikolaos) C. Fotis <nfotis@theseas.ntua.gr>
+Subject: Various
+To: gjward@lbl.gov (Greg Ward)
+Date: Mon, 10 Feb 92 3:56:26 EET
+
+Dear Mr. Ward,
+
+as I finished the last exam for the semester, I anxiously proceeded
+to our beloved (except that awful keyboard!) Snake to test your code.
+
+I tried the H-P oriented malloc(). It seems to work fine!
+Don't know about speed, though. It's faster than the old way?
+I hope to test the same malloc.c with the DECstations we have here.
+
+(And the new gensurf has compiled ok, but I still don't know how to use it!
+ ie. How I supply the height field data to this module??)
+
+a. I had  a small problem:
+
+nfotis@kentayros
+10:43pm  114   /usr/tmp/nfotis/ray/obj/office > make 
+        oconv model.b90 desk misc > modelb.oct
+xform: (cornerdesk.norm): bad brightfunc "ygrain"
+oconv: fatal - (!xform -e -s 4 -ry 90 -t -28 15.5 28 cornerdesk.norm): 
+	       bad arguments for brightfunc "ygrain"
+*** Error code 1
+
+----
+
+I had to change the relative line in cornerdesk.norm, from
+2 ygrain woodpat.cal -s .05
+to
+4 ygrain woodpat.cal -s .05
+
+---
+and everything seemed to work OK here (I suppose)
+(your wood texture seems better than the previous - I may be wrong of course!)
+
+b. I feel uneasy about the texture example. In particular, the text is not
+very clean, and I feel that it has to do with the way your code samples
+intensities across surfaces (I don't really know, since I just use the
+system). Also the orange ball seems rather strange.
+Perhaps I should send you a UUencoded image??
+
+c. About oversampling and then postfiltering the results:
+The idea is rather sound, but some hard spots remain, like venetian
+blinds. Perhaps the ray-tracer could get a jittered  sampling option?
+(These blinds tend to show some VERY annoying staircase-like patterns,
+ even if I use pfilt with -r 0.7 and slash by 3 the resolution of the
+ original image :-( )
+
+Another trouble spot seems to be the text rendering in general. Maybe
+I'll try to transfer to PAL video tape the filtered images (or at least
+to see them on a 24-bit device!)
+
+d. I'm constructing a Frequently Asked Questions message for the
+comp.graphics USENET newsgroup, and I would like to include a 1-2
+paragraph description of the system. Here's the present description:
+
+RADIANCE 2.0:
+------------
+In a short sentence, It's a ray-tracer with radiosity effects.
+I'm using it on a HP 9000/720, and it's different from the rest
+(If you've seen radiosity-generated images, you know what I mean)
+
+Clearly, this doesn't do justice to your program! ;-)
+
+e. I would like for a copy of your theoretic works (from the tail of the
+   ray.1 manual):
+
+Ward, G.,  ``Adaptive  Shadow  Testing  for  Ray  Tracing,''
+Second Annual Eurographics Workshop on Rendering, to be pub-
+lished by Springer-Verlag, May 1991.
+
+Ward, G., ``Visualization,'' Lighting  Design  and  Applica-
+tion, Vol. 20, No. 6, June 1990.
+
+Ward, G., F. Rubinstein, R. Clear, ``A Ray Tracing  Solution
+for  Diffuse  Interreflection,'' Computer Graphics, Vol. 22,
+No. 4, August 1988.
+
+Ward, G., F. Rubinstein,  ``A  New  Technique  for  Computer
+Simulation   of   Illuminated   Spaces,''   Journal  of  the
+Illuminating Engineering Society, Vol.  17,  No.  1,  Winter
+1988.
+
+I would be grateful if you could send me a copy.
+
+Greetings,
+Nick.
+
+
+-- 
+Nikolaos Fotis			National Technical Univ. of Athens, Greece
+16 Esperidon St.,		UUCP:	mcsun!ariadne!theseas!nfotis
+Halandri, GR - 152 32		or InterNet : nfotis@theseas.ntua.gr
+Athens, GREECE			FAX: (+30 1) 77 84 578
+
+Date: Mon, 10 Feb 92 09:43:08 PST
+From: greg (Gregory J. Ward)
+To: nfotis@theseas.ntua.gr
+Subject: Re:  Various
+
+Hi Nick,
+
+The new version of malloc should be as fast or faster than anyone else's
+implementation, with more efficient memory use for my programs.
+
+Try following the example at the end of the new gensurf man page to
+generate a height field.  If it is still confusing to you, I would be
+happy to answer specific questions.
+
+a.  Yes, this problem was the result of a careless change I made when
+going over to the new woodgrain.  You fixed it correctly, and the fix
+has been included in the pub/patch directory on hobbes.
+
+b.  The orange ball in the texture example is meant to appear as an orange.
+There is a 1 Mbyte image of what the finished scene should look like called
+pub/pics/textures.pic.  The orange is an orange, so it has texture and maybe
+that's what looks strange to you.  The text needs to be rendered at a high
+resolution to come out right, and you may have to set the pixel sampling
+rate (-sp) to 1.
+
+c.  The default pixel jittering (-sj) is .67.  You may increase it if you
+like as high as 1 (full pixel jittering).  A setting of -sj 0 would mean
+no pixel jittering.  As for the staircases you see on venetian blinds,
+this may be a result of the floating point color images more than anything
+else.  Most software clips the high end of an image as its written out,
+before anti-aliasing is performed.  Because Radiance endeavors to represent
+the real values involved, where there is extreme contrast the anti-aliasing
+is less effective.  Imagine you have the following boundary in a 3x3 pixel
+section of your image, representing pixels brightnesses (rather than colors)
+as floating point values:
+
+	.361	.365	.380
+	.353	.358	1082.
+	.345	1085.	1090.
+
+In a standard approach, these values would be clipped before the filtering
+takes place, ie:
+
+	.361	.365	.380
+	.353	.358	1.00
+	.345	1.00	1.00
+
+The pixels would then be averaged together (assuming 3x3 box filtering) to
+a single pixel value, namely .574.  In Radiance, however, no such clipping
+takes place, and the correct average of 362 is computed.  To display this
+value, we must necessarily clip, but at least we clip to one instead of
+the erroneous value of .574.  Also, the resulting filtered image can be
+scaled in brightness and the result will still be correct -- not true in
+the clipped-then-averaged case.
+
+However, there is a drawback to using correct math in our calculations.
+Look at the above pattern of pixels.  What if the pixel sample in the upper
+right had landed on the brighter surface rather than the darker surface?
+This is quite possible when using jittered sampling.  Our value may then
+have been around 1000 rather than .380, and our correct average would
+jump from being 362 to 473.  Imagine another case where just one pixel
+in our 3x3 grid is that bright -- this amounts to a huge source of
+uncertainty in the final value.  With the incorrect clip-then-average
+scheme, such large pixel values are never a problem because the result
+is always clipped to a value less than one.
+
+In short, if a smooth image is more important to you than a correct one,
+you can take the original high-resolution image out of rpict, convert it
+to some 24-bit image type (like TIFF or TARGA), and read it into another
+program such as Adobe's Photoshop to perform the anti-aliasing on the
+clipped image.  If you don't have Photoshop, then I can show you how to
+do it with pcomb, but it's much slower.
+
+As for text rendering, the problem is probably that you need to increase
+the pixel sampling rate as mentioned before in order to correctly resolve
+the text.  Set -sp to 1 and see if that doesn't solve your problem.  By
+the way, text looks better without pixel jittering (-sj 0)!
+
+d.  Yes, that description does seem a bit terse.  Please send me your
+description before sending it out, and thanks!
+
+e.  The papers are on the way.
+
+Regarding the animation, it is only camera motion and I picked the
+keyframes with rview.
+
+-Greg
+
+From: Nick (Nikolaos) C. Fotis <nfotis@theseas.ntua.gr>
+Subject: Re:  Various
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Wed, 12 Feb 92 5:18:01 EET
+
+> Hi Nick,
+> 
+> Try following the example at the end of the new gensurf man page to
+> generate a height field.  If it is still confusing to you, I would be
+> happy to answer specific questions.
+
+(blush) I had deleted the previous gensurf you sent after the announcement
+of the erroneous part you sent(I had not the time to try it).
+Did you include a manual for gensurf in you first post??
+Please send it to me again...
+
+> b.  The orange ball in the texture example is meant to appear as an orange.
+> There is a 1 Mbyte image of what the finished scene should look like called
+> pub/pics/textures.pic.  The orange is an orange, so it has texture and maybe
+> that's what looks strange to you.  The text needs to be rendered at a high
+> resolution to come out right, and you may have to set the pixel sampling
+> rate (-sp) to 1.
+
+It would be nice to have compressed these files, because we're on the Internet
+via a Trailbazer+ modem at 9600 (or 19200?) bps.
+It could make my life much easier....
+
+In any case, when I tried to display the image, I got an
+
+ximage: fseek error
+
+Do your picture files are byte order indepedent? I fear the answer is no :-(
+In any case, I re-rendered the scene with the parameters that you had inside
+the image's header (the new rpict didn't like the -dp .9 parameter, so I
+just left it out..)
+
+The high-resolution pic was great, so I got assured that there was not
+some flaw to the system (It would't be good for you, no?? ;-) )
+
+The trouble spot (or artifact, if you prefer) was the extremely high contrast
+of the base surface (white?) with the orange surface that gave to the
+orange ball a rather odd appearance.
+
+Perhaps you should use something like Sun's XDR??
+I heard that many Unix boxes include these libraries, but I would prefer
+something like the free BRL-CAD's library for network file order and
+reading/writing these data. You could include it on the Radiance distribution,
+making it more immune from changes to its environment.
+
+> c.  The default pixel jittering (-sj) is .67.  You may increase it if you
+> like as high as 1 (full pixel jittering).  A setting of -sj 0 would mean
+
+Ahh, I should have RTFMed before I ask such a question!!
+
+> no pixel jittering.  As for the staircases you see on venetian blinds,
+> this may be a result of the floating point color images more than anything
+> else.  Most software clips the high end of an image as its written out,
+> before anti-aliasing is performed.  Because Radiance endeavors to represent
+> the real values involved, where there is extreme contrast the anti-aliasing
+> is less effective.  Imagine you have the following boundary in a 3x3 pixel
+> section of your image, representing pixels brightnesses (rather than colors)
+> as floating point values:
+
+Hmmmm... I know that the human eye is not linearly sensitive to the various
+brightness levels you present to it. You could do (perhaps) a logarithmic
+hack to scale the values to the range 0..255??
+But given the VERY wide range possible with FP numbers, I feel it's at best
+a challenge...
+
+[etc]
+> However, there is a drawback to using correct math in our calculations.
+> Look at the above pattern of pixels.  What if the pixel sample in the upper
+> right had landed on the brighter surface rather than the darker surface?
+> This is quite possible when using jittered sampling.  Our value may then
+> have been around 1000 rather than .380, and our correct average would
+> jump from being 362 to 473.  Imagine another case where just one pixel
+> in our 3x3 grid is that bright -- this amounts to a huge source of
+> uncertainty in the final value.  With the incorrect clip-then-average
+
+And I thought that a 3-fold increase in dimensions plus gaussian filtering
+would take good care of all these problems... Going to 4-fold sizes is a VERY
+expensive proposition (and again, it may be not enough)
+
+> scheme, such large pixel values are never a problem because the result
+> is always clipped to a value less than one.
+> 
+> In short, if a smooth image is more important to you than a correct one,
+
+At this time, I'm interested in artistically "correct" images.
+When I take the Photometry course, of course my interests will be the other
+way around...
+(Your programs made me thinking about it. Seriously!)
+
+> you can take the original high-resolution image out of rpict, convert it
+> to some 24-bit image type (like TIFF or TARGA), and read it into another
+> program such as Adobe's Photoshop to perform the anti-aliasing on the
+> clipped image.  If you don't have Photoshop, then I can show you how to
+> do it with pcomb, but it's much slower.
+
+Since we don't have Macintoshes lying around here, I'm forced to the UNIX
+route (not that I feel bad about it! ;-) ). And the file transfer to a Mac
+is not that fast (ie.sneakernet).
+
+What's your recipe about pcomb??
+
+> As for text rendering, the problem is probably that you need to increase
+> the pixel sampling rate as mentioned before in order to correctly resolve
+> the text.  Set -sp to 1 and see if that doesn't solve your problem.  By
+> the way, text looks better without pixel jittering (-sj 0)!
+
+I had done a 512x512 rendering, and it didn't seem enough. I'll try it later
+(when your test anim finishes!
+For the anim, I changed the parameters, so I hope to get
+PAL-sized images. I filter down to 760x578, the overscan PAL resolution -
+If I remember correctly the numbers. I put a horizontal field of view of
+50 degrees. Does the vertical fov changes accordingly??? or I have to set
+this also?)
+
+> d.  Yes, that description does seem a bit terse.  Please send me your
+> description before sending it out, and thanks!
+
+See above. I think there's no problem...
+> 
+> e.  The papers are on the way.
+
+Many thanks!!
+
+> Regarding the animation, it is only camera motion and I picked the
+> keyframes with rview.
+
+OH! And you got the inbetween numbers with rpict. Correct??
+(I had not seen this potential inside the manuals. Perhaps you should
+ emphasize it in another section? In the other side, I usually play with
+ Radiance somewhat strange hours of the day... And so I'm less than
+ bright when I look at the manuals)
+
+Greetings,
+Nick.
+
+Date: Wed, 12 Feb 92 10:50:35 PST
+From: greg (Gregory J. Ward)
+To: nfotis@theseas.ntua.gr
+Subject: Re:  Various
+
+Hi Nick,
+
+Did you remember to set binary mode before ftp'ing the image?  The Radiance
+picture format is byte-order independent, and should read correctly when
+transferred between machines.  I'm sorry that I didn't compress the image
+beforehand.  All of those images should be kept compressed.  I will do
+that now.
+
+The correct scaling of images for viewing is an open research topic.
+A recent paper by Tumblin and Rushmeier suggested the following brightness
+mapping:
+
+{
+	Mapping of Luminance to Brightness for CRT display.
+	Hand this file to pcomb(1) with the -f option.
+	The picture file should have been run previously through
+	the automatic exposure procedure of pfilt(1), and
+	pcomb should also be given -o option.  Like so:
+
+	pfilt input.pic | pcomb -f tumblin.cal -o - > output.pic
+
+	If you are using pcomb from Radiance 1.4, you will have
+	run without pfilt and set the AL constant manually.  If
+	you are using a pcomb version before 1.4, you will have
+	to do this plus change all the colons ':' to equals '='
+	and wait a lot longer for your results.
+
+	Formulas adapted from Stevens by Tumblin and Rushmeier.
+
+	28 August 1991
+}
+PI : 3.14159265358979323846;	{ Hmm, looks familiar... }
+LAMBERTS : 1e4/PI/179;		{ Number of watts/sr/m2 in a Lambert }
+DL : .027;			{ Maximum display luminance (Lamberts) }
+AL : .5/le(1)*10^.84/LAMBERTS;	{ Adaptation luminance (from exposure) }
+
+sq(x) : x*x;
+aa(v) : .4*log10(v) + 2.92;
+bb(v) : -.4*sq(log10(v)) + -2.584*log10(v) + 2.0208;
+
+mult = li(1)^(aa(AL)/aa(DL)-1) * ( 10^((bb(AL)-bb(DL))/aa(DL)) / DL );
+
+ro = mult*ri(1);
+go = mult*gi(1);
+bo = mult*bi(1);
+--------------------------------
+You can apply this directly with pcomb as shown in the example.  If you
+want to clip the images prior to anti-aliasing reduction with pfilt, just
+apply a function such as 'clip(x)=if(x-1,1,x)' using pcomb, ie:
+
+	% pcomb -e 'ro=clip(ri(1));go=clip(gi(1));bo=clip(bi(1))' \
+		-e 'clip(x)=if(x-1,1,x)' adjusted.pic \
+		| pfilt -x /3 -y /3 -1 -r .67 > final.pic
+
+Note that "adjusted.pic" must already be set to the desired exposure level
+with a previous run of pfilt.  Alternatively, if you know the correct
+exposure scaling, you can set it with a "-s expval" option to pcomb 
+immediately before the original picture.
+
+Regarding your changes to and problems with the animation script, perhaps
+you could send it to me.  The vertical field of view is not altered by
+the horizontal setting.  Rather, the image height or width is adjusted
+down to insure that the specified pixel aspect ratio (if non-zero) is met.
+If the aspect ratio (-p option) is set to zero, then you will get exactly
+what you ask for in terms of x and y image resolution.
+
+The inbetween frame position are actually calculated by rcalc using the
+Catmull-Rolm spline algorithm in spline.cal.  None of this is well-
+documented as I have never gotten around to making a nice walkthrough
+animation executor.  I believe Paul Bourke and the folks in New Zealand
+may be working on one.  (pdbourke@ccu1.aukuni.ac.nz)
+
+-Greg
+
+<A NAME="SHARED_PICTURES">=============================================================</A>
+SHARED_PICTURES
+
+From: Alexander Keith Barber <barber@ravl.rice.edu>
+Subject: Rice U Renderings
+To: greg@hobbes.lbl.gov
+Date: Tue, 11 Feb 92 17:20:07 CST
+
+Greg - 
+
+I just uploaded 3 pictures along with a README in a tar.Z file to the xfer
+directory of hobbes.  I hope people will pull them down and view them; I would
+like people to see what sort of large scale renderings are possible with
+Radiance.  Perhaps you could tell people on the mailing list about these
+pictures?  Despite the fact that the .rad file used for these .pics is several
+megs, as is the octree, the longest rendering time was one and a half hours.
+The shortest time was a quarter hour for a 512x512 version of the large aerial
+view included here.  I just love the processing speed of a Unix platform.  I
+hate to think how long these would take in Autocad...  I've seen _hidden line_
+drawings alone take hours...
+
+Alex Barber
+barber@comet.rice.edu
+
+
+Date: Tue, 11 Feb 92 17:38:45 PST
+From: greg (Gregory J. Ward)
+To: barber@ravl.rice.edu
+Subject: Re:  Rice U Renderings
+
+Hi Alex,
+
+Thanks for your contributions.  I would like to encourage more such
+contributions from others, but I'm not sure I have enough disk space to
+hold them.  
+
+Generally, I only ask people who want to share to share the .rad files
+in compressed format, since these usually take up less space.  In your
+case, though, I'm not so sure!
+
+I'm curious why you didn't use the rendering capabilities built into AES?
+I was wondering also if you and Dwayne might be willing to share your
+file converter with the rest of the world?
+
+I am eager to take a look at your pictures myself.  Unfortunately, I'm
+at home now and output on a dot matrix printer just doesn't cut it.
+
+I'm glad that you have had such success with Radiance.  It's true of any
+good ray tracing program that it will be faster with large models than
+any object rendering technique such as z-buffer or hidden line algorithms.
+You should get ahold of version 2.0, though.  It really is much better
+than previous releases in a number of ways.  Version 2.1 will even be
+able to render models twice as large in the same amount of memory (with
+some loss in geometric accuracy).
+
+-Greg
+
+From: Alexander Keith Barber <barber@ravl.rice.edu>
+Subject: Re:  Rice U Renderings
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Wed, 12 Feb 92 9:48:39 CST
+
+Greg -
+
+In reply to:
+
+>I'm curious why you didn't use the rendering capabilities built into AES?
+>I was wondering also if you and Dwayne might be willing to share your
+>file converter with the rest of the world?
+
+I must say that while we have had no problems making hidden line and hidden
+surface pictures, using surface definitions of our own in AES, as well as a
+light source for a sun, there are still a few problems creating raytraced
+output with AES.  In other words, I have no output that makes any sense.  No
+matter what I try, I end up with a light source too bright, too dark, too
+focused like a spotlight... Despite following the tutorial and manual to the
+letter, I have nothing but a a couple meg of various small pictures that are
+rather fun for the mood they create (a spotlight against a building in the
+dark, creating purple shadows) but that have nothing to do with realism.  Hence
+our use of Radiance to do renderings...
+
+
+>You should get ahold of version 2.0, though.  
+
+That is what we have been using since you released it.  We still have some 
+problems with Radiance and surface defs, tho'.  I'll send you a few pictures - 
+small ones - that illustrate our difficulties.  I'll render a building I've
+created, using just gensky for light (no ground glow since I have a large plane
+I use as grass or concrete or whatever).  The resultant picture is very nice,
+but I'll get a blue color thrown on the building from the sky, along with the
+green of the ground...  I'll send you details later this week.
+
+Alex Barber
+barber@comet.rice.edu
+
+Date: Wed, 12 Feb 92 10:21:42 PST
+From: greg (Gregory J. Ward)
+To: barber@ravl.rice.edu
+Subject: Re:  Rice U Renderings
+
+Hi Alex,
+
+I finally got a look at your images.  Very nice.  I have shrunk the first
+one to 512x512 using pfilt and put it in the pub/pics directory for sharing
+along with your README file.
+
+I misread the header on your images and concluded (wrongly) that you were
+still using an earlier version.  Sorry.  Your sky does look a little too
+blue to me, and that may be why you get more color bleeding than you would
+like on your renderings.  If you upload them, I will be able to say for sure.
+
+You may still want to create a ground source for your scene, so that the
+horizon does not appear black.
+
+-Greg
+
+<A NAME="AMIGA_PORT">====================================================================</A>
+AMIGA_PORT
+
+Date: Thu, 13 Feb 92 17:12:41 +0100
+From: bojsen@id.dth.dk (Per Bojsen)
+To: greg@hobbes.lbl.gov
+Subject: Amiga port of Radiance 2.0, beta version
+
+Hi Greg,
+
+I've uploaded a beta version of the Amiga port of Radiance in the
+/pub/ports/amiga directory.  The archive is in the `lharc' format.
+`Lharc' is a popular archiving/compressing utility, which is available
+for the IBM PC, Amiga, and UNIX.  Is it OK, that I use this format?
+
+The archive contains binaries, the library files, the example
+objects/models, and documentation.  No source.  When I release the
+final version of the port I'll upload a diff of the sources as I
+believe you requested.
+
+-- 
+Per Bojsen         The Design Automation Group     Email: bojsen@ithil.id.dth.dk
+MoDAG            Technical University of Denmark          pb@id.dth.dk
+
+
+Date: Thu, 13 Feb 92 08:33:59 PST
+From: greg (Gregory J. Ward)
+To: bojsen@id.dth.dk
+Subject: Re:  Amiga port of Radiance 2.0, beta version
+
+Hi Per,
+
+Thank you for uploading the port.  Does this lharc utility come standard
+with the Amiga?  If not, can you legally upload a program to unarchive the
+files?  If not, than it might be better to use the archiving utility I
+wrote, which can be freely distributed.  I suspect that it has close to
+the same utility as lharc, though I know nothing of this program.
+
+I have ported my file archiving/compression programs (pkg and unpkg) to
+UNIX, MS-DOS and C/PM.  I do not have a version for the MacIntosh or the
+Amiga, though I suspect porting it to the Amiga would be a snap.  I'll
+be happy to provide you with the source code if you need it.
+
+Thanks again!
+-Greg
+
+<A NAME="DECSTATION">===================================================================</A>
+DECSTATION
+
+Date: Thu, 13 Feb 1992 13:15 EDT
+From: RCBI110@MARSHALL.MU.WVNET.EDU
+Subject: Re:  Radiance install question
+To: greg@hobbes.lbl.gov
+
+Greg,
+
+ Somehow I magically got all the programs, and I don't know how I did it...:^)
+
+Today's question: error message:
+
+rview: Cannot open command line window
+
+I get a nice blank black window for about 2 seconds then it stops with this
+error message...
+If it matters, it's on a brand new DECsystem 5000/200. Fresh out of the box,
+almost :^)
+
+Any suggestions??
+
+Alan
+
+Date: Thu, 13 Feb 92 10:23:59 PST
+From: greg (Gregory J. Ward)
+To: RCBI110@MARSHALL.MU.WVNET.EDU
+Subject: Re:  Radiance install question
+
+Yes, I think that other DECstation users have had similar problems, because
+DEC for some reason does not see fit to distributing the standard X11 fonts
+with its system.  You must reset the COMFN macro in ray/src/rt/x11.c to
+a font that is supported on your system.  I don't know what that would
+be, but there's got to be something.  Also, you will have to change COMCW
+and COMCH while you are at it.
+
+Likewise, you should make a similar change to the FONTNAME macro in
+ray/src/px/x11image.c and ray/src/util/xglaresrc.c.
+
+I hope this solves your problem!
+-Greg
+
+Date: 20 Feb 92 15:00:00 PST
+From: "Jack Hsiung" <cvetp035@CSUPomona.Edu>
+Subject: Re:  Problem making obj/office with Radiance 2.0
+To: "greg" <greg@hobbes.lbl.gov>
+
+I followed your advice and changed the 8x13 font in src/rt/x11.c and
+src/px/x11image.c to fixed (works for other X windows programs on
+this DECstation). Now rview and ximage are able to display the images.
+However, it seems that images displayed by ximage have their red and
+blue channels switched. For example, the reddish looking wood looks blue.
+
+rview displays the colors fine. Any idea what can be causing this?
+
+Jack
+
+Date: Thu, 20 Feb 92 15:04:23 PST
+From: greg (Gregory J. Ward)
+To: cvetp035@CSUPomona.Edu
+Subject: Re:  Problem making obj/office with Radiance 2.0
+
+Hi Jack,
+
+Do you have a 24-bit X11 server?  There doesn't seem to be much of agreement
+on how these beasties are supposed to work.  I don't have one myself, so
+it is difficult for me to debug from here.
+
+If your X11 server is only 8-bit, then we're in a heap of trouble!
+
+Couldn't you find some way to get it to find the more standard font?
+
+-Greg
+
+Date: 20 Feb 92 15:21:00 PST
+From: "Jack Hsiung" <cvetp035@CSUPomona.Edu>
+Subject: Re:  Problem making obj/office with Radiance 2.0
+To: "greg" <greg@hobbes.lbl.gov>
+
+I know the display is 24-bit and the server is DEC's own, which I think
+is 24-bit (The colors in the demo animation blends very smoothly).
+
+Is it possible to go into the code and switch the red and blue when
+ximage reads an image?
+
+I'll try to figure out how to get the 8x13 font to work.
+
+Jack
+
+Date: Thu, 20 Feb 92 15:37:17 PST
+From: greg (Gregory J. Ward)
+To: cvetp035@CSUPomona.Edu
+Subject: Re:  Problem making obj/office with Radiance 2.0
+
+Go to line 733 of x11image.c.  There, you can reverse the ordering of
+those three statements and that should turn the trick.  It's a bad hack,
+though, since the server should be doing this job in XImage().
+
+<A NAME="INFRARED">==============================================================</A>
+INFRARED
+
+Date: Thu, 20 Feb 92 15:58:12 +0100
+From: manolesc@cethil.univ-lyon1.fr
+Subject: Infrared radiance
+To: greg@hobbes.lbl.gov
+
+   Hi, Greg !
+
+   Here I am again bothering you with questions about infrared radiance.
+   I am not sure to make a good connection of the radiance curve with the rgb va
+   lues. So :
+
+   1 In wich file do you fix the 3 representative wavelengths rgb emploied by
+     RADIANCE ?
+   
+   2 The units of mesure for the rgb radiance values of the "light" material
+     are Watts/rad2/m2 or Watts/sr/m2 ? 
+     If Watts/rad2/m2 how do you calculate "rgb" knowing the 3 wavelengths 
+     fixed on the 1st point ?
+
+   3 The "l" comand in XIMAGE displays the luminance value in the area of 
+     interest. In what unit of mesure is it displayed ?
+
+   Thanks a lot for everything, Mircea.
+
+Mircea Manolescu
+INSA Lyon- Batiment 307
+21, Av. Albert Einstein
+69126 Villeurbanne
+E-mail: manolesc@cethil
+
+Date: Thu, 20 Feb 92 08:53:34 PST
+From: greg (Gregory J. Ward)
+To: manolesc@cethil.univ-lyon1.fr
+Subject: Re:  Infrared radiance
+
+Hello Mircea,
+
+I will try to answer your questions as best I can.
+
+   1 In wich file do you fix the 3 representative wavelengths rgb emploied by
+     RADIANCE ?
+
+As I think I said before, there are no specific wavelengths employed by
+Radiance for red, green and blue.  Those three channels can mean whatever
+you want them to mean, and they are treated identically throughout the
+calculation.  The only time any assumption is made about them is by
+ies2rad to compute a lamp color or ximage to compute luminance.  In most
+applications, these primaries are chosen to correspond to a standard
+computer monitor, but this may be totally inappropriate in your application.
+
+   2 The units of mesure for the rgb radiance values of the "light" material
+     are Watts/rad2/m2 or Watts/sr/m2 ?
+     If Watts/rad2/m2 how do you calculate "rgb" knowing the 3 wavelengths fixed
+     on the 1st point ?
+
+I am afraid I don't know what you mean by "rad2" or how this differs from
+steradians.  The units for light sources are Watts/sr/m2/spectrum, where
+"spectrum" is the totality of wavelengths in which you are interested.
+In other words, the value for a particular channel for a light source is
+given as the total Watts/sr/m2 that source would have over the spectrum
+if it emitted uniform white light at that level.  The reason for giving
+such values rather than the more usual Watts/sr/m2/channel is so the
+values are independent of the wavebands selected for the channels.  A
+value of "1 1 1" will always mean uniform white light over the desired
+spectrum with a total radiance of 1 Watt/sr/m2.
+
+   3 The "l" comand in XIMAGE displays the luminance value in the area of
+     interest. In what unit of mesure is it displayed ?
+
+The unit of luminance used is candelas/m2 (lumens/sr/m2), and the conversion
+factor from Watts/sr/m2 is 179, which is the luminous efficacy of white
+light over the visible spectrum (380nm to 780nm).  This is the default
+efficacy used by Radiance, although again you may find it to be inappropriate
+for your needs.
+
+I hope this helps.  Please don't hesitate to ask any further questions you
+might have.
+
+-Greg
+
+<A NAME="SPECULARITY_BUG">===========================================================</A>
+SPECULARITY_BUG
+
+Date: Thu, 16 Apr 92 08:12:50 EDT
+From: spencer@cgrg.ohio-state.edu (Stephen Spencer)
+To: greg@hobbes.lbl.gov
+Subject: Can you help?
+
+One of our users has a well-documented case of version 1.4 producing far
+better results when compared to version 2.0 of the RADIANCE software.
+I've uploaded a file, "forWard.tar.Z", into the pub/xfer area of your 
+machine -- can you look at it for me/him?
+
+If you could, send the replies to 
+
+	spencer@cgrg.ohio-state.edu
+
+and to
+
+	ksimon@cgrg.ohio-state.edu
+
+as he (Kevin) is the user in question.
+
+Thanks very much!
+
+steve 
+
+Date: Thu, 16 Apr 92 12:28:59 PDT
+From: greg (Gregory J. Ward)
+To: ksimon@cgrg.ohio-state.edu, spencer@cgrg.ohio-state.edu
+Subject: Re:  Can you help?
+
+Dear Steve and Kevin,
+
+I have looked at your images and your files and what you are seeing is
+the difference in the way Radiance 2.0 handles specular surfaces.  Simply
+put, version 1.4 was not fully able to compute reflection from specular
+surfaces.  Radiance 2.0 does a much better job.  However, most of the
+surfaces in your room should be completely diffuse, yet the input file
+defines these materials as having a specularity between 1% and 10%.
+In my current model of specular surfaces, the degree of specularity
+increases near grazing angles.  Thus, even a specularity of a few
+percent will increase close to 1 near grazing.  That is what is
+causing the unusual bright areas at the base of your furniture, in
+the corners of the room, etc.  It is also causing a "sheen" in your
+sofas that is quite unnatural.
+
+This gives me reason to reconsider my calculation of the specular
+component near grazing, to be sure.  The lesson for your work is
+not to specify a specular component unless you really mean it!
+Most fabrics and wall coverings and paints are diffuse.  Enamel
+paint, formica, and other plastic-like finishes may have some
+specularity, but never more than a few percent.  Only metals have
+a significant specular component.
+
+Hope this helps.  Thanks very much for bringing this to my attention!
+
+-Greg
+
+Date: Mon, 20 Apr 92 09:33:27 PDT
+From: greg (Gregory J. Ward)
+To: spencer@cgrg.ohio-state.edu
+Subject: Re:  Can you help?
+Cc: ksimon@cgrg.ohio-state.edu
+
+Dear Steve (and Kevin),
+
+Actually, the problem you noticed in 2.0 was a rather serious bug in the
+normalization of the specular reflection from light sources.  I am
+eternally grateful that you brought this to my attention, as I was just
+about to send in a Siggraph paper with the wrong formula!!  Thanks to
+you, I won't have to publish a retraction and go around hanging my
+head low the rest of my days!
+
+I can send you the repaired files if you like, or you can wait for this
+and other bug fixes in version 2.1, due out soon.
+
+Thanks again!
+-Greg
+
+Date: Mon, 20 Apr 92 12:52:14 EDT
+From: spencer@cgrg.ohio-state.edu (Stephen Spencer)
+To: greg@hobbes.lbl.gov
+Cc: ksimon@cgrg.ohio-state.edu
+Subject:  Can you help?
+
+Glad to hear that we've helped.
+
+How soon is "due out soon"?  I think we can probably just wait... (Kevin, I'm
+not trying to speak for you here.)
+
+steve
+
+<A NAME="VIEW_INFO">=============================================================</A>
+VIEW_INFO
+
+Date: Tue, 21 Apr 92 16:33:04 +0100
+From: andre@borneo.inet.dkfz-heidelberg.de (Andre Schroeter)
+To: gjward@Csa1.lbl.gov
+Subject: radiance
+
+hallo,
+i just compiled radiance v2.0 on ISC2.2.
+all works fine exept xshowtrace and the *glare* programs.
+these programms only show an errormessage that they can't get the view from
+the pic. ximage beeps if i try to get information with the 't'command.
+maybe you know what's going wrong ???
+
+thanks andre
+
+e-mail: andre@borneo.inet.dkfz-heidelberg.de
+        81239@rz.novell1.fht-mannheim.de
+
+Date: Tue, 21 Apr 92 09:09:32 PDT
+From: greg (Gregory J. Ward)
+To: andre@borneo.inet.dkfz-heidelberg.de
+Subject: Re:  radiance
+
+The problem must be with your picture file.  Run getinfo on it and send
+me the output.  (Xshowtrace and glare only work with rpict and pfilt output.)
+
+-Greg
+
+To: greg@hobbes.lbl.gov
+From: "Andre Schroeter"  <81239@novell1.rz.fht-mannheim.de>
+Date:     28 Apr 92 07:48:45 GMT+0100
+Subject:  RE: problem with view in picfile
+
+hallo,
+here is the output of getinfo. this picture is the fisheye view from the
+example in the tutorial manpage.
+
+
+fish.pic:
+	/usr/andre/radiance/oconv sky.rad outside.rad mkiwindow.rad room.rad 
+	/usr/andre/radiance/rpict -vta -vp 1.5 .8 1 -vd 0 1 0 -vh 240 -vv 180 \
+				  -av .5 .5 .5 
+	SOFTWARE= RADIANCE 2.0 lastmod Thu Apr 16 21:43:22 MES 1992 by andre 
+		   on andre
+	FORMAT=32-bit_rle_rgbe
+
+thanks, andre
+
+e-mail: andre@borneo.inet.dkfz-heidelberg.de
+        81239@rz.novell1.fht-mannheim.de
+	
+
+Date: Mon, 27 Apr 92 23:16:03 PDT
+From: greg (Gregory J. Ward)
+To: 81239@novell1.rz.fht-mannheim.de
+Subject: RE: problem with view in picfile
+
+Hi Andre,
+
+The problem is that you are using an explicit path to rpict (starting with
+a '/'), which ximage and xshowtrace do not know how to read.  This is a
+bug that I really ought to fix...  I will attempt to do so and send you
+a patch a little later.
+
+-Greg
+
+Date: Tue, 28 Apr 92 11:17:20 PDT
+From: greg (Gregory J. Ward)
+To: 81239@novell1.rz.fht-mannheim.de
+Subject: RE: problem with view in picfile
+Status: R
+
+I have made the changes, but it is probably better to wait for release 2.1
+since I had to change several files.  I will release 2.1 next month sometime.
+
+-Greg
+
+<A NAME="BACKGROUND_COLOR">=======================================================</A>
+BACKGROUND_COLOR
+
+Date: Mon, 27 Apr 92 12:17:57 -0400
+From: David Jones  <djones@lightning.McRCIM.McGill.EDU>
+To: greg@hobbes.lbl.gov
+Subject: background color instead of black??
+
+
+Hi Greg, I'm trying to generate some RADIANCE pics really quickly.
+I'd like to render an incomplete scene, and color any ray that does not
+hit an object as GREY instead of BLACK as rpict does by default.
+Is there any easy way to do this, or to massage the output of rpict?
+
+dj
+
+Date: Mon, 27 Apr 92 09:28:02 PDT
+From: greg (Gregory J. Ward)
+To: djones@lightning.McRCIM.McGill.EDU
+Subject: Re:  background color instead of black??
+
+Hi Dave,
+
+Just make a glow source with the desired color, like so:
+
+void glow background_color
+0
+0
+4 .2 .3 .4 0
+
+background_color source background
+0
+0
+4 0 0 1 360
+
+-Greg
+
+Date: Mon, 27 Apr 92 09:30:14 PDT
+From: greg (Gregory J. Ward)
+To: djones@lightning.McRCIM.McGill.EDU
+Subject: Re:  background color instead of black??
+
+You can also massage the output picture using pcompos:
+
+	pcompos -b .2 .3 .4 -t 1e-4 input.pic 0 0 > output.pic
+
+Note that any pixel values less than 1e-4 will be replaced by the
+background color, so this is no good if you actually have black objects
+in your scene.
+
+<A NAME="UPFRONT_TRANSLATOR">===============================================================</A>
+UPFRONT_TRANSLATOR
+
+Date: Fri, 1 May 92 17:42:59 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: For your information
+To: GJWard@lbl.gov
+
+I have just written a model translator from Alias Upfront on the Macintosh
+to Radiance. It seems to work really well. Layers are colours are converted
+into materials. If anyone is interested then you can pass my address on
+otherwise I will eventually install a copy on your site. At the monent you
+only get 3 or 4 point facets (upfront limitation) but I intend to do cleaver
+tests and convert appropriate things into genbox and genprism calls. 
+------------------------------
+Paul D. Bourke                             School of Architecture
+pdbourke@ccu1.aukuni.ac.nz                 Auckland University
+         (130.216.1.5)                     Private Bag
+Ph:  +64 -9 373 7999 x7367                 Auckland
+Fax: +64 -9 373 7410                       New Zealand
+
+<A NAME="SCENE_FLATTENING">============================================================</A>
+SCENE_FLATTENING
+
+Date: Mon, 4 May 92 10:01:52 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: Radiance extraction
+To: GJWard@lbl.gov
+
+Is there a way to extract a decomposed description of a Radiance scene
+description, that is,  a file containing just primitives such as polygons,
+spheres etc (no generators) I have tried various methods but have not found
+a way that doesn't require a possibly high user input.
+------------------------------
+Paul D. Bourke                             School of Architecture
+pdbourke@ccu1.aukuni.ac.nz                 Auckland University
+         (130.216.1.5)                     Private Bag
+Ph:  +64 -9 373 7999 x7367                 Auckland
+Fax: +64 -9 373 7410                       New Zealand
+
+
+Date: Sun, 3 May 92 21:17:46 PDT
+From: greg (Gregory J. Ward)
+To: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re:  Radiance extraction
+
+Hi Paul,
+
+That's great news about the UpFront! translator!.  I wish I had this program,
+so I could use the translator.
+
+Regarding expanded Radiance descriptions, you can use xform with the -e
+option to take out all inline commands, like so:
+
+	% xform -e input.rad > expanded.rad
+
+I have considered from time to time writing a program to completely polygonize
+a scene description, replacing all spheres and cones and even bringing in
+instances and converting everything to polygons, but I have never had a
+real need to do it so have just left it as an idea for a rainy day.
+
+-Greg
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 2</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

@@ -1,0 +1,1481 @@
+<!DOCTYPE HTML PUBLIC "-//Netscape Comm. Corp.//DTD HTML//EN">
+<HTML>
+<HEAD>
+    <!-- SGI_COMMENT COSMOCREATE -->
+    <!-- SGI_COMMENT VERSION NUMBER="1.0" -->
+    <TITLE> Radiance Digest v3n1 </TITLE>
+</HEAD>
+<BODY>
+<H2>
+<A NAME="top">RADIANCE Digest Volume 3, Number 1</A></H2>
+<HR>
+<PRE>
+The release of this digest corresponds with the release of
+the next version of Radiance--v. 3.1.1 to be announced in a
+subsequent e-mail.
+
+-Chas
+
+-------------------------------------------------------------
+Index of Topics
+
+<A HREF="#pdfblur">PDFBLUR</A>
+<A HREF="#perspective">PERSPECTIVE VIEW DISTORTION</A>
+<A HREF="#photometrics">PHOTOMETRICS</A>
+<A HREF="#limitations">RADIANCE LIMITATIONS</A>
+<A HREF="#dynamic">SIMULATING DYNAMIC RANGE</A>
+<A HREF="#illuminance">CALCULATING ILLUMINANCE</A>
+<A HREF="#archicad">ARCHICAD TO RADIANCE</A>
+<A HREF="#input">INPUT LANGUAGE BASICS</A>
+<A HREF="#glare">GLARE CALCS WITH ADELINE</A>
+<A HREF="#redhat">RADIANCE AND RED HAT LINUX</A>
+<A HREF="#instances">INSTANCES AND OCONV</A>
+<A HREF="#star">STAR PATTERNS</A>
+
+<A NAME="pdfblur">-------------------------------------------------------------</A>
+PDFBLUR QUESTION
+
+
+To: CKEhrlich@lbl.gov
+Subject: PDFBLUR QUESTION.
+
+Hi Mr. Ehrlich,
+
+     I have a quick question regarding the &quot;pdfblur&quot; command in 
+radiance.  To try the command I typed :
+
+1% rpict -vf myview -x 640 -y 480 -z orig.zbf scene.oct &gt; orig.pic
+2% pdfblur 0.5 60 8 orig.pic | pinterp -B -vf myview -x 640 -y 480 
+orig.pic orig.zbf &gt; blurry.pic  
+
+Of course, &quot;scene.oct&quot; and &quot;myview&quot; are files already available.
+
+The problem is that after three days of computation on a Indigo2 the 
+program was still running!  I had to kill the process thinking something 
+was wrong.
+
+I am trying to model the effect of camera Focal Length and aperture for 
+various ray traced images.
+
+Thank you for your precious help.
+
+Sincerely,
+Jean-Sebastien 
+
+----------------------
+
+Date: Wed, 28 May 1997 17:50:13 -0700
+From: radiance (Radiance Maintenance)
+To: valois@cim.mcgill.ca, chas@pink (Charles Ehrlich)
+Subject: Re:  pdfblur
+
+Hi J-S,
+
+I just ran pdfblur on a similar problem, and it did take a few minutes,
+but it finished and the results were what I expected.  I don't know what
+the problem is.  Perhaps you could check to make sure that the output
+of pdfblur is a sequence of VIEW= lines.  Which version of Radiance are
+you running?
+
+-Greg
+
+
+----------------------
+
+Date: Thu, 29 May 1997 13:21:00 -0400 (EDT)
+From: Valois Jean-Sebastien &lt;valois@cim.mcgill.ca&gt;
+To: Radiance Maintenance &lt;radiance&gt;
+Subject: Re: pdfblur
+
+Greg! 
+    I would first like to congratulate you on your new position at SGI. I am
+sure your experience in computer graphics will contribute toward better
+hardware and software products from SGI.  In that sense it is good new for 
+all of us ;) .
+
+&lt;snip&gt;
+
+   pdfblur for a few minutes ?!?  Mine was running for three days without any
+success!  Ok, I guess I don't know how to use it.  Actually, I am combining
+pinterp and pdfblur (from Radiance v3.0) to simulate ZOOM.  I
+used the example given in the man pages under pdfblur where it says:
+
+rpict -vf myview -x 640 -y ...
+pdfblur 0.5 57 8 orig.pic | pinterp -B ...
+
+   Instead of &quot;pinterp -B -vf orig.pic ...&quot;  I used &quot;pinterp -B -vf myview
+...&quot;   That must be it!  I just realized the mistake.
+
+   Anyway, I am only using ONE view point (VIEW) to run the simulation,
+the same view point that I am using to generate a &quot;pin-hole&quot; type of 
+image.
+
+&lt;snip&gt;
+
+########
+
+Thank you.
+
+Sincerely yours,
+Jean-Sebastien
+ ____________________________________________
+|        Jean-Sebastien Valois B.Eng         | 
+|````````````````````````````````````````````| 
+| * Email: valois@cim.mcgill.ca              | 
+| * Web page (Where and how to reach me):    | 
+|          http://www.cim.mcgill.ca/~valois  | 
+|____________________________________________| 
+
+
+<A NAME="perspective">----------------------------------------------------------</A>
+PERSPECTIVE VIEW DISTORTION
+
+Date: Sun, 01 Jun 1997 17:13:46 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance-discuss
+Subject: Naive question regarding -vp and -vd
+
+Hello all, 
+
+I have finally gotten a chance to spend some time
+with radiance and am stumped with the relationship
+between -vp and -vd and the scenes that I have
+been working on. 
+
+I have used torad (which is great) to pull out
+several sections from autocad to get a better visual
+on light and space. What I need to be able to is
+as *simple* as move up and down, front and back, and
+so on without incurring fisheye perspective distortions.
+I'm sure this is not so simple once you get
+into the details, but never mind the the details
+for now, I can figure that out as I get going. 
+
+So, how do I use -vp and -vd to move up, down, etc...
+
+Humbled, and hoping for you indulgence,
+
+mlarch@ix.netcom.com
+
+P.S.
+I think that I am on the list but have not seen
+any traffic in the last month or so. If there has
+been traffic, please let me know so that I can
+re-request.
+
+--------------------------
+
+Morgan,
+
+The trick to prevent vertical perspective distortion
+is to maintain a view direction that is paralell to
+the X-Y plane (assuming Z is up), and changing ones
+vertical view orientation with the &quot;-vl&quot; view option.
+
+For example, the following two view definitions are
+*roughly* similar:
+
+rview -vtv -vp 0 0 0 -vd 1 1 0.000 -vu 0 0 1 -vs 0 -vs 0.2
+rview -vtv -vp 0 0 0 -vd 1 1 0.127 -vu 0 0 1 -vs 0 -vs 0
+
+This topic is discussed in more detail in the Radiance
+digests which can be found in the doc directory of the
+Radiance distribution.  
+
+I double-checked the discussion list, and your e-mail is
+on it. 
+
+-Chas
+Charles Ehrlich
+Principal Research Associate
+Lawrence Berkeley National Laboratory
+
+<A NAME="photometrics">-----------------------------------------------------------------</A>
+PHOTOMETRICS
+
+To: ckehrlich@lbl.gov
+Subject: RADIANCE 3.0 
+Date: Thu, 29 May 97 16:22:17 +0200
+
+Hi Chas,
+
+I am Vincent from the FACULTE POLYTECHNIQUE DE MONS.
+
+For my thesis I had to measure the illuminance value for a road during the 
+night. The caracteristics of the luminaire are given by a manufacturer 
+(Photometric data for 25 horizontal and 27 vertical angles). I have to 
+create the IES file. It is a symetric luminaire for roads lighting.
+
+Actually, the results are very different of results given by a firm 
+specialised in lighting.
+
+To obatin the values I use : ximage my.pic | rlux my.oct
+or I render the image with the -i option.
+
+Could you tell me if the geometry of the luminous area given in the IES 
+is very important to use in RADIANCE ? In my case, the luminaire is an 
+ellipsoid.
+
+Is the description of the sky important ?
+
+And the important question : Is RADIANCE valid to render with accuracy 
+exterior scene ?
+
+
+Thank you for your rapid reply ( I had to present my thesis the 15th of 
+june).
+
+Vincent DUVIVIER
+FACULTE POLYTECHNIQUE DE MONS
+BELGIUM
+E-mail: duvivier@motelec.fpms.ac.be
+
+
+Date: Thu, 29 May 1997 14:26:01 -0700
+To: duvivier@motelec.fpms.ac.be
+Subject: Re:  RADIANCE 3.0
+
+Hello Vincent,
+
+If you have the raw candlepower distribution data, it is more
+convenient to simply create a Radiance data file which describes
+the output of the luminaire, than to first create an IESNA file
+and then translated it into Radiance.  Unfortunately, until
+the publication of the Radiance book, this is one of least well
+documented features of Radiance.
+
+I recommend that you use a sphere made of material illum rather
+than an ellipsoid.  The invisible illum sphere will be just large 
+enough to completely enclose the visible geometry of the luminaire.
+If glare is important, then this geometry should also contain 
+a surface which describes the visible output aperature of the
+luminaire, which would be modeled with material glow. 
+
+The intensities of the glow and illum would be inversely proportional
+to the projected area (in meters) of each of their respective surfaces.
+The projected area of the illum sphere is a circle (of course)
+and the projected area of a mesh of polygons would be the sum of
+the polygons' areas.  When you have these data available, use the
+lampcolor program to compute the R G B intensities for each surface.
+There will be no double-counting of the illuminance even though
+there is both a glow and an illum because the glow will have a
+radius of effect of zero, and any ambient rays that happen to go
+reach the illum sphere will be stopped before reaching the glow.
+
+Assuming the data is bi-laterally symmetrical, and since 180 is not
+evenly divisible by 24 and 90 is not even divisibly by 26, the data 
+file will look something like:
+
+---------
+
+2
+0 0 27 v1 v2 v3 ... v27
+0 0 25 h1 h2 h3 ... h25
+v1h1 v1h2 v1h3 ... v1h25
+v2h1 v2h2 v2h3 ... v2h25
+...
+v27h1 v27h2 v27h3 ... v27h25
+
+---------
+V1 through v27 and h1 through h25 are the specific vertical and
+horizontal angles respectively at which the data is provided, 
+and the v1h1 through v27h25 are the actual values at each angluar 
+location.  If the data you have is provided in the opposite
+order, then simply swap the two lines after the &quot;2&quot; and use the
+data as you have it.  What is different about this format than
+most data file formats is that the abcisas and ordinates are
+not specified on each and every line of data.
+
+Lets assume the above datafile is called lum1.dat.  This data
+would then be included into the radiance scene with a brightdata
+pattern thusly:
+
+----------
+
+void brightdata illum_sphere_pat
+5 corr lum1.dat source.cal src_theta src_phi2
+0
+1 .95
+# if depreciation factors need to be accounted for
+# then change .95 to the corresponding total accumulated
+# depreciation allowance.
+
+illum_sphere_pat illum illum_sphere_mat
+0 
+0
+3 R G B
+# intensities as provided by lampcolor
+
+illum_sphere_mat sphere illum_sphere_surf
+0
+0
+4 X Y Z R
+# location and radius of sphere
+
+-----------
+
+There are many other examples of how to do this provided
+with the digests in ray/doc/digest.  I recommend that you 
+browse them thoroughly to satisfy yourself that you are 
+doing this correctly.  You should also make sure that
+your luminaire is oriented correctly with respect to the
+roadway.
+
+To calculate illuminance values on the roadway, create
+a &quot;plan&quot; view of the road with a view definition like:
+
+rview -vtl -vp 0 0 1 -vd 0 0 -1 -vu 0 1 0 -vh 100 -vv 10
+
+And use the -I parameter of rpict (or rview, or rtrace).
+When the final image is then viewed with ximage and the
+value of a pixel is queried with &quot;L&quot;, then the resulting
+value will be in lux.
+
+If this is a nighttime view, the sky is not important.
+
+Radiance is accurate for interior and exterior scene.  The
+point of least accuracy in this sort of analysis would be
+the material description of the surface of the roadway.  But,
+since you are not calculating luminances, this will not
+affect your results.  The problem with roadway surfaces is
+that there is self-shadowing--something not well treated
+by any existing material model.
+
+-Chas
+
+-------------------
+
+Subject: RADIANCE 3.0 / luminaire 
+Date: Mon, 09 Jun 97 17:11:47 +0200
+
+Hi Chas, 
+
+I am Vincent,
+
+Thank you very much for your reply about modeling luminaires.
+
+I have others questions : 
+
+If the raw candlepower distribution data of the luminaire is in (cd/1000 lm) 
+and the total output of the luminaire is 16500 lumens, is it correct to put 
+16.5 (or 16500) for 'total lamp lumens' when I use lampcolor and 1 (or 0.001) 
+for the multiplier A1 of source.cal ? 
+
+To obtain correct values (compared with measures made by a specialised firm) 
+for the illuminance, I had to use 3.5 for the multiplier. Is it normal ? 
+
+Thank you very much for your reply.
+
+Vincent DUVIVIER
+FACULTE POLYTECHNIQUE de MONS, BELGIUM
+email: duvivier@motelec.fpms.ac.be
+
+
+
+
+
+-----------------------
+Date: Sun, 1 Jun 1997 21:44:23 -0400 (EDT)
+From: Navid Sadikali &lt;nhsadika@barrow.uwaterloo.ca&gt;
+To: &quot;Gregory J. Ward&quot; &lt;greg&gt;
+Subject: Re:  Radiance question: Tilting the filmplane? (fwd)
+
+Hi again.  Thanks for your response about tilting the filmplane,
+by leveling the view, and then using view lift.  
+Now, I am trying to understand exactly how the number given to
+view lift corresponds to a movement that in the 3D coordinates...
+
+For example, how much would I lift the view to exactly
+simulate the effect of tilting the film plane by a certain 
+theta degrees?
+By choosing an arbitrary number such as 0.5 I can remove the
+convergences, but unless I fiddle I can't get the image centered
+in the same spot (ie. centered in the same spot that corresponds to
+the center of the non-converged picture).
+
+Maybe I should illustrate:
+
+
+                         |     
+                         X
+                         |  building   
+                         |     
+                         |
+           \-- distperp --|
+         eye             |_____________
+
+
+If the non-tilted picture is centered at X, how much do I lift
+the film plane, to center the image on X in the tilted picture?
+Note:If I lift the view by  (X.vert - eye.vert) I don't get the 
+correct image, even though I have set the view direction horizontal.
+
+
+Thanks every so much,
+
+Navid
+M.Math Student
+
+&gt;From greg  Wed Jun  4 09:47:36 1997
+Date: Wed, 4 Jun 1997 09:47:35 -0700
+From: greg (Gregory J. Ward)
+To: Navid Sadikali &lt;nhsadika@barrow.uwaterloo.ca&gt;
+Subject: Re:  Radiance question: Tilting the filmplane? (fwd)
+
+Hi Navid,
+
+Using your diagram:
+
+
+                          |     
+                          X
+                          |  building   
+                          |     
+                          |
+           \-- distperp --|
+         eye              |_____________
+
+
+You need to specify a lift value that is the fractional image height you
+want to shift your view.  The image height is in turn determined by your
+vertical view angle (-vv parameter).  For example, if the top of your
+&quot;unlifted&quot; view just reached your desired view center (marked &quot;X&quot; in the
+above illustration), then you would specify a view lift of 0.5, since you want
+to move your image center half the frame height.
+
+To put it mathematically, your frame height is twice the tangent of half your
+vertical view angle in a relative coordinate system where your view vector
+defines the base of a triangle with unit length.  All you have left to
+do is figure out what the lift should be using similar triangles:
+
+               (X.vert - eye.vert)/distperp
+       lift =  ----------------------------
+               2 * tan(vv_ang/2)
+
+If you ever want to use the angle instead of distances, just replace
+the numerator with the tangent of your vertical lift angle.  A similar
+sort of formula applies for horizontal view shift, if you ever need that.
+
+Hope this helps.
+-Greg
+
+
+&gt;From chas@pink  Fri Jun 13 13:21:36 1997
+Date: Fri, 13 Jun 1997 13:18:37 -0700
+From: chas@pink (Charles Ehrlich)
+To: MRINALINI D SHARMA &lt;msharma@ced.berkeley.edu&gt;
+Subject: Re:  Adeline
+Cc: radiance@pink
+
+<A NAME="shadow">---------------------------------------------------</A>
+SHADOW QUANTIFICATION STUDY
+
+Date: Fri, 13 Jun 1997 12:00:40 -0700 (PDT)
+From: MRINALINI D SHARMA &lt;msharma@ced.berkeley.edu&gt;
+To: ckehrlich@lbl.gov
+Subject: Adeline
+
+June 13, 1997
+
+Dear Mr. Charles Ehrlich,
+I am an assistant a the Environmental Simulation Laboratory, College of
+Environmental Design, Berkeley.
+
+I was wondering if ADELINE is capable of coducting a shadow quatification
+study. In essence is it able to calculate shadow areas given a lighting
+situation.
+
+Your prompt reply would be appreciated.
+
+Thankyou for your time.
+
+sincereley
+Mrinalini Devi Sharma 
+
+----------------------------------------
+
+Dear Mr. Sharma,
+
+Yes.  ADELINE/Radiance can perform a shadow quantification
+of an arbitrary lighting and geometry situation.  The way
+to perform this is not obvious, however.
+
+First problem: getting the geometry together.  I recommend
+using AutoCAD with the torad or radout export utilities.
+
+Second: geting the lighting distribution data from mfgr.
+
+Third: assembling the materials and lighting in the 
+Radiance input text files (no graphical user interface for
+this task).
+
+Fourth: Define a &quot;plan&quot; view of the area to be quantified.
+The view type for the rendering program is &quot;-vtl&quot;.  See
+the manual pages for rpict for more information.
+
+Fifth: Calculate the image with sufficient resolution and
+analyze the results with pvalue.  You would then have to
+write a simple script that would count the number of pixels
+in the image that have a value less than the ambient value
+of your scene (this can be zero with -av 0 0 0).  Or, the 
+image file could be converted to some other format (like tiff) 
+and analyzed with any other convenient software which can query 
+and count pixels.
+
+So, ADELINE/Radiance can do it, but not exactly with ease.
+
+
+-Chas
+Charles Ehrlich
+Principal Research Associate
+Lawrence Berkeley National Laboratory
+
+
+<A NAME="limitations">------------------------------------------------</A>
+RADIANCE LIMITATIONS
+
+
+&gt;From urge@shore.net  Tue Jul  1 11:48:54 1997
+Date: Tue, 01 Jul 1997 14:46:30 -0700
+From: &quot;R.J. Russell&quot; &lt;urge@shore.net&gt;
+Organization: Continental Design
+To: gregl@asd.sgi.com
+Subject: Radiance restriction general question
+
+First, if this not the appropriate place to ask tech questions 
+about Radiance, please direct my there.
+
+If you don't mind answering a few general questions I have about
+Radiance, I'd appreciate it.
+
+
+On the web page, under &quot;Restrictions of the Complexity of the
+Problem&quot; it says that: 
+
+Although Radiance attempts to account for all significant sources of
+illumination, there are a few cases that are not
+adequately modeled in the present calculation. The most important of
+these is the reflection of intense light from
+curved specular surfaces, such as might be found within a heliostat or
+parabolic light fixture. Computing light from
+such a system requires a ray tracing method that follows light in the
+forward direction, starting at the emitters and
+working outward. Since Radiance works strictly in the reverse direction,
+a separate preprocess is necessary to
+compute these output distributions. This hypothetical preprocessor is
+not included in the present package. 
+
+I have a client that designs automotive taillamps, and they 
+want to be able to see the lit appearance of their lamps
+in a rendered image.  The majority of the light transmitting 
+through the lens surface is reflected off the curved, basically
+parabolic reflector surface behind the bulb (essentially the
+same as a flashlight).  
+
+Does the quoted restriction refer to a problem like this?
+
+If so, can you point me to any resources on the web or elsewhere
+that may have addressed this?  My client is VERY interested in
+doing this, so if it has not been done already they may want me
+to develop the mentioned &quot;seperate preprocess&quot;. Could you briefly
+explain the major issues involved with that, or outline the
+basic steps that such a program would have to tackle?
+
+Any info is very appreciated.
+
+R.J. Russell
+urge@shore.net
+Continental Design
+
+--------
+
+&gt;From gregl@radiate.asd.sgi.com  Tue Jul  1 12:49:39 1997
+From: gregl@radiate.asd.sgi.com (Greg Larson)
+To: &quot;R.J. Russell&quot; &lt;urge@shore.net&gt;
+Subject: Re:  Radiance restriction general question
+
+Hi R.J.,
+
+Future queries about Radiance should be addressed to &quot;radiance@floyd.lbl.gov&quot;.
+
+Indeed, the restriction mentioned does apply to your case.  I cannot offer
+much advice on writing a forward ray-tracer, except to say that it is about
+a 6 man-month effort for someone who is already an expert in the field.
+It is not a task to be tackled lightly.
+
+I can recommend a program that already performs such a function, called ASAP
+by Breault Research Organization (http://www.breault.com/).  I suggest that
+you check this out.
+
+Radiance assumes that you have some way of measuring or otherwise
+characterizing the output of all light sources in a scene.  If you
+can measure the output distribution of your tail-lights, then you can
+certainly simulate scenes containing them.  If your goal is to predict
+the tail-light output, however, you need a program like ASAP.
+
+Best of luck.
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<A NAME="dynamic">----------------------------------------------</A>
+SIMULATING DYNAMIC RANGE
+
+&gt;From valois@cim.mcgill.ca  Mon Jun 23 08:29:58 1997
+Date: Mon, 23 Jun 1997 11:25:43 -0400 (EDT)
+From: Valois Jean-Sebastien &lt;valois@cim.mcgill.ca&gt;
+To: Radiance Account &lt;radiance&gt;
+Subject: Gray Scale Response
+
+Hi Greg,
+
+How are you?  Thanks for your last email.  Here is another (quick) 
+question for you.
+
+Is there a command/function that allows to stretch or crop the intensity 
+ranges for an image ?  For example, I would like to model the response of 
+a camera that can resolve a 10-step (32:1 contrast ratio) under a minimum 
+scene illumination of 10 footcandles.  Also, I know that the gray scale 
+capability can extend to a 12,000 footcandle scene illumination.
+
+Sincerely yours,
+Jean-Sebastien
+
+ ____________________________________________
+|        Jean-Sebastien Valois B.Eng         | 
+|````````````````````````````````````````````| 
+| * Email: valois@cim.mcgill.ca              | 
+| * WWW  : http://www.cim.mcgill.ca/~valois  | 
+| * Tel. : (281) 244-7271                    | 
+|____________________________________________| 
+
+
+&lt; or stated another way &gt;
+
+&gt;From valois@cim.mcgill.ca  Tue Jun 24 09:14:53 1997
+Date: Tue, 24 Jun 1997 12:10:38 -0400 (EDT)
+From: Valois Jean-Sebastien &lt;valois@cim.mcgill.ca&gt;
+To: Radiance Account &lt;radiance&gt;
+Subject: Dynamic Range
+
+Hi Greg!
+        Me again.  
+1.  I guess what I was trying to ask yesterday was: &quot;How do I 
+change (or simulate) the dynamic range in Radiance ?&quot;  Instead of a 
+10^30:1 ratio, I would like to see the effect of a 100:1 ratio for a 
+given Exposure.  I guess a special filter would do the job, but which 
+one ?  
+
+The way I see it, the dynamic range is related to the resolving power that is 
+a function of the Exposure.  Is that right ?
+
+2. Would it be possible to use the function:
+
+  Radiance EXPOSURE = K*T*S/f^2.
+
+   for a CCD camera when, instead of taking S as the film speed (ISO), I 
+take the CCD efficiency ?
+
+
+Thanks for your time.
+
+Sincerely,
+Jean-Sebastien
+ ____________________________________________
+|        Jean-Sebastien Valois B.Eng         | 
+|````````````````````````````````````````````| 
+| * Email: valois@cim.mcgill.ca              | 
+| * WWW  : http://www.cim.mcgill.ca/~valois  | 
+| * Tel. : (281) 244-7271                    | 
+|____________________________________________| 
+
+-------------
+
+&gt;From radiance  Wed Jun 25 12:34:29 1997
+Date: Wed, 25 Jun 1997 12:34:28 -0700
+From: radiance (Radiance Account)
+To: Valois Jean-Sebastien &lt;valois@cim.mcgill.ca&gt;
+Subject: Re:  Gray Scale Response
+Cc: radiance
+
+Jean-Sebastien,
+
+The best (quick) answer I can give you is to explore the
+use of the &quot;pcomb&quot; program.  It allows you to specify an
+arbitrary function on the command line which provides the
+functionality to perform pixel-by-pixel operations.   Be
+sure to browse the rayinit.cal file for useful functions
+to use.  There have also been examples of the use of the
+pcomb program in the digests.
+
+-Chas
+Charles Ehrlich
+Principal Research Associate
+Lawrence Berkeley National Laboratory
+
+
+<A NAME="illuminance">------------------------------------------------</A>
+CALCULATING ILLUMINANCE
+
+
+&gt;From duvivier@motelec.fpms.ac.be  Thu Jun 12 03:53:14 1997
+To: chas (Charles Ehrlich)
+Cc: duvivier@motelec.fpms.ac.be
+Subject: Re: RADIANCE 3.0 / luminaire  
+Date: Thu, 12 Jun 97 12:51:41 +0200
+
+Hi Chas,
+
+I am Vincent
+
+Thank you very much for your rapid reply. Your are great.
+
+I don't know what is my problem with the luminaire.
+
+The scene is an exterior nighttime view. The portion of road is 15m X 4m (origin at 0,0).
+The 5 luminaires (GEMA from COMATELEC, ellipsoid, high-pressure sodium Philips SON-T 150W, 
+16500 lumens) are placed every 15m (starting at x=-15 m to x=45m) at y=5.5m and z=5m.
+
+1) Simple description of the luminaire
+ 
+        xxxxxxx             *
+      xxxxxxxxxxx  .523m       x = not emitting area
+      lllllllllll              l = emitting area
+        lllllll             *
+
+      &lt;   .7m   &gt;
+
+
+2) PROGRAM lampcolor :
+
+       lamp type : HID
+       length unit : meter
+       lamp geometry : ring
+       disk radius : .35
+       total lamp lumens : 16500
+       lamp color (RGB) = 134.387528 49.117057 1.253024
+
+3) Assuming that the candlepower distribution file (cd/1000 lm) is correct (vertical angle 0-90 
+degrees and horizontal angle 0-355 degrees,), the description of the scene is :
+
+       ### Description of the road
+
+       ### Material : Beton (not important for the illuminance)
+       void plastic beton
+       0
+       0
+       5 0.216 0.145 0.106 0.192 0
+
+       ### Geometry
+       beton polygon road
+       0
+       0
+       12
+               0  0 0
+               0  4 0
+               15 4 0
+               15 0 0
+
+       ### Description of the luminaire
+
+       void brightdata illum_sphere_pat
+       5 corr gema.dat source.cal src_theta src_phi2
+       0
+       1 0.0035 (not 0.001 if I want the correct values)
+
+       illum_sphere_pat illum illum_sphere_mat
+       0
+       0
+       3 134.387528 49.117057 1.253024
+
+       illum_sphere_mat sphere illum_sphere_surf1
+       0
+       0
+       4 -15 5.5 5 .35
+
+       illum_sphere_mat sphere illum_sphere_surf2
+       0
+       0
+       4 0 5.5 5 .35
+
+       illum_sphere_mat sphere illum_sphere_surf3
+       0
+       0
+       4 15 5.5 5 .35
+
+       illum_sphere_mat sphere illum_sphere_surf4
+       0
+       0
+       4 30 5.5 5 .35
+
+       illum_sphere_mat sphere illum_sphere_surf5
+       0
+       0
+       4 45 5.5 5 .35
+
+4) gema150.rif file :
+       
+       ZONE= I -16 46 0 6 0 6
+       scene= scene.rad
+       view= v1 -vtl -vp 7.52404 2.41832 1.48918 -vd 0 0.0099995 -0.99995 \
+             -vu 0 0 1 -vh 22.5 -vv 22.5 -vo 0 -va 0 -vs 0 -vl 0
+       render= -i -dt 0 -lw 0 -lr 12 -ad 1024 -ab 2 -x 1024 -y 1024
+
+5) rad gema150.rif
+   ximage gema150_V1.pic
+
+The values are obtained from interactive clicks (L) on the picture.
+
+This was the process to evaluate the illuminance.
+Could you tell me if it seems correct ? 
+Thank you very much.
+
+
+Vincent DUVIVIER
+Rue Trieu des Dames, 24
+5190 Jemeppe-sur-Sambre
+Belgium
+
+email: duvivier@motelec.fpms.ac.be (until july of 1997)
+
+
+----------------------------------------------------------
+
+Vincent,
+
+I appologize for my late reply. I've been way over-worked lately.
+
+I started to look at your scene and realized that I don't
+have your data file.  If you e-mail it to me, I'll be able to
+reproduce your results.
+
+Meanwhile, you can try two changes to your scene while you
+wait for my reply.
+
+1. In scene.rad change:
+
+void brightdata illum_sphere_pat
+5 corr gema.dat source.cal src_theta src_phi2
+0
+1 0.0035
+
+to:
+
+void brightdata illum_sphere_pat
+5 flatcorr gema.dat source.cal src_theta src_phi2
+0
+1 0.001 
+
+Flatcorr is the correct correction function for planar
+surfaces such as rings.  Corr is used for spheres and
+surfaces which can be simplified as infinitely distance 
+like the &quot;source&quot; surface.
+
+2. In the rif file change:
+
+render= -i -dt 0 -lw 0 -lr 12 -ad 1024 -ab 2 -x 1024 -y 1024
+
+to:
+
+render= -i 
+RESOLUTION= 1024 1024
+QUALITY= MEDIUM
+OPTFILE= scene.opt
+OCTREE= scene.oct
+
+The -x and -y params were taken out because this causes
+problems when you try an interactive viewing with rview.
+RESOLUTION takes care of that.  QUALITY=MEDIUM makes the
+resolution render at twice the specified RESOLUTION value
+to reduce the jaggies, and takes care of the other necessary
+options.
+
+To do an interactive view:
+
+rad -o x11 file.rif
+
+Use the &quot;t&quot; command to trace a ray into the scene.  Press
+return a few times and it will show the average value,
+which will be illuminance because of the &quot;-i&quot; in the 
+render= line.  Read the rview manual for more commands.
+
+If you have no other surfaces in your scene except the
+ground and the light, you don't need any ambient bounces,
+so you could make -ab = 0.
+
+I added the -I option so that you could use the scene.opt
+options file with rtrace for a more rigorous analysis with
+rtrace.  Same goes for the OCTREE= definition.
+
+rtrace @scene.opt -dv- -h- -x 1 scene.oct &lt; scene.pts \
+       | rcalc -e '$1=47.4*$1+120*$2+11.6*$3' \
+       &gt; illum.val
+
+scene.pts contains:
+
+0 0 1 0 0 1
+1 0 1 0 0 1
+1 1 1 0 0 1
+0 1 1 0 0 1
+
+for a simple four-point analysis.  First three digits are
+the &quot;sensor&quot; location x y z, and the next three are the &quot;sensor&quot;
+orientation x y z.  Scene.val will contain four values corresponding 
+in sequence to the four locations above.  Rcalc with its options
+takes the average of the R G B calculated values.
+
+
+-Chas
+
+
+<A NAME="archicad">-----------------------------------------------------------------------</A>
+ARCHICAD TO RADIANCE
+
+&gt;From paul@bourke.gen.nz  Wed Jul  2 16:02:15 1997
+Date: Thu, 3 Jul 1997 09:00:52 +1000
+To: greg (Gregory W. Larson)
+From: Paul Bourke &lt;paul@bourke.gen.nz&gt;
+Subject: Re:  ArchiCAD2rad
+
+&gt;We looked and looked, and could not find the archicad to Radiance translator.
+&gt;I guess it's time to ask Paul Bourke if he still has it, or knows where it is.
+&gt;His e-mail address is &quot;pdb@mhri.edu.au&quot; -- and please include me in your
+&gt;discussion.
+
+It can be found at
+   http://www.mhri.edu.au/~pdb/software/
+I've sent the URL off to Henry.
+
+How are things anyway? I never actually heard what you were doing at
+SGI? As it turns out I'm using SGI gear all the time now, we have
+Indigo-2 Max Impacts for workstations and a lovely 12 processor power
+challenge as our CPU server. Even better when you consider there are
+only 3 of us using it! I'm involved almost exclusively in scientific
+visualisation and still find lots of uses for Radiance. I think I asked
+earlier whether you'll be at Siggraph, if so, I might see you there.
+
+---------------------------------------------------------------------
+Paul Bourke                                           pdb@mhri.edu.au
+Brain Dynamics Research Unit                  http://www.mhri.edu.au/
+Mental Health Research Institute                   Ph: 61 3 9389 2602
+Locked Bag 11, Parkville                          Fax: 61 3 9387 5061
+Victoria 3052, Australia
+
+
+
+<A NAME="input">---------------------------------------------------------------------</A>
+INPUT LANGUAGE BASICS
+
+&gt;From mlarch@ix.netcom.com  Wed Jul  2 06:59:16 1997
+Date: Wed, 02 Jul 1997 09:53:09 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: radiance-discuss
+Subject: first colorfunc's and the disappear'd prmitives
+
+This may well be yet another silly question, but ...
+
+My first try at colorfunc's has resluted in the 
+disappearance of my primitives. I built a .cal
+file, s.cal, with the fallowing:
+
+       red = Px*A1;
+       green = Py*A2;
+       blue = Pz*A3;
+
+and a rad file, c.rad, with the fallowing:
+
+       void plastic white
+       0
+       0
+       5 1 1 1 0.01 0.01
+
+       void colorfunc hat
+       4 red green blue s.cal
+       0
+       3 1 1 1
+
+       void light bright_white
+       0
+       0
+       3 20 20 20
+
+       bright_white sphere l1
+       0
+       0 
+       4 0 0 20 4
+       
+       hat sphere s1
+       0
+       0
+       4 0 0 0 2
+
+       hat polygon floor
+       0
+       0
+       12
+               -10 -10  0
+               -10  10  0
+                10  10  0
+                10 -10  0
+
+
+After oconv c.rad &gt; c.oct, rivew ( with -vp 0 -20 10 
+-vd .30 .95 -.34 -av .2 .2 .2) shows me nothing. If 
+I replace hat with the plastic material white, I can 
+see what I'd expect, a polygon intersecting a sphere. 
+
+I read through the usman1.rtf and usman2.doc and looked
+over several example files and thought I had connected
+all the dots. But I guess not. What am I not getting ?
+
+Thanks,
+mlarch@ix.netcom.com
+
+----------------------
+
+&gt;From radiance  Sun Jul  6 23:48:40 1997
+Date: Sun, 6 Jul 1997 23:48:39 -0700
+From: radiance (Radiance Account)
+To: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+Subject: Re:  first colorfunc's and the disappear'd prmitives
+
+Morgan,
+
+You're almost there!  The only concept of the Radiance
+input language that you overlooked was that a pattern
+by itself is not sufficient to describe the surface
+material properties of an object.  The pattern must
+&quot;modify&quot; a material like plastic.  So the colorfunc
+pattern must appear before the white plastic, and
+the white plastic must be modified by the &quot;identifyier&quot;
+of the colorfunc (hat).  In this way, the white plastic
+&quot;inherits&quot; the properties of the previous modifier(s).
+
+        void colorfunc hat
+        4 red green blue s.cal
+        0
+        3 1 1 1
+
+        hat plastic white
+        ^^^
+        0
+        0
+        5 1 1 1 0.01 0.01
+
+        void light bright_white
+        0
+        0
+        3 20 20 20
+
+        bright_white sphere l1
+        0
+        0
+        4 0 0 20 4
+
+        hat sphere s1
+        0
+        0
+        4 0 0 0 2
+
+        hat polygon floor
+        0
+        0
+        12
+                -10 -10  0
+                -10  10  0
+                 10  10  0
+                 10 -10  0
+
+That should do it.
+-Chas
+
+------------
+&gt;From mlarch@ix.netcom.com  Mon Jul  7 10:45:30 1997
+Date: Mon, 07 Jul 1997 13:40:29 -0400
+From: Morgan Larch &lt;mlarch@ix.netcom.com&gt;
+To: Radiance Account &lt;radiance&gt;
+Subject: Eureka ! Re: first colorfunc's and the disappear'd prmitives, thanks
+
+Thanks Chas, now that I stop and look at it, it makes
+quite a lot of sense and a whole lot of difference!
+
+
+mlarch@ix.netcom.com
+
+<A NAME="glare">-------------------------------------------------------------</A>
+GLARE CALCS WITH ADELINE
+
+&gt;From haico.schepers@arup.com  Tue Jul  8 16:17:53 1997
+Date: Tue, 08 Jul 1997 22:53:08 +0000
+From: Haico Schepers &lt;haico.schepers@arup.com&gt;
+To: chas
+Subject: Glare Uuugh
+
+Chas
+
+I seem to be able to get some numeretical results now that rayinit is
+located in the same directory as Glare.exe.  Just some additional
+questions to those in the last email;
+1/ I can't find xglaresrc to run the visualization program for Glare
+2/ How important is the warning that I am missing 80% of samples to the
+reliablity of the results
+3/ I am working on Daylighting glare with large sources, has the program
+been evaluated for this?
+
+If there is anyone else that can help me on these questions please
+forward their email accounts.
+
+Thanks for your help
+haico
+
+--------
+&gt;From greg  Wed Jul  9 10:23:43 1997
+Date: Wed, 9 Jul 1997 10:23:42 -0700
+From: greg (Gregory W. Larson)
+To: chas
+Subject: Re:  Can you help with this one?
+Cc: haico.schepers@arup.com
+
+Chas/Haico,
+
+&gt; 1/ I can't find xglaresrc to run the visualization program for Glare
+
+Doesn't exist in ADELINE, since it's tied to X11.
+
+&gt; 2/ How important is the warning that I am missing 80% of samples to the
+&gt; reliablity of the results
+
+Shouldn't be a big deal.  What it means is that there is information on
+the border of your sample space that is unaccounted for.  If you're concerned
+that the borders contain important glare information, then you should run
+findglare with the rtrace option, though I'm not sure if this is supported
+in ADELINE.  The other thing you could do is render a wider angle view to
+give to findglare.
+
+&gt; 3/ I am working on Daylighting glare with large sources, has the program
+&gt; been evaluated for this?
+
+There has been some work on this done by the folks at the LESO in Switzerland,
+but I don't think it's been integrated back into ADELINE.  In general, the
+glare indices provided are appropriate for small sources, though they have
+been applied by people to other cases.  I'm just not sure how valid they are.
+
+-Greg
+_____________________________________________________________________
+Gregory Ward Larson (the computer artist formerly known as Greg Ward)
+Silicon Graphics, Inc.                   Computer Science Department
+2011 N. Shoreline Blvd., M/S 07U-553     537 Soda Hall, UC Berkeley
+Mountain View, CA  94043-1389            Berkeley, CA  94720-1776
+(415) 933-4878, -2663 fax                (510) 642-3631, -5775 fax
+gregl@sgi.com                            on Tues., Thurs. and Fri.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<A NAME="redhat">-----------------------------------------------------------------------</A>
+RADIANCE AND RED HAT LINUX
+
+&gt;From jbi@saturn.dmu.ac.uk  Thu Jul 10 01:35:33 1997
+Date: Thu, 10 Jul 1997 09:35:37 +0100
+From: jbi@dmu.ac.uk (Joven Ignacio)
+To: rogerc@indigo.ie
+Subject: Re: Radiance/Linux (Red Hat)
+
+Dear Roger
+
+If you still haven't sorted out the problem with Radiance installation on
+the Linux (RedHat) version, the solution is as follows.
+
+You have to specify where your include and library files are located
+under the X11R6 directory (RedHat's latest version for X11).
+
+When you install Radiance, you will have to change the settings on the 
+makeall script, see below:
+
+
+&lt;... cut ...&gt;
+
+Current rmake command is:
+#!/bin/sh
+exec make &quot;SPECIAL=&quot; \
+       &quot;OPT=-O2&quot; \
+       &quot;MACH=-DBSD -DSPEED=40 -DDCL_ATOF -Dqsort=_quicksort -DBIGMEM&quot; \
+       ARCH=IBMPC &quot;COMPAT=malloc.o erf.o getpagesize.o&quot; \
+       INSTDIR=/usr/home/bin \
+       LIBDIR=/usr/home/lib \
+       CC=gcc &quot;$@&quot; -f Rmakefile
+
+... cut ...
+
+&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;.
+
+To correct the error, use the following.
+
+#!/bin/sh
+exec make &quot;SPECIAL=&quot; \
+       &quot;OPT=-O2&quot; \
+       &quot;MACH=-DBSD I-DSPEED=40 -DDCL_ATOF -Dqsort=_quicksort -DBIGMEM  -L/usr/X11R6/lib -I/usr/X11R6/include&quot; \
+       ARCH=IBMPC &quot;COMPAT=malloc.o erf.o getpagesize.o&quot; \
+       INSTDIR=/usr/home/bin \
+       LIBDIR=/usr/home/lib \
+       CC=gcc &quot;$@&quot; -f Rmakefile
+
+&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;
+
+It's because RedHat has both an X11 and an X11R6 directory and radiance just
+gets confused with the two directories.
+
+problem solved on my end.
+
+regards
+
+Joven
+______________________________________________________________________
+Jose (Joven) Ignacio                                         
+The Institute of Energy &amp; Sustainable Dev't.
+The Gateway - DeMontfort University, Leicester - LE1 9BH UK 
+Email:    jbi@dmu.ac.uk
+Phone:    +44 116 250-6124
+FAX:      +44 116 257-7449
+URL:      http://www.iesd.dmu.ac.uk/~jbi/
+______________________________________________________________________
+
+<A NAME="instances">--------------------------------------------------</A>
+INSTANCES AND OCONV
+
+&gt;From haldane@MIT.EDU  Thu Jul 17 12:29:59 1997
+To: greg@floyd
+Subject: some questions
+Date: Thu, 17 Jul 1997 15:28:29 EDT
+
+
+hi greg,
+
+
+i had some questions concerning radiance. 
+
+the first question is concerning smoothing in radiance.  i have a model of a
+person that i've created in &quot;poser&quot; on the macintosh and i'm trying to render
+it in radiance.  the program exports dxf and i translate that into a rad file
+using radout.  is there anyway to smooth the surfaces of the model?
+
+the second question is concerning the use of instances.  i had a file that had
+100 instances and it created an oct tree that was about 57mb.  does that sound
+right?  the oct file was simply a column with some cylindrical mapping.
+
+here's a sample of the instances....
+
+## row 1
+## --------------------------------------------------------------------
+void instance bcolumns
+5 Oct/bcolumns.oct -t 10.9530 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 13.1249 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 15.2968 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 17.4687 25.0780 0.000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 19.6406 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 21.8125 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 23.9844 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 26.1563 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 28.3282 25.0780 0.0000
+0
+0
+
+void instance bcolumns
+5 Oct/bcolumns.oct -t 30.5001 25.0780 0.0000
+0
+0
+
+## row 2
+## --------------------------------------------------------------------
+void instance bcolumns
+5 Oct/bcolumns.oct -t 10.9530 27.2499 0.0000
+0
+0
+
+etc...  am i doing it correctly?  there's also one other very peculiar aspect
+to this whole thing.  if i use 11 instances, the final octree gets generated
+almost instantly.  if use 12 instances, the octree takes up to 5 minutes to
+generate.  do you know what might be the cause for this? 
+
+
+and that's it.  thanx for all your time and assistance.
+
+
+haldane
+
+
+-------
+
+&gt;From greg  Thu Jul 17 13:23:37 1997
+Date: Thu, 17 Jul 1997 13:23:37 -0700
+To: haldane@MIT.EDU
+Subject: Re:  some questions
+
+Hi Haldane,
+
+Unfortunately, there's no automatic smoothing method in Radiance.  If you
+have surface points on a rectangular grid, you can give them to the gensurf
+program and have it smooth them using the -s option, or if you have the
+surface normals, you can pass them through tmesh2rad or mgf2rad to get
+smoothed triangles out, but those are the only options.
+
+Instances are a bit strange the way they work in oconv.  Since they are
+volumes as opposed to surfaces, oconv cannot separate them very well,
+and you can get &quot;clumpings&quot; that take it a long time to sort out.
+Keep in mind that the extent of an octree is actually a cube, so your
+columns do not fit well into an instance, as all their dimensions will
+equal their longest one.  If you can find a way to group roughly cubical
+geometry together for your instances, you combined octree will be much
+smaller and will generate much more quickly.
+
+-Greg
+
+---------
+
+&gt;From radiance  Fri Jul 18 10:04:51 1997
+Date: Fri, 18 Jul 1997 10:04:50 -0700
+From: radiance (Radiance Account)
+To: haldane@MIT.EDU
+Subject: Re: some questions
+Cc: radiance, greg
+
+
+Hi Haldane,
+
+I would like to add a few words regarding the use of instances
+and octrees.  The &quot;clumping&quot; Greg mentions is the cause of your
+problems with oconv...why it is taking so long, and also possibly the
+reason why the octree is so large.  The reason lies with the
+cubical form of the bounding boxes, as Greg mentions. 
+
+Another way to get around this is to tell oconv to not bother
+with trying to sort out the instances' bounding boxes from each
+other.  This is done by specifying a larger set size on the
+command line.  Since you have twelve &quot;surfaces&quot;, i.e., instances
+in your scene, you can use:
+
+      oconv -n 12 columns.rad &gt; columns.oct
+
+I would recommend that you then create another instance out of
+this gathering of columns before you include it into the main
+scene octree.  If done in this way, there will only be a very small 
+impact on rendering speed because only one voxel of the entire
+scene has more than 5 (the optimum) sub-voxels.
+
+Unfortunately, I have no suggestions for how to smooth the surfaces
+of your columns in the DXF file, unless you have a means of creating 
+instead a Wavefront &quot;.obj&quot; file with vertex normals included for 
+smoothing.  Using obj2rad -s  will cause the resulting radiance file 
+to have surfaces smoothed.  There's no way you're going get smoothing 
+from DXF.
+
+-Chas
+
+<A NAME="star">-----------------------------------------------</A>
+STAR PATTERNS
+
+Subject: Star patterns in pfilt
+Date: Wed, 16 Jul 97 10:51:17 -0500
+From: &lt;robert@audile.com&gt;
+To: &lt;raydisc&gt;
+
+Does anyone have any advice in making the star pattern options (-n, -s, 
+-h) work noticeably with pfilt in Radiance?  I have not been able to hit 
+on any combinations that show visible effects.
+
+Thanks for any help,
+
+robert@audile.com
+
+--------------
+
+Date: Fri, 18 Jul 1997 10:54:37 -0500 (EST)
+From: &quot;robert a. shakespeare&quot; &lt;tcvc@indiana.edu&gt;
+To: robert@audile.com
+cc: raydisc
+Subject: Re: Star patterns in pfilt
+
+Hi Robert,
+
+       Try something like the following to achieve subtle star effects. 
+Of course, it is dependent on luminance of objects within the scene.
+
+%pfilt -2 -h 5 -n 6 -s .00001  input.pic  &gt; output.pic
+
+
+You must use the -2 option instructing pfilt to make two passes
+over the picture data.
+
+Change the -h value to control the luminance level at which
+the star pattern will begin to be exhibited.
+
+Set the number of points with the -n value.
+
+The -s value sets the &quot;spread&quot; of the effect, ie, the value it has at the 
+edges of the picture. The default is .0001
+
+
+Hope this helps!
+
+-Rob Shakespeare
+ Theatre Computer Visualization Center
+ Indiana University
+
+
+
+</PRE>
+<HR>
+<P>
+<STRONG>Back to <A HREF="#top">Top of Digest Volume 3, Number1</A></STRONG><A
+ HREF="#top"></A><BR>
+ <STRONG><FONT SIZE="3">Return to <I><A HREF="../HOME.html">RADIANCE</A></I><A
+ HREF="../HOME.html"> Home Page</A></FONT></STRONG><A
+ HREF="../HOME.html"></A><BR>
+ <STRONG>Return to <I><A HREF="rad_dig_HOME.html">RADIANCE</A></I><A
+ HREF="rad_dig_HOME.html"> Digests Overview</A></STRONG><A
+ HREF="rad_dig_HOME.html"></A></P>
+<HR>
+<H5>
+All trademarks and product names mentioned herein are the property of 
+their registered owners.<BR>
+ All written material is the property of its respective contributor.<BR>
+ Neither the contributors nor their employers are responsible for 
+consequences arising from any use or misuse of this information.<BR>
+ We make no guarantee that any of this information is correct. </H5>
+</BODY>
+</HTML>

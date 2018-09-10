@@ -1,0 +1,1101 @@
+<TITLE>
+Radiance Digest, v1n3
+</TITLE>
+<html><a name="top"></a>
+<h2>Radiance Digest Volume 1, Number 3</h2>
+<hr>
+<pre><body>
+Hello Radiance users,
+
+I am trying to keep caught up with my correspondance better and
+redistribute interesting tidbits before they turn to compost.
+Here is the latest batch of letters on various topics that seemed
+to me to be of general interest.  Once again, I have tried to make
+it easier to find what you want by searching for the corresponding key.
+
+	<A HREF="#INST">INST</A>	Installation of 1.4 and associated problems
+	<A HREF="#MOLEC">MOLEC</A>	Molecular modeling using Radiance
+	<A HREF="#PHONG">PHONG</A>	Phong surface normal interpolation
+	<A HREF="#INTERN">INTERN</A>	Radiance internals (image.c)
+	<A HREF="#PREVW">PREVW</A>	X11 previewer for Radiance
+	<A HREF="#SPEC">SPEC</A>	Spectral distributions curves
+	<A HREF="#DAYF">DAYF</A>	Daylight factors and unknown programs
+	<A HREF="#VISION">VISION</A>	Vision-3D modeler for the MacIntosh
+
+-Greg
+
+<A NAME="INST">=========================================================================</A>
+INST	Installation of 1.4 and associated problems
+
+Date: Mon, 29 Apr 91 19:37:09 EDT
+From: richards@eleceng.ee.queensu.ca (Haydn Richardson)
+Subject: Radiance 1.4
+
+I was playing with the new cabin model and got hung with the following error. 
+
+I ran
+	rview -av .01 .01 .01 -o sundev oct/cabin
+after building oct/cabin according to the Makefile. 
+
+The error message is:
+	rview: /images/local/lib/ray/rayinit.cal, line 61: syntax error:
+	rview: and(a,b) : if( a, b, a );
+	rview:          ^ '=' expected
+
+Does this indicate a problem with the function and() in rayinit.cal?
+I noticed that and() is defined in my old rayinit.cal as
+	and(a,b) = if( a, b, a);
+
+I assume there is a trivial fix for this problem but I don't want to risk any
+possible interdependencies by substituting my old version.
+
+-Haydn Richardson
+Queen's University
+
+Date: Tue, 30 Apr 91 08:01:22 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance 1.4
+
+The new ':' definitions go with the new 1.4 release of Radiance, and you
+must recompile the programs for them to work.  If you just want to look
+at the cabin model without recompiling, you can set the RAYPATH
+environment variable so it searches the location of the old library first,
+but you should include the new library location in it as well or it won't
+be able to find some of the files needed for the cabin.  I recommend
+running makeall to install the new programs.
+
+-Greg
+
+Date: Tue, 30 Apr 91 11:16:59 EDT
+From: richards@eleceng.ee.queensu.ca (Haydn Richardson)
+Subject: Re:  Radiance 1.4
+
+Actually I did run makeall install and it compiled with minimal errors (all
+associated with missing XWindows files as we run in Sunview.) RAYPATH does
+include the location of the new library. The Makefile in the cabin directory
+complains that plasfunc and metfunc are unknown types. Is there something else
+that needs to be done to set up the rayinit.cal definitions?
+
+-Haydn
+
+Date: Tue, 30 Apr 91 17:34:19 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance 1.4
+Status: RO
+
+The new version of rview requires X11 to be installed in order to compile
+properly.  You must still be running the previous version.  You must
+manually modify the Makefile in the ray/src/rt directory to remove the
+X11 dependency.  Make the following changes:
+
+37c37
+< DOBJS = devtable.o devcomm.o editline.o x11.o x11twind.o \
+---
+> DOBJS = devtable.o devcomm.o editline.o \
+41c41
+< DLIBS = -lX11
+---
+> DLIBS = 
+
+You must also remove all mentions of x11 from devtable.c (you might
+as well take out x10 while you're at it) and reset dev_default[] to "sun".
+
+I guess I should have had makeall complain a bit more on failure!
+
+-Greg
+
+Date: Tue, 30 Apr 91 17:12:06 EDT
+From: richards@vision.ee.queensu.ca (Haydn Richardson)
+Subject: Continued problems installing Radiance 1.4
+
+I removed the x10 and x11 dependencies from the rt, util, and px Makefiles.
+However, I still have the following problems.
+   glareval.c line 480 syntax error near (
+which refers to the following statement.
+#ifdef ALIGN
+	scansize = scansize+(sizeof(ALIGN)-1)) & ~(sizeof(ALIGN)-1);
+#endif
+
+and my compiled version of rview can no longer find sundev. An old version of
+sundev is in my bin and my bin is in RAYPATH. 
+
+I appreciate your effort in assisting us through our growing pains.
+
+-Haydn
+
+Date: Wed, 1 May 91 08:31:59 +0200
+From: greg (Greg Ward)
+Subject: Re:  Continued problems installing Radiance 1.4
+
+Hi Haydn,
+
+The syntax error is an extra parenthesis.  I never tested this particular
+segment with ALIGN defined, so just s/-1))/-1)/ in the problem statement.
+Sorry about that.  Guess I should update the distribution (already).
+
+The name sundev has been changed to just plain old "sun", so you just
+need to use -o sun instead of -o sundev, although in your case you could
+make sun the default (dev_default in devtable.c) and not specify a -o
+option at all.
+
+-Greg
+
+Date: Sat, 4 May 91 18:15:21 NZT
+From: pdbourke%ccu1.aukuni.ac.nz@csa1.lbl.gov
+Subject: Radiance and TAR message
+
+Loaded RADIANCE this evening but when I tar it I get the following:
+
+/dept/arc/pdbourke >tar xfo Radiance1R4.tar
+tar: ray/src/util/glareval.c - cannot create
+
+I thought I may have a corrupt copy from the FTP so redid it, same result!
+
+Any suggestions??
+
+Date: Mon, 6 May 91 08:31:43 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance and TAR message
+
+Oops!  Sorry about that!  Glareval.c is a duplicate that was added at the
+end of the tar tape.  Apparrently, this won't work unless you change the
+mode of the first extracted file during the extraction and before it gets
+to the second one.  You can ignore the error for now, but you may get
+a syntax error during compilation of this file later which you can also
+ignore.
+
+I will repair the distribution and you can try again later if it concerns
+you.
+
+-Greg
+
+<A NAME="MOLEC">=======================================================================</A>
+MOLEC	Molecular modeling using Radiance
+
+Date: Fri, 26 Apr 91 18:15 EST
+From: cristy%ESSUN3%ESVAX@dupont.com
+Subject: Radiance
+
+I have been looking for a renderer that can do a good job modeling the
+area of intra-penetration of two nearly transparent intersecting
+spheres.  I am hoping Radiance may solve this problem.  I will be
+experimenting with materials and Radiance parameters hoping I can
+finally get a good rendering.  If you have any suggestions that would
+nudge me in the right direction with Radiance, I would be grateful.
+
+I just started with Radiance and I have been having trouble getting a
+correct view so I can look at the window directly for the model
+described in the tutorial.  The default view as specified in the
+tutorial looks at the wall opposite of the window wall.  I tried
+different view points and view directions without luck.  One thing that
+confuses me is in rview the point retains its original unnormalized
+form: 2.25 0.375 1, however, the view direction appears to be normalized
+(-0.25 0.125 -0.125 is reported as -0.8 0.408 -0.408).  Is this the
+correct behavior?  Do you know the correct view point and view
+direction so that the wall with the window appears in the image?
+
+Thanks in advance.
+
+cristy@dupont.com
+
+Date: Mon, 29 Apr 91 11:41:03 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance
+
+Dear Jonn,
+
+Unfortunately, I do not have a copy of the files used in the tutorial so
+I will have to guess at the viewpoint from the input description.  You
+can try the following parameters for rview to get a view of the window:
+
+	-vp .1 .1 .75 -vd 1 .8 0 -vh 60 -vv 45
+
+This puts the viewer in the corner looking towards the opposite walls.  From
+there, you should be able to adjust the view to your liking using the "aim"
+command from within rview.  You are right that the view direction gets
+normalized by the program.  Since it is a vector indicating only the direction
+to look, it's magnitude is irrelevant.  If you give a vector of 1 2 .5 it
+is the same to Radiance as if you had given 2 4 1 or any positive scaling
+thereof.
+
+-Greg
+
+P.S.  Regarding your question about transparent spheres.  I think I
+need some more specifics.  Are the spheres of a solid material, or like
+soap bubbles?  What problems have you had with other renderers?
+
+Date: Mon, 29 Apr 91 12:45 EST
+From: Cristy <cristy%ESSUN3%ESVAX%dupont.com@RELAY.CS.NET>
+Subject: Re: Radiance
+
+Sorry about not supplying enough information about transparent
+spheres.  The two problems I am trying to solve has to do with
+molecular modeling.  Many times a chemist will come to me with a
+molecule he/she is interested in rendering for publication.  Typically
+they want a cluster of atoms in the center of the molecule to be opaque
+and the surrounding atoms to be almost totally transparent.  That way
+you can see the structure of the molecule and still emphasize the area
+of interest (typically the center atoms).
+
+I have tried many raytracers (RAYSHADE, VORT, DBW, TRACER, etc.) and
+they produce a nasty artifact at the area of intersection of two
+transparent spheres.  For example, assume two atoms represented by
+spheres that intersect about 20% of the total area.  The area of
+intersection normally appears to be black in all the raytracers I used.
+This black area interferes with the transparent effect I am looking for
+and distracts from viewing the area of interest in the center of these
+outer transparent spheres.  Of course this effect gets worse the more
+transparent spheres you have-- to the point where you cannot see the
+opaque atoms in the center.
+
+So I have been looking for a renderer that correctly models the area of
+intra-penetration of two transparent spheres.  I looked at radiosity
+programs, talked with experts in the field (Pat Hanarhan for instance)
+but have not found a program that handles this problem well.  I do not
+have the expertise to write my own algorithm so...  I am hoping
+Radiance may work.  I am looking at the problem now in Radiance, but I
+thought that you would have a better feel of Radiance's capability to
+handle the problem correctly.  Also perhaps you know of the correct
+material properties and other Radiance parameters to solve the
+intersecting transparent sphere problem.
+
+Thank you in advance
+
+cristy@dupont.com
+
+Date: Tue, 30 Apr 91 08:44:22 +0200
+From: greg (Greg Ward)
+Subject: Re: Radiance
+
+I'm guessing that the problems you've encountered with other ray tracers
+has to do with thier handling of dielectrics.  If you were modeling the
+spheres as solid glass objects, there would definitely be some confusion
+as the two objects interpenetrated.  You would be best off modeling the
+spheres as an outer surface and an inner surface with a small difference
+in radius.  Thus, you would be intersecting two "bubbles" rather than two
+solids.  Fortunately, Radiance has a material type that allows you to
+model an infinitely thin glass object with a single surface.  The material
+type is called "glass" and the parameters are the transmission in red,
+green and blue, which you will probably want to set to 1:
+
+	void glass clear_glass
+	0
+	0
+	3 1 1 1
+
+	clear_glass sphere bubble1
+	0
+	0
+	4 x1 y1 z1 r1
+
+	clear_glass sphere bubble2
+	0
+	0
+	4 x2 y2 z2 r2
+	...
+
+This should give you the desired effect.  Again, you should be able to
+get similar results by using two slightly different concentric spheres
+(with the inside radius negative, or however they specify an inward
+surface normal).
+
+-Greg
+
+Date: Fri, 31 May 91 12:04 EST
+From: cristy%ESSUN3%ESVAX@dupont.com
+
+A fellow scientist wants to model atomic orbitals with Radiance.
+Unfortunately there is no easy way (that he knows of) to express orbitals
+in terms of cartesian space.  The equations are always in the form of a
+spherical harmonic.  Is it possible to express surfaces in spherical
+coordinates with Radiance?
+
+Thanks in advance.
+
+Date: Mon, 3 Jun 91 16:20:01 +0200
+From: greg (Greg Ward)
+Subject: orbitals
+
+Cartesian and sphereical coordinates are of course convertible using
+a simple transformation:
+
+	x = rho sin(theta) cos(phi)
+	y = rho sin(theta) sin(phi)
+	z = rho cos(theta)
+
+I suppose what you are really asking is if there is an easy way to
+represent surfaces defined by some arbitrary (in this case spherical
+harmonic) function.  The answer is a qualified yes.
+
+The generator program gensurf can be given a parametric description of
+the surface in terms of two independent variables (for a spherical
+harmonic these would probably be theta and phi) from which it produces a
+tesselation of the desired surface into quadrilaterals and triangles.
+Thus, the Radiance rendering programs themselves do not model arbitrary
+parametric or implicit surfaces, but gensurf can be used to approximate
+most parametric surfaces as a collection of polygons.
+
+Unfortunately, I have not done anything about modeling implicit surfaces
+(ie. surfaces described by a function of the form F(x,y,z) = 0).
+Tesselating such surfaces is not an easily solved problem, and I
+have not yet had a strong enough need for them.
+
+-Greg
+
+<A NAME="PHONG">=======================================================================</A>
+PHONG	Phong surface normal interpolation
+
+Date: Mon, 6 May 91 12:55:44 EST
+From: Eric Ost <emo@ogre.cica.indiana.edu>
+Subject: smooth surfaces using normals
+
+If I have a surface defined using discrete polygons, actually triangles,
+is there a way that I can use surface normal vectors to derive a smoothly
+shaded appearance?  For example, the human form geometry we have access to
+consists of approximately 3500 triangles.  When we render instances of
+this geometry the edges between triangles are painfully apparent.
+Is there some way to smooth these edges without resorting to interpolating
+the triangles themselves and creating a geometry database with an increased
+number of polygons?  Thanks.
+
+eric
+
+Date: Tue, 7 May 91 08:57:35 +0200
+From: greg (Greg Ward)
+Subject: Re:  smooth surfaces using normals
+
+Hi Eric,
+
+Yes, it is quite possible to interpolate the surface normals, using a
+procedural texture (texfunc) applied to the elements individually.  Of
+course, this is not very convenient if you already have the database,
+but it can be done using rcalc.  Unfortunately, the math for this
+procedure is not very straightforward, and the only place I've done it
+is in the Phong shading procedures of gensurf (ray/src/gen/gensurf.c
+and see also ray/lib/surf.cal).
+
+I suppose this would be a nice feature to have built into Radiance
+directly, but I didn't feel that the method worked well enough to
+warrant it.  Specifically, Phong (bilinear) surface normal
+interpolation doesn't work for some degenerate cases or for concave
+polygons, and I have no idea how to apply it to polygons with more than
+four vertices.
+
+I think there are some more general surface normal interpolation schemes
+floating around the literature, but I couldn't really recommend one to
+you because I haven't tried any of them.
+
+Even gensurf may not help you that much, since I wrote the code to
+handle only paired triangles, and never got it to work right for lone
+triangles.
+
+I hate to be so discouraging.  This is really something I would like
+to see happen, so if you can find a method that you think will do the
+trick, I will help you create an rcalc procedure or even a C program
+that implements it.
+
+-Greg
+
+<A NAME="INTERN">=======================================================================</A>
+INTERN	Radiance internals
+
+Date: Thu, 9 May 91 16:45:32 EDT
+From: richards@eleceng.ee.queensu.ca (Haydn Richardson)
+Subject: View Plane Transformation
+
+Hi Greg,
+	I'm trying to write a function which will read the 3-d world coordinates
+of an object, as specified in a .rad file and the view parameters from a view
+file to generate the corresponding image plane coordinates. My major problem
+is defining the relationship between the distance between the view origin vp
+and the view plane in terms of the -vh and -vv parameters specified in the
+view file. It seems to me that this information is embedded in the function
+viewpixel() which is in the file image.c. However, I have been unable to find
+where this function is called from if at all. I would be most appreciative if
+you could elaborate on the comments for this function, or address my problem
+more directly. For example is double d in viewpixel() the distance between the
+viewpoint and the view plane? What are the expected input and output 
+interpretations of the parameters xp,yp,zp? What is the expected input p?
+
+As always thanks for the assistance
+
+-Haydn Richardson
+Queen's University at Kingston
+
+Date: Fri, 10 May 91 11:57:28 +0200
+From: greg (Greg Ward)
+Subject: Re:  View Plane Transformation
+
+Hi Haydn,
+
+So, we've been digging in my code, have we?  I don't get many questions
+about internals, so please forgive me for the confusion that follows.
+
+The distance between the view point and the image plane is undefined,
+since the image plane is an imaginary entity.  Viewpixel() takes a
+point in world coordinates (ie. from the Radiance scene description)
+and computes the corresponding image position in normalized coordinates
+for a particular view.  The input point, p, is in world (x,y,z), and the
+return values *xp and *yp are in normalized view coordinates.  These
+coordinates run from (0.,0.) at the lower left corner of the image to
+(1.,0.) at the lower right and (1.,1.) at the upper right.  The returned
+value *zp is distance along the view direction from the viewpoint to the
+world plane containing the point p.  Perhaps this is the grail you seek.
+
+I apologize for the unreadability of my code.  It even gives me trouble
+sometimes.  You should ignore anything called i, j, k, d, etc.  These
+are almost always temporary variables whose meaning changes depending
+on where you are in the procedure.  Such is the case in viewpixel().
+
+The viewpixel() routine is used by certain picture processors such as
+px/pinterp.c and util/glareval.c.  I don't recommend learning how to use
+it by reading these modules, however.  They are rather nasty.
+
+Good luck!  I'm gone all next week, so any further questions will have
+to wait until I get back for a response.
+
+-Greg
+
+<A NAME="PREVW">======================================================================</A>
+PREVW	X11 previewer for Radiance
+
+From: sumant@shakti.ernet.in
+Subject: Radiance input Previewer.
+
+Dear Greg,
+	I am planning to use the Radiance input data format
+for my experimentation in Image Synthesis. I've just written 
+its line drawing previewer for X. I've successfully tested
+it on 3 UNIX Platforms. If U want it to be included in 
+your PD distribution I'll be very happy to send it to U.
+
+If U make any scene data public, pl let me know.
+I'll be interested in using them.
+----
+sumant
+(email : sumant@shakti.ncst.ernet.in)
+------------------------------------------------------------------
+Sumant Narayan Pattanaik
+N.C.S.T.
+Juhu, Bombay 400 049
+
+Date: Tue, 21 May 91 08:59:24 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance input Previewer.
+
+Hello Sumant,
+
+That's great!  I'd love to try your previewer out, and include it for
+distribution.  I am in the process of setting up scene models and programs
+for public redistribution via anonymous ftp, and I'll let you know when
+it's ready.  In the meantime, you can deposit your previewer in the public
+ftp directory on hobbes.lbl.gov (128.3.12.38) where I can retrieve it.
+If it's small enough to go by e-mail, you can send it to me directly at
+"greg@lesosun2.epfl.ch" instead.  Thanks a lot!
+
+-Greg
+
+Date: Fri, 24 May 91 13:25:35 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance input Previewer.
+
+Hello Sumant,
+
+Thank you very much for the previewer.  I just tried it out and it works
+great!  It should come in very handy for anyone using Radiance.  Do you
+mind if I include it at our ftp site so that people can pick it up?
+
+Just a couple of minor suggestions.  It would be nice if the previewer
+accepted multiple Radiance files, one after the other, or read from
+the standard input if none were given.  This should not be very difficult.
+I noticed that you adapted the object file reading routine, so just giving
+it NULL makes it read from standard input.  Also, you can avoid the need
+for specifying a bounding box by using the routines from oconv (bbox.c,
+cone.c, face.c, misc.c) to compute the bounding box for you.  This would
+require two passes on the input file, however, and it is nice that the
+user can give a different bounding box to specify clipping so this
+may not be so important.  For a long time, I required the user to include
+the bounding box in the input files directly!
+
+Thank you for such a wonderful service.  I still haven't gotten the model
+library together, but you will be the first to know!
+
+-Greg
+
+Subject: Re: Radiance input Previewer. 
+Date: Sun, 26 May 91 11:44:01 +0530
+From: sumant@shakti.ernet.in
+
+Dear Greg,
+
+I'll do the needful.
+I'll not try the  bounding box computation.
+
+I am planning the following modifications.
+1. The input parser in not rugged. I am now adapting it
+   from "readobj.c".
+2. The color of the objects are arbitrary now.
+   I'll take the hints from the input file and color them accordingly.
+
+I'll come bcak to U in a day or two.
+I want that it is avaiable to public.
+However, i havenot asked my boss yet. I'll do it when I am through.
+I donot see any problem.
+In any case most of the code used are assembled from book or PD
+software. So it is really for public consumption. If there is any
+problem I'll substitute all references of my name by "anonymous"
+and send it to U.
+---
+sumant
+
+Date: Tue, 28 May 91 08:56:45 +0200
+From: greg (Greg Ward)
+Subject: previewer
+
+Helo Sumant,
+
+Thank you for the new version of your previewer.  I tried it out and
+it works very well indeed.  Thank you for getting (and granting)
+permission to redistribute it.  I am in the process now of setting
+up the public ftp site at hobbes.lbl.gov (128.3.12.38).  I will
+put your software under pub/programs, with a one-line description
+of its function.
+
+At the same ftp site (by tomorrow, hopefully) you should find Radiance
+objects and models that you may use under pub/objects and pub/models.
+
+Thank you again for all of your help!
+
+-Greg
+
+Date: Tue, 28 May 91 13:44:39 +0530
+From: sumant@shakti.ernet.in
+
+Dear Greg,
+	Thank U for the message. I'll try to get the
+new version of Radiance from your site. The earlier version's
+(the version I got in the 1st Week of May) documentation
+was a bit short. I hope it is improved now.
+
+About the previewer, I must tell U the bugs I know of.
+1. In X11.c line 103
+	fprintf(..) has missing file pointer.
+	Please correct it to 
+		fprintf(stderr,....)
+2. The input parser does not support yet the description in
+   the form
+	"modifier alias identifier reference"
+   and
+      for the other description form
+	"modifier type identifier
+	 n s1 s2 s3 ... sn
+  	 0
+	 m R1 R2 ... Rm"
+      the parser takes the sequence literally in terms of
+      lines in which they appear.
+
+   I'll correct this problem by adapting to your Parser and
+   when I am ready I'll send U a copy. However, I'll be a bit
+   late.
+
+Thanks again.
+Regards.
+----
+sumant
+(email : sumant@shakti.ncst.ernet.in)
+------------------------------------------------------------------
+Sumanta Narayan Pattanaik
+N.C.S.T.
+Juhu, Bombay 400 049
+
+<A NAME="SPEC">=====================================================================</A>
+SPEC	Spectral distributions curves
+
+Date: Tue, 28 May 91 09:16:16 -0400
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+Subject: Radiance archive
+
+
+I have a user here at OSU who has done some work with spectral distribution
+curves.  He asked me if there any way to include these distribution curves,
+either for light sources or objects, in RADIANCE.  I told him that I didn't
+think so.  When your mail arrived just now I thought, well, it won't hurt 
+to ask the one person who can give a definitive answer.
+
+Also, is there any .ies files available?  I've got the "ies*.{rad,dat}" but
+don't have any IES input files.  Just curious.  
+
+We're having great fun with RADIANCE around here.  It's going to be a mix of
+Industrial Design students and Art students using it (we have a sophisticated
+scanline renderer as the main renderer but I've introduced RADIANCE as an
+alternative).
+
+steve
+
+Date: Tue, 28 May 91 15:51:11 +0200
+From: greg (Greg Ward)
+Subject: Re:  Radiance archive
+
+Hi Steve,
+
+It is possible to make multiple passes with Radiance, using the three RGB
+channels provided to mean some other selection of spectral samples.  For
+example, you could have three sets of material files, each with slightly
+different RGB values corresponding to different sample locations.  (I
+recommend interleaving the samples.)  You then run rpict on each one
+and produce three output pictures.  (Be sure to set -sj to 0 so the
+pixels correspond.)  These three pictures have a total of 9 spectral
+samples, which you can combine however you want using pcomb before the
+final display.
+
+This is obviously less efficient than having more spectral samples in
+the calculation itself, but until I have the spectral response data,
+I can't see the sense in implementing more samples right at the moment.
+
+Regarding IES luminaire data, I put what I have into the archive directory
+pub/iesdata.  Thank you for reminding me of this.  Although I didn't have
+much to contribute myself, maybe others will pitch in.
+
+-Greg
+
+From: spencer@cgrg.ohio-state.edu (Stephen N. Spencer)
+Subject: Radiance archive
+
+Thanks!  I don't think this is what my user will want to hear (it sounds 
+rather time-consuming) but hey, it WILL work.  
+
+steve
+
+<A NAME="DAYF">======================================================================</A>
+DAYF	Daylight factors and unknown programs
+
+[The following is in response to a letter from John Mardaljevic at Leicester
+Polytechnic.  I am too lazy to retype the letter here, but John was
+having some problems with Sun Open-Windows and Radiance version 1.3,
+and he also had some questions about undocumented programs and computing
+daylight factors.  Incidentally, I have added documentation for cnt,
+neat, and total and plan to have a daylight factor calculation script
+ready in the next release.]
+
+Date: Wed, 29 May 91 10:02:09 +0200
+From: greg (Greg Ward)
+To: edu@leicp.ac.uk
+Subject: Radiance
+
+Hello John,
+
+Your letter was just forwarded to me regarding your questions on v1.3.1.
+The problem you are having is an initialization problem that is associated
+with the open look window manager (olwm).  It has been fixed in version
+1.4, which is available by anonymous ftp from hobbes.lbl.gov (128.3.12.38).
+If you do not have access to ftp and do not want to wait for another
+upgrade via mail, I can send you the new version of x11image.c by e-mail
+and you can recompile it yourself.  Alternatively, you can run twm or some
+other window manager instead of olwm and x11image should work.
+X11image never has a command window, so that is normal.  The manual page
+for x11image is identical to ximage, and I even renamed the program to
+ximage in the next release.  Sorry for the confusion.  Unfortunately,
+the problems with xshowtrace haven't been fixed in release 1.4,
+although I've fixed them since 1.4 and the program will work in the
+next release.  Rtrace should work fine, since it doesn't depend on
+the window system unless you run it in conjunction with x11image.
+
+As for the missing manual pages, I apologize.  I never did write up
+some of the programs I include on the distribution since I figure
+most people won't be using them.  There are manual pages for calc,
+rcalc and ev in ray/src/cal/man.  I am sorry they are not in the
+expected place.  The only documentation for the others is the source
+code, but here is a one line description of each:
+
+	cnt		- integer counter, try "cnt 2 5"
+	colorscale	- generates color scale picture
+	genwindow	- calculates light from window with venetian blinds
+	greyscale	- generates grey scale picture
+	lam		- joins lines from multiple files
+	lookamb		- examines contents of Radiance ambient file
+	mt160r		- output driver for Mannesman-Tally dot matrix printer
+	neat		- neatens up columns of numbers and aligns decimals
+	oki20c		- output driver for OkiData OkiMate 20 color printer
+	paintjet	- output driver for HP color paintjet printer
+	sun.com, sundev	- driver programs used by rview for sun windows
+	total		- sums up columns of numbers
+
+As for daylight factors, the most efficient method is to use rtrace with
+the -oi option (will be -I in 1.5) and give it your list of workplane
+points with up vectors (ie. 0,0,1).  Then, take the output numbers and
+divide them by the ambient level given to you by gensky (multiplied by
+pi).  Here is a more complete example:
+
+Let's say we have a room that we have compiled into room.oct and we
+want to calculate daylight factors on a 10x8 grid running from x=1
+to x=10 and y=5 to y=11 at a height z=3.  First, we run gensky manually
+for the day and time we are interested in, like so:
+
+	gensky 5 29 10 -a 47 -o -7 -m -15
+
+Of course, you would adjust the latitude, longitude and standard meridian
+to correspond with your site location.  The above produced the following
+comment in its output:
+
+	# Ground ambient level: 7.582072
+
+This ground ambient level corresponds to the irradiance/pi due to the sky
+without direct solar, which is what we will divide into our irradiance
+values from rtrace to get daylight factors, thus:
+
+	cnt 10 8 | rcalc -e '$1=$1+1;$2=$2+5;$3=3;$4=0;$5=0;$6=1' \
+	| rtrace -oi room.oct | rcalc -e '$1=(.3*$1+.59*$2+.11*$3)/PI/7.582' \
+	> room.df
+
+The factors of .3, .59 and .11 are to get from RGB to brightness.
+Note that the values in the output file do not have their associated input
+values with them.  You can add them in again like so:
+
+	cnt 10 8 | rcalc -e '$1=$1+1;$2=$2+5' | lam - room.df \
+	| neat 4.9 > room.df.final
+
+Notice that I tried to use as many of the programs you asked about as I
+could!  Notice also that doing real calculations with Radiance
+currently requires long, unreadable command lines.  We hope to make
+some of this easier in the next release by adding shell scripts to do
+these kinds of useful things without requiring so much user guidance.
+
+I hope some of this helps.
+-Greg
+
+<A NAME="VISION">=================================================================</A>
+VISION	Vision-3D modeler for the MacIntosh
+
+Date: Fri, 17 May 91 9:58:22 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+To: ray@hobbes.lbl.gov
+Subject: Mac modeller
+
+The public domain modeller Vision-3D for the Mac II family is about to
+support Radiance data files as an export option. This has already been
+done but the copy on our FTP site hasn't yet been updated (I want to put
+some more features in the next release) If anyone is interested however
+the current version of Vision-3D with Radiance file export can be made
+available.
+-- 
+ |   Paul D Bourke        pdbourke@ccu1.aukuni.ac.nz         (130.216.1.5)   |
+
+
+Date: Fri, 17 May 91 11:16:42 +0200
+From: greg (Greg Ward)
+Subject: Re:  Mac modeller
+
+Hi Paul,
+
+Thank you for putting a Radiance output option into your modeller!  I have
+had a student working on a translator from Sculp 3D RIB files to Radiance
+with limited success.  It would be great to get a hold of a real 3D
+modeller for the MacIntosh II, since that's the computer I use most
+often.  Does your program work with A/UX 2.0?  I have Radiance working
+on the Mac under this operating system now.
+
+-Greg
+
+Date: Sat, 18 May 91 10:38:22 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re: Mac modeller
+
+> 
+> Thank you for putting a Radiance output option into your modeller!  I have
+> had a student working on a translator from Sculp 3D RIB files to Radiance
+> with limited success.  It would be great to get a hold of a real 3D
+> modeller for the MacIntosh II, since that's the computer I use most
+> often.
+
+Well, Vision-3D is a shareware modeller...MicroStation is a real modeller.
+The RayShade and Radiance export facility has received so much attention
+that I will put a preliminary copy of the next version of Vision-3D in our
+FTP directories early next week. The readme file will indicate when this
+has been done. In case you don't know we are ccu1.aukuni.ac.nz (130.216.1.5)
+The directory you want is mac/architec.
+
+> Does your program work with A/UX 2.0?
+
+Don't know. What are the issue, I use Think C (never even seen AUX)
+
+> I have Radiance working on the Mac under this operating system now.
+
+Is it possible to generate a version that would run under the finder OS.
+This would be of great interest to many users.
+-- 
+ |   Paul D Bourke        pdbourke@ccu1.aukuni.ac.nz         (130.216.1.5)   |
+
+Date: Tue, 21 May 91 08:55:41 +0200
+From: greg (Greg Ward)
+Subject: Re: Mac modeller
+
+Hi Paul,
+
+Unfortunately, I don't have a version of Radiance for the MacOS, and I don't
+expect to in the near future.  The rendering program in Radiance was really
+meant to run in the background and may require large amounts of memory for
+complex scenes, so I don't think it would be very simple to port it to the
+native Macintosh OS.  You are welcomed to try!  Frankly, I haven't got much
+patience for menus and that sort of programming.  A few years ago, someone
+I hired wrote a 3d editor for Radiance files on the Mac and the code was
+bigger than my renderer!  It never quite worked to my satisfaction (it
+crashed a lot) so I didn't advertize it much.  This is another problem
+with the Mac environment -- frequent crashes that spell disaster for
+background processes.  Also, the system does not allow that much CPU
+time to such programs, preferring to reserve as much as possible for
+the application running in the foreground.  Perhaps this will change
+a bit with version 7, but I doubt it.
+
+I will pick up the modeller as soon as you have the right release on there.
+Thanks again.
+
+-Greg
+
+Date: Wed, 22 May 91 7:48:49 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re: Mac modeller
+
+> Unfortunately, I don't have a version of Radiance for the MacOS, and I don't
+> expect to in the near future.  The rendering program in Radiance was really
+> meant to run in the background and may require large amounts of memory for
+> complex scenes, so I don't think it would be very simple to port it to the
+> native Macintosh OS.  
+
+Yes, I tried to render some landscapes woth 2 million polygonal facets, no
+luck yet and our SGI has 64MB !
+
+> You are welcomed to try!  Frankly, I haven't got much
+> patience for menus and that sort of programming.  A few years ago, someone
+> I hired wrote a 3d editor for Radiance files on the Mac and the code was
+> bigger than my renderer!  
+
+You shouldn't be very surprised at this, a modeller is much more complex
+and varied than a renderer. 
+
+> It never quite worked to my satisfaction (it
+> crashed a lot) so I didn't advertize it much.  This is another problem
+> with the Mac environment -- frequent crashes that spell disaster for
+> background processes.
+
+Can't remember my last crash! I am afraid that the impression people have
+of the Mac as unstable is almost always due to substandard software
+especially INITs, games, utilities in the public domain. The system
+software and toolbox is only resposible for a small fraction of the
+problems people have with Macs.
+
+> Also, the system does not allow that much CPU
+> time to such programs, preferring to reserve as much as possible for
+> the application running in the foreground.  Perhaps this will change
+> a bit with version 7, but I doubt it.
+
+No it hasn't really changed. An application can specifiy how often a 
+background task is "looked" at and for how long. Most developers tend
+to give background tasks only a peek every now and then because they
+want maximum performance for themselves. I have only seen one application
+which allowed the user to specify the sharing load, a good idea though.
+
+> I will pick up the modeller as soon as you have the right release on there.
+> Thanks again.
+
+I have placed a beta version of the modeller that supports Radiance in our
+archive. There is an administrative problem though with our site, they are
+worried about the huge amount of traffic they are experiencing.
+-- 
+ |   Paul D Bourke        pdbourke@ccu1.aukuni.ac.nz         (130.216.1.5)   |
+
+Date: Wed, 22 May 91 09:26:03 +0200
+From: greg (Greg Ward)
+Subject: Re: Mac modeller
+
+Hi Paul,
+
+I just picked up your modeller yesterday, and I must say I'm impressed.
+I hope it took you a long time to write and document.  Please don't tell
+me you did it during donut breaks on Thursdays.
+
+If you want to render large scenes with Radiance, you need to somehow
+break them down into repeatable groups using instances.  Of course, this
+doesn't work if what you're rendering doesn't have any inherent repetition
+inherent repitition.  Almost everything I do does.
+
+I agree that crashes are caused by poor inits more than bad system software,
+but I have little control over what other people do to their machines and
+they seem to like those silly little bastards.  I've been using a shared
+machine here at EPFL and every day I switch it on it seems like there's
+another one.  Maybe they breed overnight.  I go for a bite while the thing
+boots up.
+
+I didn't find the export option for Radiance in the modeller.  It's not
+in the expected place (File Export...).  Are you sure it was on yesterday's
+release?
+
+If network traffic is a problem, I would be happy to put Vision 3D on
+my ftp site in California.  That is, if you have no objections.  From
+the manual, it sounds like you were (thinking?) of marketing the program
+at one time.  I'd be interested to hear what your current attitude is on that.
+
+By the way, I ran Vision 3D under A/UX to try it out, and everything I
+tested seemed to work fine.  The only problem I noticed was that the
+cursor disappeared after I quit.  There must be some deinitialization that's
+required for A/UX that the normal Finder takes care of.  I've noticed other
+strange cursor happenings in the past with other programs as well.  The
+other thing that wasn't quite right was that the 32-bit clean flag was not
+set on the program.  That's a function of the compiler, I suppose, though
+it is possible to set this flag yourself using ResEdit.  The requirements
+for applications running under A/UX (as I understand it) besides 32-bit
+clean are that you stick with Apple's guidelines (which I guess you have)
+and that you don't access certain little-used toolbox routines that the A/UX
+people haven't implemented yet.  Most of these have to do with strange
+color table manipulations as near as I can tell.
+
+Once I get the correct version of Vision 3D (assuming I ain't got it),
+I'll do a more thorough testing under A/UX so I can tell you if there are
+any other problems.  I don't expect there will be too many, anyway.
+
+Do you know Robert Amor?  How did New Zealand get so many hot shots when
+they have so little money?  As I said before, I'm impressed.
+
+-Greg
+
+Date: Wed, 22 May 91 20:32:14 NZT
+From: pdbourke@ccu1.aukuni.ac.nz
+Subject: Re: Mac modeller
+
+> I just picked up your modeller yesterday, and I must say I'm impressed.
+> I hope it took you a long time to write and document.  Please don't tell
+> me you did it during donut breaks on Thursdays.
+
+I did work on it fairly well full time for a few months. I would love to
+have time to rewrite the "definitive" modeller now that I know know how. ie:
+Vision-3D was my first 3D software but it has been left behind because of
+other commitments. I would love to write a good modeller specifically for
+RenderMan but it's probably a years work!
+
+> I didn't find the export option for Radiance in the modeller.  It's not
+> in the expected place (File Export...).  Are you sure it was on yesterday's
+> release?
+
+Sorry, humble...humble... my mistake, don't know how it happened, etc etc...
+I will fix up the directory, I might try mailing you the application. 
+
+> If network traffic is a problem, I would be happy to put Vision 3D on
+> my ftp site in California.  That is, if you have no objections.  From
+> the manual, it sounds like you were (thinking?) of marketing the program
+> at one time.  I'd be interested to hear what your current attitude is 
+> on that.
+
+Please put it somewhere in the US and let me know where. There has been
+huge traffic loads to our site, I am becoming unpopular with the Computer
+Centre administrators. The current position is that the program is shareware,
+which means in my book that you should feel free to copy and distribute the
+software. If you keep and use it for any sort of financial gain then I would
+appreciate $120 NZ (approx US$80)
+
+> By the way, I ran Vision 3D under A/UX to try it out, and everything I
+> tested seemed to work fine.  The only problem I noticed was that the
+> cursor disappeared after I quit.  There must be some deinitialization that's
+> required for A/UX that the normal Finder takes care of.  I've noticed other
+> strange cursor happenings in the past with other programs as well.  The
+> other thing that wasn't quite right was that the 32-bit clean flag was not
+> set on the program.  That's a function of the compiler, I suppose, though
+> it is possible to set this flag yourself using ResEdit.  The requirements
+> for applications running under A/UX (as I understand it) besides 32-bit
+> clean are that you stick with Apple's guidelines (which I guess you have)
+> and that you don't access certain little-used toolbox routines that the A/UX
+> people haven't implemented yet.  Most of these have to do with strange
+> color table manipulations as near as I can tell.
+
+Yeah, I have just installed system 7 and all my programs seem to work OK. I
+do use my own cursors when the mouse is in "my" windows (it looks like the
+normal crosshair cursor but it's not). You will probably find that if you
+quit from Vision-3D with the cursor away from my windows all will be fine.
+I'll put cursor initialising on my list of things to do.
+
+> Once I get the correct version of Vision 3D (assuming I ain't got it),
+> I'll do a more thorough testing under A/UX so I can tell you if there are
+> any other problems.  I don't expect there will be too many, anyway.
+
+Thanks
+
+> Do you know Robert Amor?  How did New Zealand get so many hot shots when
+> they have so little money?  As I said before, I'm impressed.
+
+Yes, how do you know him? I met him last week, he's come up to the Computer
+Science dept here to do some brief contract work on an expert system for
+a building industry firm. His address here is robert-a@cs.aukuni.ac.nz
+He just gave me 40MB of radiance examples...!
+-- 
+ |   Paul D Bourke        pdbourke@ccu1.aukuni.ac.nz         (130.216.1.5)   |
+
+Date: Thu, 23 May 91 09:02:01 +0200
+From: greg (Greg Ward)
+Subject: Re: Mac modeller
+
+Hi Paul,
+
+Thank you for sending the beta version of Vision3D.  I know what you mean
+about wanting to start over.  I've put the modeller just by itself on
+anonymous ftp at hobbes.lbl.gov (128.3.12.38) under pub.  You can put the
+other hqx files there yourself if you feel like it.  I am planning to get
+the whole thing organized with drop off points and pick up points and
+read me files and so on, in a day or two.  (How many weeks have I been
+saying this?)  Actually, it was largely Robert Amor's idea to have a
+shared Radiance archive, and I recently got a lot of interest at the
+Eurographics workshop on rendering.
+
+Robert came by Berkeley at some point last year and we talked a bit.
+He knew an awful lot about Radiance and had some good suggestions and
+one or two programs for me.  Also, we had been exchanging e-mail for
+some time on the topic of building data representation, a shared interest.
+
+I had a quick look at the Radiance export files from Vision3D and they
+look great.  I haven't run any tests, yet, though, so I'll have to let
+you know how they turn out.  I read quickly through your little article
+on CAD formats and took some of the things you said to heart.  My next
+release of Radiance will be much more forgiving of cones and spheres with
+"illegal" radii so there will be a little less for you to worry about.
+I would be interested in any specific comments or criticism you have
+about the Radiance scene description format.  It was basically written
+for my own (ie. the implementer's) convenience rather than ease of use,
+so I realize it is somewhat brain dead.  (Scanf is my parser and printf
+is my formatter...)
+
+-Greg
+
+Date: Sun, 26 May 91 12:02:00 NZT
+From: pdbourke%ccu1.aukuni.ac.nz@csa1.lbl.gov
+Subject: Triangulate
+
+Something else of mine that now supports Radiance export...!
+
+Triangulate is a Mac II utility that takes a "random" distribution of samples
+of a surface and generates a triangulated (Delauney) or gridded mesh 
+(user specified resolution) representation of the surface. We use it
+extensively for generating terrain models, the data is generated either from
+manual entry from site surveys or by digitizing existing contour maps. A
+number of export formats are supported, DXF, Super3D text, and now Radiance.
+
+The archive I uploaded has been passed through Stuffit (.sit) and then
+BinHex (.Hqx). It contains the application and the user manual in MS Word 4
+format. 
+-- 
+ |   Paul D Bourke        pdbourke@ccu1.aukuni.ac.nz         (130.216.1.5)   |
+
+ </PRE></BODY><hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 1, Number 3</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

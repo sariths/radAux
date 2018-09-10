@@ -1,0 +1,1553 @@
+<TITLE>
+Radiance Digest, v2n1
+</TITLE>
+<html>
+<a name="top"></a><h2>RADIANCE Digest Volume 2, Number 1</h2>
+<hr>
+<pre><body>
+Dear Radiance Users,
+
+Here once again we have a culling of e-mail exchanges to share.
+I hope by now that most of you have picked up version 2.0 of the
+program, which seems mostly stable except for one or two minor
+glitches.  Please check also the previous digest, v2n0, if you
+have not seen it already.  As always, back issues of the digest
+are available via anonymous ftp from hobbes.lbl.gov (128.3.12.38)
+in the pub/digest directory.
+
+Here is a table of contents that you can use for finding the
+sections you are interested in.  Use the search string /^==*$/
+to skip to the next section.
+
+	<A HREF="#BUG">BUG</A>		- A memory bug in rpict
+	<A HREF="#DAYLIGHT">DAYLIGHT</A>	- Daylight Scripts and TIM's
+	<A HREF="#ALIASING">ALIASING</A>	- Anti-aliasing in Radiance (again?)
+	<A HREF="#LANGUAGE">LANGUAGE</A>	- Radiance input language definitions
+	<A HREF="#NEXT">NEXT</A>		- Radiance compilation on the NeXT
+
+By the way, if anyone has need of some first rate consulting or training
+on Radiance, I have someone I can recommend (besides myself!).
+
+-Greg
+
+<A NAME="BUG">===========================================================</A>
+BUG		- A memory bug in rpict
+
+Date: Wed, 11 Dec 91 00:59:10 MED
+From: bojsen@moria (Per Bojsen)
+To: greg@hobbes.lbl.gov
+Subject: Bug in rpict (rpict.c)?
+
+Hi Greg,
+
+[I'm the guy working on the Amiga port of Radiance if you don't remember me.]
+
+A couple of weeks ago I picked up Radiance 2.0, and now have a working port.
+I think I may have discovered a bug in rpict, specifically the rpict.c
+module, though.  Rpict crashes when run with anything other than `-sp 1'.
+Rpict overwrites (or rather underwrites ;-) memory just before a malloc()'d
+buffer.  The amount of bytes overwritten is proportinal to the `-sp'
+setting.  On the Amiga such overwriting is nasty because the free memory
+list will be mangled.
+
+I snooped around in the source a bit to find something that depends on
+`-sp', i.e., the psample variable.  I found something in the
+fillscanline() routine that may be the cause of the bug.  Take a look
+on fillscanline():
+
+fillscanline(scanline, zline, sd, xres, y, xstep)       /* fill scan at y */
+register COLOR  *scanline;
+register float  *zline;
+register char  *sd;
+int  xres, y, xstep;
+{
+        static int  nc = 0;             /* number of calls */
+        int  bl = xstep, b = xstep;
+        double  z;
+        register int  i;
+
+        z = pixvalue(scanline[0], 0, y);
+        if (zline) zline[0] = z;
+                                /* zig-zag start for quincunx pattern */
+        for (i = ++nc & 1 ? xstep : xstep/2; i < xres-1+xstep; i += xstep) {
+                                   ^^^^^^^^^
+                if (i >= xres) {
+                        xstep += xres-1-i;
+                        i = xres-1;
+                }
+                z = pixvalue(scanline[i], i, y);
+                if (zline) zline[i] = z;
+                if (sd) b = sd[0] > sd[1] ? sd[0] : sd[1];
+                b = fillsample(scanline+i-xstep, zline ? zline+i-xstep : NULL,
+                               ^^^^^^^^^^^^^^^^
+                                i-xstep, y, xstep, 0, b/2);
+                if (sd) *sd++ = nc & 1 ? bl : b;
+                bl = b;
+        }
+        if (sd && nc & 1) *sd = bl;
+}
+
+Now, every other call of fillscanline() will have `i' start with xstep/2
+in the for loop.  In the call to fillsample() the first parameter is
+`scanline + i - xstep', i.e., `scanline - xstep/2' (xstep is even, if xstep
+is odd it will be `scanline - xstep/2 - 1', I think).  If xstep is greater
+than 2 (it is 6 for -sp 4), the pointer represented by `scanline + i - xstep'
+will point to some memory (on reasonable systems, anyway) before the scanline
+array.  If the fillsample() routine writes to colline[0], for example,
+we have found a bug.
+
+Could you try to look into this and confirm if its indeed a bug?  I'll
+try to change some things to see if my problem goes away.
+
+Thanks for making your work available!
+
+--
+"There had been something loose about the          // Greetings from Per Bojsen
+ station dock all morning, skulking in            //
+ amongst the gantries and the lines and the    \\//   cbmehq!lenler!bojsen
+ canisters which were waiting to be moved ..."  \/    pb@id.dth.dk
+
+Date: Wed, 11 Dec 91 01:15:06 MED
+From: bojsen@moria (Per Bojsen)
+To: greg@hobbes.lbl.gov
+Subject: Bug in rpict.c fillscanline()
+
+I just tried a simple thing:  I malloc()'d a somewhat larger buffers for
+the scanlines and pointed the scanbar[] pointers into these larger buffers
+to allow for the overwrite of the memory before the buffer.  This made
+the symptom of the bug go away (no crash).  So I'm pretty certain that
+what I described in my previous mail must be a bug.  The question is:
+how do I fix it?
+
+--
+"There had been something loose about the          // Greetings from Per Bojsen
+ station dock all morning, skulking in            //
+ amongst the gantries and the lines and the    \\//   cbmehq!lenler!bojsen
+ canisters which were waiting to be moved ..."  \/    pb@id.dth.dk
+
+From greg Tue Dec 10 17:48:15 1991
+Return-Path: <greg>
+Date: Tue, 10 Dec 91 17:48:12 PST
+From: greg (Gregory J. Ward)
+To: bojsen@moria
+Subject: Re:  Bug in rpict (rpict.c)?
+Status: RO
+
+Hi Per,
+
+Of course I remember you.  There aren't many people with your kind of nerve,
+going where no programmer has gone before and all that.
+
+You have indeed found a bug.  A bit of stupidity on my part after the last
+so-called "enhancement" to my sampling code.  I guess it doesn't show up on
+most machines (including mine) because the memory doesn't get freed until
+after the program is done.  Anyway, here is the routine returned to its
+original intent, and thanks for your thorough analysis of the problem!!
+
+-Greg
+-----------------
+
+------- rpict.c -------
+4c4
+< static char SCCSid[] = "%Z%%M% %I% %G% LBL";
+---
+> static char SCCSid[] = "@(#)rpict.c 2.3 12/10/91 LBL";
+280,281c280,285
+< 		b = fillsample(scanline+i-xstep, zline ? zline+i-xstep : NULL,
+< 				i-xstep, y, xstep, 0, b/2);
+---
+> 		if (i <= xstep)
+> 			b = fillsample(scanline, zline, 0, y, i, 0, b/2);
+> 		else
+> 			b = fillsample(scanline+i-xstep,
+> 					zline ? zline+i-xstep : NULL,
+> 					i-xstep, y, xstep, 0, b/2);
+
+From bojsen@dc.dth.dk Thu Dec 12 06:13:23 1991
+Return-Path: <bojsen@dc.dth.dk>
+Date: Thu, 12 Dec 91 15:12:01 +0100
+From: bojsen@dc.dth.dk (Per Bojsen)
+To: greg@hobbes.lbl.gov
+Subject: bug and fix
+Status: RO
+
+Hi Greg.
+
+I've incorporated the bug fix now and it works like a charm!  Thanks
+for acting so promptly.
+
+A question regarding your special malloc() implementation.  Do you
+depend on the memory added by subsequent sbrk() calls to be contiguous
+with the already allocated memory?  The problem is that the sbrk()
+that comes with the SAS/C compiler is *not* compatible with UNIX in
+that regard (an can never be due to the way memory allocation works on
+the Amiga);  every time sbrk() is called you get a new memory block
+that is uncontiguous with the rest.
+
+Your malloc() does seem to work, though.  I just want to be sure
+there's no hidden danger.
+
+--------------------------------------------------------------------------------
+Per Bojsen                The VLSI Research Group        EMail: bojsen@dc.dth.dk
+MoDAG                 Technical University of Denmark
+--------------------------------------------------------------------------------
+
+From greg Thu Dec 12 09:46:09 1991
+Return-Path: <greg>
+Date: Thu, 12 Dec 91 09:45:59 PST
+From: greg (Gregory J. Ward)
+To: bojsen@dc.dth.dk
+Subject: Re:  bug and fix
+Status: RO
+
+Hi Per,
+
+My malloc does indeed work better if sbrk() returns contiguous blocks of
+memory, but it does not depend on it.
+
+-Greg
+
+<A NAME="DAYLIGHT">==============================================================</A>
+DAYLIGHT	- Daylight Scripts and TIM's
+
+[TIM stands for Transparent Insulation Materials -- if you don't know
+what it is than you probably wouldn't care. -G]
+
+Date: Wed, 11 Dec 91 13:59:32 PST
+From: greg (Gregory J. Ward)
+To: apian@ise.fhg.de
+Subject: RE: Questions
+
+Hi Peter,
+
+> Modelling rooms with TIM windows looks very promising and take most
+> of my time beside end-of-year paperwork etc.
+
+Raphael Compagnon recently started looking at these, and I tried to
+help him out with the BRDF description of a certain kind of TIM,
+the kind made up of many closely packed plastic cells aligned
+perpendicular to the window surface.  Here is the .cal file I made:
+
+--------------------------------
+{
+	Calculate BRTDF of Transparent Insulation Materials
+	made up of many small tubes packed tightly together.
+
+	29 Nov 1991	Greg Ward and Raphael Compagnon
+
+	Apply with following BRTDfunc:
+
+	mod BRTDfunc tim1
+	10	0	0	0
+		stran	stran	stran
+		brtdf	brtdf	brtdf
+		tim1.cal
+	0
+	7 0 0 0 R T 1 K
+
+	where:
+		R = diffuse reflectance when Ktan_t is zero
+		T = total transmittance divided by (1-R)
+		K = ratio of tube length to diameter
+}
+
+Ktan_t = A7 * Sqrt(1-Rdot*Rdot)/Rdot;
+
+stran = if(1-Ktan_t, 2/PI*Acos(Ktan_t) - Ktan_t/PI*Sqrt(1-Ktan_t*Ktan_t), 0);
+
+brtdf(lx,ly,lz) = (1-stran)/PI;
+
+-------------------------------------
+
+You might like to ask Raphael how it's going.  His e-mail is
+compagnon@eldp.epfl.ch.
+
+> If you like, an user-id at ISE would be no problem at all.
+> e.g., I found access to man pages of other machines is fine sometimes.
+
+Sure, when you get time could you do this for me?  Also, give me some
+details and a model so I can reproduce the error you got from readfargs.
+
+> I've got a question, I don't dare to ask, because it shines bright
+> light on my ignorance:
+> -ad N 	is the number of random rays sent out into the hemisphere to
+> 		look for light coming from other surfaces
+> -as N	if two of these rays differ, N other rays are sent in the
+> 		directions between them
+> -ar and -aa specify what happens when one of these rays hit an area
+> 		on a surface where there are to ambient values (yet).
+>		Either this initiates a new hemisphere sampling or the value
+>		is interpolated by using other ambient values on that the	
+>		surface. -aa spicifies the threshold when a new hemisphere
+>		sampling is started. 
+> As for the moment, am I totally lost or somehow on the right track ?
+
+It seems that you understand it pretty well to me.  I would add the following:
+
+-ad N 	is the number of INITIAL rays sent out into the hemisphere to
+	look for light coming from other surfaces
+-as N	is the number of ADDITIONAL rays sent out to reduce variance
+	in the initial hemisphere sample, based on the assumption that the
+	initial sample captured all significant intensity gradients
+-ar and -aa specify what happens when one of these rays hit an area
+	on a surface where there are to ambient values (yet).
+	Either this initiates a new hemisphere sampling or the value
+	is interpolated by using other ambient values on that the	
+	surface. -aa specifies the threshold when a new hemisphere
+	sampling is started.  -ar specifies a maximum resolution, past
+	which the -aa value will start to be relaxed.  The resolution
+	is computed by the global cube size (as determined by oconv
+	and displayed by getinfo -d on the octree) divided by the
+	-ar parameter.
+
+-Greg
+
+From: Environmental Design Unit <edu@leicester-poly.ac.uk>
+Date: Tue, 10 Dec 91 15:18:30 GMT
+To: ray@hobbes.lbl.gov
+
+Hi Greg,
+
+I thought i'd get back to you about the daylight factor
+scripts.  For comparison purposes, contour lines are
+preferable to bands.  However, when I switch from one to the
+other, the lines appear to be mid-way between the bands.  I
+would have expected the line to overlap the band (or be it's
+leading edge) - also the legend arrangement is different.  It does
+look like one scheme is giving the mid-way values of the other.  It's
+a small point but I would like to clear it up before I start to compare
+results with other programs.  The modification to dayfact to allow
+user fixed contour levels works fine - but ... it's still not
+ideal.  Is their a way around having fixed increment scaling,
+i.e. 1,3,5,7,9, and so on?  Levels of 1,2,4,6,10,15,20 etc. would
+be better.
+
+More generally, is v2.0 different in any way from the beta release
+I obtained from you?  Also, could you briefly explain the changes
+to the source function for windows?
+
+Did you get the OpenWindows file-manager mods for RADIANCE, I hadn't
+actually e-mailed a tar file before (or since) so I just sent it off
+as normal mail, hoping that's how it is done.
+
+Hope all is well,
+
+-John
+
+Date: Thu, 12 Dec 91 10:05:17 PST
+From: greg (Gregory J. Ward)
+To: edu@leicester-poly.ac.uk
+Subject: Re:  RADIANCE
+
+Hi John,
+
+Yes, the contour lines do appear midway between values rather than at
+those values like the bands.  Currently, there is no way to specify
+exact contour levels an irregular intervals using this script.  I would
+have to rewrite it significantly, which I may do when I find some time.
+In the meantime, I would like you at least to have the latest version
+of the dayfact script.  I made some changes following release 2.0 to
+correct an error in the illuminance contour calculation and add a new
+ability to calculate daylight savings.
+
+Unfortunately, I do not remember exactly when I gave you the beta copy
+so I don't know how much I changed since then.
+
+I did get the OpenWindows modifications you sent me, and thank you.  Did
+you not receive the latest Radiance Digest?  In it I included your mods
+for other OpenWindows users.
+
+-Greg
+
+From: Environmental Design Unit <edu@leicester-poly.ac.uk>
+Date: Mon, 16 Dec 91 11:25:24 GMT
+To: greg@hobbes.lbl.gov
+Subject: Radiance
+
+Greg,
+
+Thanks for the reply.  I sort of guessed that mods to
+dayfact would not be trivial.  Yes I did get the digest
+with my OpenWindows stuff, but it did look garbled.  Changing
+the subject altogether, is RayShade a shading analysis program?
+We have on occasion used a heliodon to give shading info for
+our thermal analysis work - despite the complexity of current
+'state of the art' programs, the treatment given to sun-patching
+is still rather simplistic and best results are obtained if the
+user tweaks the input a bit.  What has this to do with Radiance?
+Well, must confess, I used your program in a rather trivial mode
+to look at the shading effectiveness of bridge structures in
+a proposed atrium design.  What surprised me was how quickly I
+could generate an adequate description with a load of genbox
+and xform commands and a bit of vi'ing.  A couple of simple
+shell-scripts to generate the oct and pic files and Bingo!
+I admit, it's a bit like using a CRAY to work out the grocery
+bill, but it's quick and simple.  In fact, i'd be amazed to
+find a program which does it more efficiently - a PC based
+commercial package we have provides no contest.  I know this
+is very much a side issue but I thought i'd let you know anyway.
+
+Regards,
+
+-John
+
+P.S.  As you've no doubt guessed my daylighting project has been
+put back yet another month by other work commitments.
+
+Date: Tue, 17 Dec 91 09:46:41 PST
+From: greg (Gregory J. Ward)
+To: edu@leicester-poly.ac.uk
+
+Hi John,
+
+Yes, I think the OpenWindows stuff you sent may have been garbled.  I
+couldn't tell myself because I didn't know what it was supposed to look
+like!  I suggest creating a compressed tar file and uploading it to
+the pub/libraries directory on hobbes.lbl.gov (128.3.12.38) by anonymous
+ftp.  The libraries directory is exactly right, but I don't have one that
+is so it will have to do.
+
+I am glad that you had some success using Radiance for your shadowing
+calculation.  I agree that most of the work is getting the geometry
+right.  I have used vi, xform and genbox (and gensurf, genprism, etc.)
+to create my models for many years now.  I still don't use a CAD system,
+for better or worse.
+
+RayShade was not made specifically for shadow calculation, although it
+probably does it just as well as Radiance.  I don't think you get a
+solar position program like gensky or anything like genbox, but RayShade
+does provide a few more surface primitive types.  I should stop talking
+about it, though, since I really don't know that much about the software.
+
+-Greg
+
+<A NAME="ALIASING">=======================================================</A>
+ALIASING	- Anti-aliasing in Radiance (again?)
+
+From: Paul Douglas <douglas@ctr.columbia.edu>
+Date: Thu, 9 Jan 92 13:30:47 EST
+To: greg@hobbes.lbl.gov
+Subject: Aliasing 
+
+Hi Greg,
+You probably don't remember, but we communicated early last year.  I was
+hoping to use radiance to produce a vidoe sequence and you kindly sent me
+ready-made letters and numbers.  Well, the project was shelved, but now it
+looks like its on again, so I have a question.  
+
+When I use rpict to generate the radiance image and then convert to a 
+sunraster image diagonal edges are jagged.  Pfilt seems not able to reduce
+this type of aliasing, but I'm guessing that it can be reduced by changing
+the pixel size, although I'm not sure how.  Can you offer any quick suggestions
+that will reduce the roughness of the object edges??
+
+Thanks much
+Paul
+
+Date: Thu, 9 Jan 92 11:02:19 PST
+From: greg (Gregory J. Ward)
+To: douglas@ctr.columbia.edu
+Subject: Re:  Aliasing
+
+Hi Paul,
+
+The anti-aliasing approach taken in Radiance is a little different from
+other raytracers inasmuch that you must combine rpict with pfilt in order
+to arrive at the desired result.  This is done by specifying an initial
+picture resolution for rpict a few times greater than what you want in
+the final image, then using pfilt to reduce it down.  This implements
+anti-aliasing by oversampling, which is the most effective approach
+for ray tracing.
+
+For example, you might use the following commands to get a 512x512 
+anti-aliased image:
+
+	% rpict -x 1024 -y 1024 -vf scene.vp scene.oct > scene.u.pic
+	% pfilt -x /2 -y /2 scene.u.pic > scene.f.pic
+
+This would produce a reasonably anti-aliased image in a minimum of time.
+To get a really fine image, you can increase your sampling rate and use
+the Gaussian filter option of pfilt, like so:
+
+	% rpict -x 1536 -y 1536 -vf scene.vp scene.oct > scene.u.pic
+	% pfilt -x /3 -y /3 -r .67 scene.u.pic > scene.f.pic
+
+I hope this helps.
+-Greg
+
+<A NAME="LANGUAGE">======================================================</A>
+LANGUAGE	- Radiance input language definitions
+
+Date: Mon, 9 Dec 91 15:13:28 -0800
+From: mcancill@denali.csc.calpoly.edu (Mike Cancilla)
+To: GJWard@Csa2.lbl.gov
+Subject: Radiance Language BNF...
+
+Hi,
+	I've been using Radiance for about 1.5 months now, and
+I think it's really nice.  I've still got to ftp 2.0 though.
+
+I'm a graduate student here at Cal Poly, and I'm currently in
+a graduate languages class.  My final paper consists of a
+comparison of 3 ray tracing languages, namely the Radiance
+language, the language for DKB trace, and an in-house raytracing
+language.
+
+	I was wondering if I could get the BNF specs for the
+Radiance language?  Any other info you might deem as helpful would
+also be helpful.  I'll send you a plain text copy of the report
+if you want it.
+
+	The report will probably use three different languages to
+do the same scene, and make a comparison based on ease and features.
+A technical description of each language, such as sytax and semantics
+will also be given.  I will also focus on any looping structures, 
+math functions, texture availability, and animation features the
+language may have.
+
+Any help would be greatly appreciated.
+
+Thanks,
+
+Mike
+
+Date: Mon, 9 Dec 91 20:08:26 PST
+From: greg (Gregory J. Ward)
+To: mcancill@denali.csc.calpoly.edu
+Subject: Re:  Radiance Language BNF...
+
+Hi Mike,
+
+Excuse my ignorance, but what's a BNF?  Personally, I would hesitate even
+to call the input format of Radiance a language!  The only reference I
+can offer is in ray/doc/ray.1 of the standard distribution.  I can send
+you a PostScript version if you haven't got it already.  Version 2.0 
+does contain a few new BRDF material types, but other than that, the
+input language looks pretty much the same as 1.4.
+
+I would say that most of the sophistication of the Radiance scene description
+is external, contained in the various object generators and auxiliary files
+available.  The function files in particular use a Turing-equivalent
+expression language that provides recursive functions as its prime mode
+of programming as well as access to an extensive math library.
+
+If you give me some more details of what you want, or suggestions on how
+to go about describing a particular scene, I'd be happy to help.
+
+-Greg
+
+Date: Thu, 12 Dec 91 01:55:21 -0800
+From: mcancill@denali.csc.calpoly.edu (Mike Cancilla)
+To: greg@hobbes.lbl.gov
+Subject: Re:  Radiance Language BNF...
+
+Hi Greg,
+
+	I mailed you a few days ago regarding a BNF for the Radiance scene
+description language.  BNF stands for Backus-Naur (sp) Form.  Its a
+way of describing the syntax of programming languages.  The YACC utility,
+or BISON if you're of the GNU flavor, takes a BNF description of a language
+and anonyzes the syntax of an input file written the target language.
+
+Here's a BNF description for a Raytracing mini-language I wrote for
+a class project, it's taken from an actual YACC input file:
+
+%%
+
+program:	open_stmt decls stmt close_stmt
+		;
+
+decls:		/* nothing */
+		| decls YOBJ_TYPE YOBJ_VAR ';'
+		| decls YFLOAT YNUM_VAR ';'
+		;
+
+open_stmt:	YOPEN_SCENE ';'
+		;
+
+close_stmt:	YCLOSE_SCENE ';'
+		;
+
+stmt:		/* nothing */
+		| stmt render_stmt
+		| stmt do_loop
+		| stmt assign
+		| stmt foreach
+		| stmt move
+		| stmt specularity
+		| stmt reflectivity
+		| stmt ambient
+		| stmt color
+		;
+
+render_stmt:	YRENDER_SCENE ';'
+		;
+
+do_loop:	YDO expr YTIMES '{' stmt '}'
+		;
+
+assign:		YNUM_VAR '=' expr ';'
+		;
+
+foreach:	YFOREACH YOBJ_TYPE '{' stmt '}'
+		;
+
+move:		YMOVE YOBJ_VAR YTO expr ',' expr ',' expr ';'
+		| YMOVE YIT YTO expr ',' expr ',' expr ';'
+		;
+
+specularity:	YSPEC YOF YOBJ_VAR YIS expr ';'
+		| YSPEC YOF YIT YIS expr ';'
+		;
+
+reflectivity:	YREFL YOF YOBJ_VAR YIS expr ';' 
+		| YREFL YOF YIT YIS expr ';'
+		;
+
+ambient:	YAMBI YOF YSCENE YIS expr ';'
+		;
+
+color:		YCOLOR YOF YOBJ_VAR YIS expr ',' expr ',' expr ';'
+		| YCOLOR YOF YIT YIS expr ',' expr ',' expr ';'
+		;
+
+expr:		assign
+		| expr '+' expr
+		| expr '-' expr
+		| expr '*' expr
+		| expr '/' expr
+		| '(' expr ')'
+		| YNUM_VAR
+		| YNUMBER
+		;
+%%
+
+	So there's a BNF.  I can probably try and derive some form of one
+by looking at some example Radiance scene descriptions.  I've printed out the
+Postcript version of the documentation draft for 2.0.
+
+	Here's a list of topics I'm going to cover in my paper, the three
+languages I'm going to compare are the language for Rayshade, Radiance, and
+the Cal Poly raytracing project language, Goober.
+
+Topics:
+
+Specification of scene parameters
+	- Right or left hand coordinate system
+	- Eyepoint
+	- View direction, etc.
+
+Supported primitives
+
+Lighting Models
+	- Whats available, and how to specify a certain model via the lang.
+
+Textures
+	- How are they handled by the lang.
+	- Can users specify their own?
+
+Bit Mapping
+	- How do you apply a bitmap, such as the infamous Mandrill,
+		to an object.
+
+Constructive Solid Geometry (CSG)
+	- Is it supported, how does one build objects
+
+Looping Constructs and/or Recursive Calls
+	- Are they available, how to use
+
+Functions or Procedures
+	- Supported by lang.?
+
+User Extensibility
+	- How does the user specify his/her own objects, textures, etc.
+
+I decided to throw out the "Let's see how three different languages specify
+the same scene" idea.  They all pretty much looked the same!  Plus, with
+this type of topic scheme, I get to  turn in a heavier paper, :-).
+
+ANY input on how the Radiance Language fits in to these topics would be
+appreciated.  I'm sure I can look most of it up in the documentation.
+
+Thanks a bunch,
+
+Mike
+
+Date: Thu, 12 Dec 91 12:50:42 PST
+From: greg (Gregory J. Ward)
+To: mcancill@denali.csc.calpoly.edu
+Subject: Re:  Radiance Language BNF...
+
+Hi Mike,
+
+Thanks for explaining a BNR.  I figured it was something like that.  Since
+I did not use yacc or similar for the parser, I will try to come up with
+a BNR independently.  The first thing to understand is that altogether
+there are at least 4 "languages" involved with Radiance scene descriptions:
+the basic scene input language, the function file language, the data file
+language and the font language.  All except the function file language are
+exceedingly simple.
+
+Scene Input
+=========== 
+
+statement:	primitive
+		| alias
+		| command
+		| comment
+
+primitive:	STRING type STRING
+		INTEGER string_args
+		INTEGER integer_args
+		INTEGER real_args
+
+alias:		STRING alias STRING STRING
+
+command:	'!' STRING string_args
+
+comment:	'#' string_args
+
+string_args:	/* nothing */
+		| STRING string_args
+
+integer_args:	/* nothing */
+		| INTEGER integer_args
+
+real_args:	/* nothing */
+		| REAL real_args
+
+type:		"polygon"
+		| "cone"
+		| "sphere"
+		| "texfunc"
+		| "ring"
+		| "cylinder"
+		| "instance"
+		| "cup"
+		| "bubble"
+		| "tube"
+		| "plastic"
+		| "metal"
+		| "glass"
+		| "trans"
+		| "dielectric"
+		| "interface"
+		| "plasfunc"
+		| "metfunc"
+		| "brightfunc"
+		| "brightdata"
+		| "brighttext"
+		| "colorpict"
+		| "glow"
+		| "source"
+		| "light"
+		| "illum"
+		| "spotlight"
+		| "mirror"
+		| "transfunc"
+		| "BRTDfunc"
+		| "plasdata"
+		| "metdata"
+		| "transdata"
+		| "colorfunc"
+		| "antimatter"
+		| "colordata"
+		| "colortext"
+		| "texdata"
+		| "mixfunc"
+		| "mixdata"
+		| "mixtext"
+		| "prism1"
+		| "prism2"
+
+Function File
+============= 
+
+decl:		';'
+		| function_decl ';'
+		| variable_decl ';'
+
+function_decl:	ID '(' id_list ')' assign_op e1
+
+variable_decl:	ID assign_op e1
+
+id_list:	ID
+		| ID ',' id_list
+
+assign_op:	'='
+		| ':'
+
+e1:		e1 '+' e2
+		| e1 '-' e2
+		| e2
+
+e2:		e2 '*' e3
+		| e2 '/' e3
+		| e3
+
+e3:		e4 '^' e3
+		| e4
+
+e4:		'+' e5
+		| '-' e5
+		| e5
+
+e5:		'(' e1 ')'
+		| ID
+		| ID '(' id_list ')'
+		| REAL
+		| '$' INTEGER
+
+Comments may appear between any two tokens set off by curly braces {},
+and may be nested to any level.
+
+Data File
+========= 
+
+data:		dimensions value_list
+
+dimensions:	INTEGER dim_list
+
+dim_list:	dim
+		| dim dim_list
+
+dim:		REAL REAL INTEGER
+		| '0' '0' INTEGER indep_list
+
+indep_list:	REAL
+		| REAL indep_list
+
+value_list:	/* nothing */
+		| REAL value_list
+
+Font File
+========= 
+
+glyph_list:	/* nothing */
+		| glyph glyph_list
+
+glyph:		INTEGER INTEGER coord_list
+
+coord_list:	/* nothing */
+		| INTEGER INTEGER coord_list
+
+--------------------------------------------------------------
+
+With regards to your topics, I have the following comments.
+
+Specification of scene parameters:
+	- Radiance uses a right-hand coordinate system
+	- The eyepoint and view direction are given as options
+		to the renderers, and can be stored in a separate file
+
+Supported primitives:
+	- N-sided polygons
+	- spheres
+	- cones, cylinders, rings
+	- hierarchical instancing for very complex geometries
+
+Lighting models:
+	- Completely general
+	- Converter provided for IES luminaire specification
+
+Textures:
+	- I break "textures" into two kinds, patterns and textures
+	- Patterns are variation in color, and can be specified as
+		pictures, data or functions in any combination
+	- Textures are perturbations in surface normal, and can
+		be specified in the same ways as patterns
+	- A light source distribution is a pattern
+
+Bit Mapping:
+	- Usually given as a picture-type pattern (ie. "colorpict" type)
+	- True bit-maps (ie. 1-bit depth images) may also be produced
+		using a special bit font
+
+CSG:
+	- Radiance has an "antimatter" type which supports some rudimentary
+		CSG subtraction, but otherwise we are strictly B-rep
+
+Looping constructs or Recursion:
+	- The function file language supports recursion
+	- The "xform" program provides iteration for repeated objects
+
+Functions or Procedures:
+	- The function file language supports functions without side effects
+
+User extensibility:
+	- The user may create function files, data files and font files,
+		or provide his/her own images for patterns
+	- General bidirectional reflection distribution functions may
+		also be specified in the same way as patterns and textures
+
+One additional topic I would like to see evaluated are the degree to which
+a language encourages the user to produce physically valid models.  I
+realize that this is not the goal of many ray tracers, but I think it
+should be and it is certainly a foremost consideration in Radiance.
+If a simulation produces bogus results, what value is it really?
+Along these lines, you made no mention of the reflectance model chosen
+or its specification.  I think this is at least as important as the
+geometry.
+
+Good luck with your paper.  I'd love to see it when it's finished!
+
+-Greg
+
+<A NAME="NEXT">========================================================</A>
+NEXT		- Radiance compilation on the NeXT
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Help?
+To: GJWard@Csa2.lbl.gov
+Date: Sun, 15 Dec 91 16:27:23 EST
+
+Greg:
+
+I'm trying to compile Radiance version 2.0 on my NeXTstation (but don't
+let that scare you).  I got the older version to compile; but only by
+nuking all X references and changing malloc() references to something
+like foo_malloc() due to conflicts with the standard library.
+
+Note that I really appreciate your "noX11.help" file in 2.0, but
+here I am again for 2.0, changing malloc() references.
+
+Am I doing something stupid?  Every time I try to compile Radiance,
+I get myriads of:
+
+/bin/ld: multiple definitions of symbol _strcmp
+/bin/ld: multiple definitions of symbol _realloc
+/bin/ld: multiple definitions of symbol _malloc
+/bin/ld: multiple definitions of symbol _free
+
+messages and cannot continue without prefixing foo_ to everything.
+
+Help.
+
+--
+|         John B. Lockhart         |.:Did you know that all the water:. .:. .:|
+|      Junior/EE, Georgia Tech     |:.between California and Japan would:. .:.|
+| john%3jane.uucp@mathcs.emory.edu |. fill the Pacific Ocean? .:. .:. .:. .:. |
+|   (Above address NeXTmailable.)  | .:. .:. .:--John's Stupid Quotes #64721 .|
+
+Date: Mon, 16 Dec 91 08:37:48 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re:  Help?
+
+Hi John,
+
+Sorry you are having trouble with my C declarations.  This seems to be one
+of the least well standardized parts of C.  Different C compilers seem to
+insist on totally different declarations.  You may find in your cc man page
+some options to affect the type of declarations the compiler will accept.
+The default mode seems to be incompatible with old C standards (the ones
+I use for coding).  See if there is a k+r option to the compiler, or
+something to turn ANSII-type declarations off.  It should not be necessary
+to change the names of the functions!
+
+I cannot code to newer standards, because people with the older standards
+wouldn't be able to cope, whereas the reverse is usually possible.
+
+I am assuming that the errors you get are fatal ones.  If they are only
+warnings, you can feel safe to disregard them and the programs should
+compile anyway.
+
+Hope this helps.
+-Greg
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Re:  Help?
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Mon, 16 Dec 91 16:30:49 EST
+
+I've tried setting my C compiler to handle non-ANSI, etc, etc, which
+only causes more problems.
+
+:I cannot code to newer standards, because people with the older standards
+:wouldn't be able to cope, whereas the reverse is usually possible.
+I can't see how changing references "malloc" to "my_malloc" constitutes
+coding to a new standard; it wouldn't hurt anyone else and it would
+sure help people with the newer compilers.
+
+:I am assuming that the errors you get are fatal ones.  If they are only
+:warnings, you can feel safe to disregard them and the programs should
+:compile anyway.
+They're fatal, of course.  I've been relegated to renaming all of your
+functions to something non-conflicting and then just compiling Radiance
+using the standard library equivalents.  (The brute force method of
+porting. :)
+
+
+I've been wondering for some time what rview does; I've glanced over the
+man pages but have been unable to run it (of course) due to the fact that
+I don't have any of the drivers.  I know you don't want to write a NeXT
+driver for it (seeing as I wouldn't either if I didn't have a NeXT!), but
+perhaps you could give me a shove in the right direction to write my own,
+which you might perhaps incorporate into a future Radiance release...
+
+--
+|         John B. Lockhart         |..As bad as it is, the U.S. Constitution..|
+|      Junior/EE, Georgia Tech     |..is a lot better than what we have now...|
+| john%3jane.uucp@mathcs.emory.edu |..........................................|
+|   (Above address NeXTmailable.)  |...............................--Unknown..|
+
+Date: Mon, 16 Dec 91 14:01:12 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re:  Help?
+
+Hi John,
+
+I still say that you should not rename the functions.  The declarations
+I have are either for functions in the system library (such as calloc)
+or for my own replacement for these functions (such as malloc).  Renaming
+functions to foo_malloc and so forth is counter-productive.  If the
+advance declarations I give cause conflict, then remove them rather
+than renaming them.
+
+I hope I am not misunderstanding your problem.  Which declarations are
+in conflict?  I do not believe that there is any real conflict involved,
+only changes in the syntax of advance declarations.
+
+Regarding device drivers for rview, I would be delighted if you would
+write one.  You should first read the file driver.h in ray/src/rt, then
+look at the routines in x11.c for ideas.  You may find that the existing
+driver for NeWS is the closest to the Display PostScript used by the NeXT.
+
+-Greg
+
+P.S.  If you are on the network and willing to make me an account, I will
+be happy to look at the compile problems myself and see if I can figure
+a way around them.
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Re: Help?
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Mon, 16 Dec 91 18:38:55 EST
+
+Greg:
+
+:I still say that you should not rename the functions.  The declarations
+:I have are either for functions in the system library (such as calloc)
+:or for my own replacement for these functions (such as malloc).  Renaming
+:functions to foo_malloc and so forth is counter-productive.  If the
+:advance declarations I give cause conflict, then remove them rather
+:than renaming them.
+:
+:I hope I am not misunderstanding your problem.  Which declarations are
+:in conflict?  I do not believe that there is any real conflict involved,
+:only changes in the syntax of advance declarations.
+
+Ok, lemme explain again:  Any function that you declare to replace a
+standard library function with the same name is causing my *linker*
+to have screaming fits about "duplicate symbols."  It is *not* over-
+riding the standard library functions with yours, like it should be,
+and I have no idea how to get it to do so (I've tried just about every
+command-line option on the man page).  In order to alleviate this,
+I have renamed *your* function-declarations that are in conflict; thus
+Radiance compiles using the standard library versions rather than its own.
+This essentially just creates dead code; I could just comment them
+out and have it work.  I was suggesting that you rename your functions
+to something else to prevent conflicts with the standard library, but
+as most compiler/linkers override library symbols with your own, it
+isn't necessary for many machines.  The only way for me to get Radiance
+to use it's own memory allocation routines is to rename them to something
+that doesn't conflict with the standard library, throughout *all* of
+Radiance.
+
+
+In other words, it is impossible for me on my NeXT to compile:
+
+char *malloc()
+{
+  return NULL;
+}
+
+main()
+{
+  malloc();
+}
+
+because *my* malloc() conflicts with the standard library malloc().
+
+:Regarding device drivers for rview, I would be delighted if you would
+:write one.  You should first read the file driver.h in ray/src/rt, then
+:look at the routines in x11.c for ideas.  You may find that the existing
+:driver for NeWS is the closest to the Display PostScript used by the NeXT.
+I'll give it a shot.  First I need to get Radiance working!  :)
+
+:P.S.  If you are on the network and willing to make me an account, I will
+:be happy to look at the compile problems myself and see if I can figure
+:a way around them.
+Unfortunately my only InterNet account is a Sequent student account.
+My 'station is at home connected via a UUCP link.  So it goes.  I've
+been standing on soap boxes shouting for student SLIP or PPP (yeah, right),
+to no avail.  If I get some sort of campus computer employment, then one
+day Georgia Tech might suddenly have a clandestine PPP link (hehehe)...
+
+--
+|         John B. Lockhart         |..What kind of dream was this,............|
+|      Junior/EE, Georgia Tech     |..so easy to destroy?.....................|
+| john%3jane.uucp@mathcs.emory.edu |..........................................|
+|   (Above address NeXTmailable.)  |.........................--Pet Shop Boys..|
+
+Date: Tue, 17 Dec 91 09:36:23 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re: Help?
+
+Hi John,
+
+I guess I had no idea of the magnitude of the problem.  I've NEVER heard
+of a linker that refused to override library definitions.  That goes
+against a very fundamental law of libraries.
+
+The reason for having library replacements is efficiency.  Sometimes the
+library functions do not perform well, sometimes they are unreliable on
+different architectures (or missing entirely), and sometimes there is
+something particular about the program that makes the library implementations
+less efficient than they could be.  A simple example of where a library
+function is overridden is in my definition of strcmp() (in common/savestr.c).
+Most library's strcmp's do not compare the pointer values they are handed
+for equality because this case never happens.  But when using savestr(),
+many strings will end up pointing to the same address so comparing pointers
+avoids having to test for equal bytes through the length of the string.
+The new implementation of savestr does the same job as the library version,
+but in the special case of equal pointers it does it much faster.
+Similarly, I wrote my own malloc() routines to work in consort with a
+variation called bmalloc() that allocates untagged blocks of memory.
+Most libraries do a decent job nowadays with malloc (although there are
+some notable exceptions), but if I use the library malloc, then bmalloc
+does not work as efficiently.  (And bmalloc is what I do most of my
+big allocations with.)
+
+Sure, removing my implementations of the library functions will work,
+but with some loss in efficiency.  I do not want to rename all references
+myself, because some of these routines I use other places without my
+particular implementations and I don't want to have to carry all my
+routines with them.  It's very inconvenient to call mystrcmp() everywhere
+I would normally use strcmp() when I may or may not be linking to my own
+library containing mystrcmp.  I also cannot call both my library function
+and the standard one because in some cases they are incompatible.  I know
+there are implementations of malloc that fail catastrophically if you make
+a call to sbrk() (as mymalloc would) inbetween calls to it.
+
+In conclusion, I think you are taking the only possible course of action
+by renaming or removing my implementations of the library routines.  Do
+not rename the calls, though.  Just discard my replacements.
+
+I recommend contacting the folks at NeXT to find out what is going on
+with their linker.  Those guys are really out on a limb or out to lunch
+or something.
+
+-Greg
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Re: Help?
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Tue, 17 Dec 91 14:51:38 EST
+
+Greg:
+
+:I guess I had no idea of the magnitude of the problem.  I've NEVER heard
+:of a linker that refused to override library definitions.  That goes
+:against a very fundamental law of libraries.
+
+I agree.  I could be missing something; in any case I'm certainly very
+frustrated.  I think I'll post that little program I gave you onto
+comp.sys.next.programmer and hope someone there says "-$, stupid!" or
+something...
+
+I completely understand your replacement of the standard library functions;
+I was never in disagreement with that.  Also, using the same names allows
+you to use either your version or the standard version by merely including
+a library or not as an arg to the compiler.  My only problem was that this
+wreaks havoc with my system, which is not as it should be.
+
+:In conclusion, I think you are taking the only possible course of action
+:by renaming or removing my implementations of the library routines.  Do
+:not rename the calls, though.  Just discard my replacements.
+
+That's what I've done.  Seems to be working well enough now.
+
+:I recommend contacting the folks at NeXT to find out what is going on
+:with their linker.  Those guys are really out on a limb or out to lunch
+:or something.
+
+To tell you the truth, I don't think it's NeXT--my suspicion is that it's
+GNU.  I had a friend compile my little program on a SPARC with and without
+the GNU CC compiler and he got the same message when he used GNU; it worked
+fine using Sun's CC.
+
+I will take your suggestion though and try to find out what (if anything)
+I'm doing wrong...
+
+Thanks.
+
+--John
+
+PS:  I'll proabaly be in touch sooner or later about NeXT driver woes
+     or (perhaps) the solution to the multiple-symbol-definitions problem
+     so that you may add a NeXT line to your makeall script.
+
+--
+|         John B. Lockhart         |..Bow down before the one you serve.......|
+|      Junior/EE, Georgia Tech     |..You're going to get what you deserve....|
+| john%3jane.uucp@mathcs.emory.edu |..........................................|
+|   (Above address NeXTmailable.)  |.......................--Nine Inch Nails..|
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Multiple Symbol Madness
+To: GJWard@Csa2.lbl.gov
+Date: Thu, 19 Dec 91 1:15:45 EST
+
+Greg:
+
+You're going to *love* this.  I posted the message about the linker
+having real fits about multiple symbols onto comp.sys.next.programmer,
+and pretty much got flamed for not noticing this until now.  Seems
+I've revived an old thread.  (Woe be unto me, for I have sinned!)
+
+Someone did, however, mail me the following solution which, though
+kludgy, hackish, and ugly besides, works:
+
+cc -O -Dmalloc=my_malloc -o prog prog.c
+
+Yes, that's right.  Just tell it to redefine matters and let the
+preprocessor do the search/replace work for you.  This can be added
+as args in your makeall script at least until something better comes
+along.  "-Dmalloc=my_malloc -Dstrcmp=my_strcmp ..."
+
+I don't like it any more than you do.
+
+--John
+
+--
+|         John B. Lockhart         |..I don't think we're in..................|
+|      Junior/EE, Georgia Tech     |..Kansas anymore, Toto!...................|
+| john%3jane.uucp@mathcs.emory.edu |..........................................|
+|   (Above address NeXTmailable.)  |...............................--Dorothy..|
+
+Date: Thu, 19 Dec 91 08:51:54 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re:  Multiple Symbol Madness
+
+Hi John,
+
+It's not a pretty solution, but at least it's a solution!  I suppose that
+one of us should have thought of that...
+
+Anyway, I am prepared to add it to the makeall script.  Rather than trying
+to remember what standard library functions I have redefined, do you have
+a list that you could share with me?  The only ones I can think of offhand
+are malloc and strcmp.
+
+Thanks a million!
+-Greg
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Re:  Multiple Symbol Madness
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Thu, 19 Dec 91 15:21:30 EST
+
+Greg:
+
+:It's not a pretty solution, but at least it's a solution!  I suppose that
+:one of us should have thought of that...
+No it isn't.  Yes we should've.  Perhaps we were thinking along the lines
+of horror at the fact that the linker wasn't doing things right and "there
+must be a command line switch" rather than just looking for kludgy solutions.
+
+:Anyway, I am prepared to add it to the makeall script.  Rather than trying
+:to remember what standard library functions I have redefined, do you have
+:a list that you could share with me?  The only ones I can think of offhand
+:are malloc and strcmp.
+
+Ok, the ones I've got a "Z" in front of are malloc(), realloc(), free(),
+and strcmp().  To assist you with adding a NeXT option:  It is of course
+BSD-derived, not RISC, and has never heard of X11.  I think your noX11help
+isn't entirely complete--some other Makefiles needed patching to remove
+X stuff, and I can't quite remember which ones.  I had only two more fatal
+errors in Radiance-in-general that I can think of:  You prototype atof()
+somewhere and I think that's a macro; this caused the compiler to have
+screaming fits--all that needs be done is remove the prototype.  Also,
+in one file you define a macro:
+
+#define CTRL(c)  ('c'-'@')
+
+this *always* compiles to ('c'-'@') on ANSI preprocessors, regardless of
+the argument.  Thus in your switch statement later in the same file, the
+compiler barfs at duplicated case values.  I merely replaced it with
+things like ('R'-'@'), etc, and everything was o.k.
+
+Finally, I have not been able to get the AutoCad-->Radiance converter
+and the TIFF library to compile.  The AutoCad-->Radiance bit has to do
+with malloc() again for some reason, and the TIFF library is just a pain.
+
+This is somewhat disturbing as TIFF is the rasterfile of choice on NeXT;
+there are library calls to write pixmaps as TIFFs builtin to NeXT.  But
+a machine-independent lib won't compile.  Arrrrg.
+
+But with the patches I've listed I've been able to trace things in rpict.
+Rview of course is useless.
+
+I realize you can't make all of these patches and still have Radiance
+compile well on other machines--perhaps a machine-dependent note file?
+Who knows.
+
+--
+|         John B. Lockhart         |..I want to hear you scream...............|
+|      Junior/EE, Georgia Tech     |..--Play some rap music...................|
+| john%3jane.uucp@mathcs.emory.edu |..........................................|
+|   (Above address NeXTmailable.)  |....................--The Last Boy Scout..|
+
+Date: Thu, 19 Dec 91 14:16:10 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re:  Multiple Symbol Madness
+
+Thanks, John, for all your help.  I will incorporate as many changes as I
+can figure out how to do in a machine-independent way.  Thanks especially
+for spotting the macro failures -- I knew nothing about those before!
+
+I am sorry you weren't able to figure out the TIFF library or dxfcvt.
+Unfortunately, both were written by others and so I have limited ability
+to fix them.
+
+-Greg
+
+Date: Thu, 19 Dec 91 14:21:35 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: another thing...
+
+Did you test this -Dmalloc=Zmalloc thing already?  As I said before, some
+malloc's are incompatible with outside calls to sbrk.  If the NeXT has
+such a malloc, then this redefinition will cause troubles for sure.
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Oops!
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Thu, 19 Dec 91 19:19:48 EST
+
+:Thanks, John, for all your help.  I will incorporate as many changes as I
+:can figure out how to do in a machine-independent way.  Thanks especially
+:for spotting the macro failures -- I knew nothing about those before!
+
+Don't mention it.  Anyone putting out free software of Radiance's quality
+deserves all the help he can get.  Note that you can add some special-cased
+code if necessary with
+
+#ifdef NeXT
+...
+#endif
+
+'cause NeXT is defined in the compiler.  That may not be necessary, however.
+
+:I am sorry you weren't able to figure out the TIFF library or dxfcvt.
+:Unfortunately, both were written by others and so I have limited ability
+:to fix them.
+
+No big deal.  I don't use AutoCAD, and I can convert from Sun Raster to
+TIFF anyway.
+
+:Did you test this -Dmalloc=Zmalloc thing already?  As I said before, some
+:malloc's are incompatible with outside calls to sbrk.  If the NeXT has
+:such a malloc, then this redefinition will cause troubles for sure.
+
+Oops.  What was I thinkin'!??  I tested it on that sample program but didn't
+test it on Radiance due to some subconcious fear of compiling for an hour.
+I looked at your malloc() stuffs, though, and noted your use of sbrk()
+like you said (I've never used it before but assume it to be crucial
+in bypassing malloc())... then checked the NeXT man page on a hunch:
+
+
+% man sbrk
+
+BRK(2)              UNIX Programmer's Manual               BRK(2)
+
+NAME
+     brk, sbrk - change data segment size
+
+     The UNIX system calls brk and sbrk are not supported on the
+     NeXT computer.
+
+
+Ain't that just dandy?  At this point I assumed it wasn't worth the bother
+of recompiling Radiance.  Since it's working fine with the standard library
+malloc(), and that's what I used in v1.4, why don't we call it even and just
+special-case your malloc() defs out of the Makefile or something, then just
+add the -Dstrcmp=my_strcmp for strsave?
+
+
+(Such a mess.  If you think this is bad, though, try porting an IBM Pascal
+program to a Mac C program that uses the GUI.)
+
+--
+|         John B. Lockhart         |: Then again: : : : : : : : : : : : : : : |
+|      Junior/EE, Georgia Tech     | :We could all be WRONG: : : : : : : : : :|
+| john%3jane.uucp@mathcs.emory.edu |: (Wouldn't be the first time.) : : : : : |
+|   (Above address NeXTmailable.)  | : : : : : : : : : : : --Laurie Anderson :|
+
+Date: Thu, 19 Dec 91 16:49:54 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re:  Oops!
+
+OK, thanks for checking.  I guess NeXT users will just have to make some
+additional Makefile changes -- namely, deleting malloc.o from the Makefile's
+in src/ot and src/rt.
+
+Date: Thu, 19 Dec 91 17:02:36 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+Subject: Re:  Oops!
+
+Actually, it wasn't so hard to make the deletions automatically.  NeXT users
+will still have to deal with the X11 shortcomings, at least until we write
+a driver for Display PostScript...
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Re:  Oops!
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 20 Dec 91 1:05:52 EST
+
+:Actually, it wasn't so hard to make the deletions automatically.
+That's good!
+
+:NeXT users
+:will still have to deal with the X11 shortcomings [...]
+Did you make the non-X11 compilation automatic, too?  Isn't that just the
+same sorta thing as removing malloc.o compilation except for several files?
+
+:at least until we write
+:a driver for Display PostScript...
+Well, I'll get to work on that.  I've scanned over (not parsed :) the
+code for existing drivers and am curious--do you get the entire bitmap
+on the screen via rectangle painting (e.g.: bunches of small rectangles)?
+Or did I miss something in my once-over--I only saw things like
+open/close/clear/paint-rect etc.
+
+'cause if that's all there is then it should be a five-minute hack
+once I figure out how the hell one gets a normal bonafide window without
+having a normal bonafide Objective-C app running.
+
+Oh, one last question:  Can you route "command-line" i/o to the terminal
+you started rview from and just have a floating window?  (Note that this
+should be moot if I can figure out what I need to figure out.)
+
+--
+|         John B. Lockhart         |......The Georgia......|   ___      |.....|
+|      Junior/EE, Georgia Tech     |.....Institute  of.....|  |  _____  |.....|
+| john%3jane.uucp@mathcs.emory.edu |......Technology:......|  |___||    |.....|
+|   (Above address NeXTmailable.)  |.....We don't mold!....|       |    |.....|
+
+Date: Fri, 20 Dec 91 08:34:01 PST
+From: greg (Gregory J. Ward)
+To: john%3jane.UUCP@mathcs.emory.edu
+
+Hi John,
+
+I didn't want to take out the X11 stuff automatically for the NeXT, just in
+case NeXT should support X11 in the future.  I should probably have a
+special question about X11 support, though, and make the changes based
+on the presence or absence of certain files.  It all gets so complicated...
+
+Yes, the picture is drawn by rview soley with paintrect calls.  I tried to
+keep the driver interface as bone-headed simple as possible.  The tricky
+part is usually getting input while drawing.  Rview has to be notified
+(using the inpready member) as soon as input is available or response
+time suffers.  It should be possible to get this from the standard input,
+although I have never done it this way.  Keep in mind that rview should
+run continuously until "interrupted" by user input.  This mode of interaction
+is not supported easily by all window systems, but there is usually a way.
+
+A specific problem we have had with our NeWS driver is that the rectangles
+it paints don't really mesh nicely.  Because PostScript uses its own
+device-independent coordinate system, there is some inaccuracy in exactly
+which pixels are drawn by a paintrect call, and the result is a lot of
+ugly seams everywhere.  If you have this problem and find a solution,
+I would be most curious to hear about it.
+
+Good luck, and let me know how I can help!
+-Greg
+
+From: john%3jane.UUCP@mathcs.emory.edu (John B. Lockhart)
+Subject: Re:  Oops!
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Fri, 20 Dec 91 13:24:27 EST
+
+Yo, Greg.
+
+:I didn't want to take out the X11 stuff automatically for the NeXT, just in
+:case NeXT should support X11 in the future.  I should probably have a
+:special question about X11 support, though, and make the changes based
+:on the presence or absence of certain files.  It all gets so complicated...
+
+That's what I wanted.  Heaven forbid you make it just a NeXT switch--
+I mean ask if you have X then it compiles or doesn't compile things based
+on that.  I realize it is somewhat complicated--Make isn't quite built
+for all the extremes of compatibility you're pushing it to.
+
+:Yes, the picture is drawn by rview soley with paintrect calls.  I tried to
+Makes sense.
+
+:Keep in mind that rview should
+:run continuously until "interrupted" by user input.  This mode of interaction
+:is not supported easily by all window systems, but there is usually a way.
+I guess I'm still foggy on what you're doing because I've never seen rview
+run (hell of a disadvantage, writing a driver for something you have to
+write the driver for to make it work).  I'll just study the NeWS code real
+well then patch a NeXT hack to get a feel for it then refine things.
+
+:A specific problem we have had with our NeWS driver is that the rectangles
+:it paints don't really mesh nicely.  Because PostScript uses its own
+:device-independent coordinate system, there is some inaccuracy in exactly
+:which pixels are drawn by a paintrect call, and the result is a lot of
+:ugly seams everywhere.  If you have this problem and find a solution,
+:I would be most curious to hear about it.
+
+I had a feeling you'd say that.  I've run into this problem before with
+PostScript resolution nastiness while trying to make a radar screen for
+a game I'm working on--seems that 1/72" screen rectangles are sometimes one
+pixel and sometimes two pixels wide, depending on where you draw them!
+Can you say "averaging?"  I knew you could.  That looks really good in
+terms of printed output and smooth transitions but it's real hell for
+the sort of thing we're trying to do.
+
+I have an idea for a kludge:  Since I imagine your rview makes the rect
+call only if it has to draw a "pixel," why not make the driver allocate
+a bitmap, attach it to a window, then set pixels in it on the fly while
+occasionally flushing it to the window?  Though sortof aesthetically
+displeasing, it should work with a reasonable amount of speed and give
+normal picture quality, since PostScript knows about bitmaps...  And
+as an added bonus I think that'd make it really easy to put the picture in
+a resizable, scrolling window (instead of just lobbing a 1024 x 768 over
+everything).  I'll look into that.
+
+--
+|         John B. Lockhart         |: : : : : : : : Alien III : : : : : : : : |
+|      Junior/EE, Georgia Tech     | : : : : : : : : : : : : : : : : : : : : :|
+| john%3jane.uucp@mathcs.emory.edu |: : : : : : The bitch is back!: : : : : : |
+|   (Above address NeXTmailable.)  | : : : : Coming Memorial Day 1992: : : : :|
+
+</PRE>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume X, Number Y</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</body>

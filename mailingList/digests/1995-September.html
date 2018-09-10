@@ -1,0 +1,2013 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+<title> Radiance Digest v2n9</title>
+</head>
+
+<body>
+
+<a name="top"></a>
+
+<h2>Radiance Digest Volume 2, Number 9</h2>
+
+<hr>
+
+<pre>
+
+Dear Radiance Users,
+
+Here is a somewhat overdue installment of the Radiance Digest.  (Well,
+technically it's not overdue since there's no schedule, but it's kind
+of long so I hope I don't choke your mailers or use up what little disk
+space you had left.)  In this issue, the following topics are addressed:
+
+<a HREF="#ILLUMINATION_MAPS">ILLUMINATION MAPS</a>		     - Applying Radiance results to polygons
+<a HREF="#REFLECTION_MODEL">REFLECTION MODEL</a>		     - Understanding Radiance's reflection model
+<a HREF="#DESIGN_WORKSHOP">DESIGN WORKSHOP</a>	 	             - Using DesignWorkshop as input to Radiance
+<a HREF="#MODELING_STARS">MODELING STARS</a>			     - Modeling a starry sky
+<a HREF="#SAVING_UNFILTERED">SAVING UNFILTERED PICTURE WITH RAD</a>   - Tricks and changes
+<a HREF="#DEBUGGING_FUNCTION">DEBUGGING FUNCTION FILES</a>	     - How to debug .cal files
+<a HREF="#ANIMATION_FEATURES">ANIMATION FEATURES (LACKING)</a>	     - What Radiance can and cannot do
+<a HREF="#ANTIMATTER_MODIFIER">ANTIMATTER MODIFIER LOOPS</a>	     - &quot;possible modifier loop&quot; error
+<a HREF="#MODELING_SEMITRANSPARENT">MODELING SEMITRANSPARENT LIGHT SHELF</a> - Using prism and mirror types
+<a HREF="#MATERIAL_MIXTURES">MATERIAL MIXTURES</a>		     - Modeling inhomogeneous materials
+<a HREF="#RADIANCE_POV-RAY">RADIANCE VS. POV-RAY</a>		     - Detailed comparison between these packages
+<a HREF="#PHOTOMETRIC_UNITS">PHOTOMETRIC UNITS AND COLOR</a>	     - Converting to and from lighting units
+
+As usual, if you got this mailing against your wishes, send a message saying
+something like &quot;I wish to unsubscribe from the Radiance digest list&quot; to:
+
+	radiance-request@hobbes.lbl.gov
+
+Please DO NOT REPLY to this message!  If you want to write to me directly,
+send e-mail to <GJWard@lbl.gov> and I will respond.
+
+For those of you who are new to the mailing list, I remind you that we
+have now a Web site with lots of goodies including indexed back issues at:
+
+	http://radsite.lbl.gov/radiance/HOME.html
+
+We also have an informal discussion group going at
+<radiance-discuss@hobbes.lbl.gov>.  If you wish to subscribe to this group,
+please once again mail to <radiance-request@hobbes.lbl.gov> with a short
+note saying that you &quot;wish to subscribe to the Radiance discussion list.&quot;
+Due this BEFORE sending any e-mail to the list if you want to see the replies.
+
+All the best,
+-Greg
+
+==========================================================================
+<a HREF="#ILLUMINATION_MAPS" name="ILLUMINATION_MAPS">ILLUMINATION MAPS</a>
+
+Date: Tue, 2 May 1995 12:26:00 -0400
+From: seguin@vr1.engin.umich.edu (Ralph Seguin)
+To: GJWard@lbl.gov
+Subject: Radiance
+Cc: seguin@vr1.engin.umich.edu
+
+Hi.  I work at the Virtual Reality Lab here at U Michigan.  We are looking
+methods of producing rendered 3D scenes which we can move around in.
+
+Ie.  We want to take a 3D scene, and radiosity render it and get colored
+polygons out (instead of a 2D projected image).
+
+Our questions are:
+
+Has anybody already done this with Radiance?
+How much work would be involved in changing it to do this?
+  Is it worthwhile?
+What would be a good starting point?
+  (I noticed that there was an awful lot of source there ;)
+
+			Thanks, Ralph
+
+Date: Tue, 2 May 95 10:11:21 PDT
+From: greg (Gregory J. Ward)
+To: seguin@vr1.engin.umich.edu
+Subject: Re:  Radiance
+
+Hi Ralph,
+
+I know some folks in Zurich have done this with Radiance, and I think some
+folks at NIST have as well.  It's not too difficult, actually, and doesn't
+involve modifying any code so long as your VR engine can handle &quot;textured&quot;
+polygons.  Ideally, you would combine an irradiance map computed by Radiance
+with a texture map containing the surface colors and variations on each
+polygon.  This is most practical for large rectangular areas, but it can
+be done for smaller polygons as well, or you can use Radiance to compute
+the vertex irradiances (equivalent to radiosities) directly.
+
+In short, there are three methods available to you:
+
+1) Compute surface radiances for each polygon, i.e:
+	a) Use rpict or (perhaps better) rtrace to compute a 2-d image of
+		the visible area of each polygon at high resolution.
+	b) Apply these as texture maps during rendering.
+2) Compute surface irradiances for each polygon, i.e:
+	a) Use rpict -i or rtrace -i to compute a 2-d map of the visible
+		area of each polygon at lower resolution.
+	b) Apply these in combination with surface color or texture during
+		rendering.
+3) Compute vertex irradiances with rtrace -I and apply these in a gouraud
+	shading step during rendering.  (This probably requires meshing
+	your scene, unlike the above two choices.)
+
+Option 2 is the one I would try first.  It should be a fast computation, and
+puts the smallest strain on the rendering hardware if you have a lot of
+repetitive surface textures.  If you don't have any surface textures to
+speak of, you might use option 1 instead and relax the resolution of your
+polygon images.  The disadvantage of 1 is that it computes radiance, which
+is not the same as radiosity except for diffuse surfaces.  (I.e. the highlights
+could be confused.)  In either case, your shadow definition will depend on how
+fine you compute these poly images.
+
+Hope this helps.
+-Greg
+
+From: &quot;Tim Burr&quot; <burr@stobart.coryphaeus.com>
+Date: Sat, 1 Jul 1995 12:29:10 -0700
+To: greg@hobbes.lbl.gov
+Subject: Quick start w/DXF converter
+
+Greg,
+
+We're looking at purchasing LightScape here but I first wanted to
+give Radiance a look.  I was pleased to see that a DXF converter
+was available as this is important to us.  Can't seem to get it
+working though.  Using the test.dxf file that came with the
+distribution (Siggraph 94 distribution).  If I run dxfcvt -orad dxf -itest.dxf
+I get two files dxf.rad and dxf.mod.  I then create a simple
+rad control file with just settings for the ZONE, EXPOSURE and
+the following setting for scene -&gt; scene = dxf.rad dxf.mod.  I name
+this rad file first.rad.  When I run &quot;rad first.rad&quot; I get the
+output:
+
+       oconv dxf.mod dxf.rad &gt; first.oct
+oconv: fatal - (dxf.mod): undefined modifier &quot;CIRCLE&quot;
+rad: error generating octree
+        first.oct removed
+
+I know I'm trying to evaluate this on a fasttrack here but if
+you could give me some help or point me to the right direction
+that would be most appreciated.  I printed out the reference
+manual and tutorial and that didn't pop out the answer for me.
+Also looked in the digests and there was no detail info on
+using the DXF converter.
+
+Thanks,
+Tim
+
+-- 
+Timothy Burr               | &quot;Essence is that about a thing that makes 
+Coryphaeus Software, Inc.  |  that thing what it is.&quot;  
+burr@cory.coryphaeus.com   |    - existentialist food for thought -
+
+Date: Sun, 2 Jul 95 11:13:38 PDT
+From: greg (Gregory J. Ward)
+To: burr@stobart.coryphaeus.com
+Subject: Re:  Quick start w/DXF converter
+
+Hi Tim,
+
+The DXF converter is for version 10 (I think) and so may not work with
+the latest version of AutoCAD and other programs.  People generally
+use the torad program from the pub/translators directory on hobbes.lbl.gov
+and run it as an export function from within AutoCAD.  It sounds like
+you're isolated from the network, so you would have to send me a tape
+(DAT is fine) to get this program and the latest version of Radiance (2.5)
+which has a graphical user interface to &quot;rad&quot;.
+
+Concerning your problem running dxfcvt, it sounds as though you put your
+modifier file after your scene file, i.e. &quot;scene = dxf.rad dxf.mod&quot;
+instead of how it needs to be:  &quot;scene = dxf.mod dxf.rad&quot;.  Also, the
+modifier file created by dxfcvt is merely a template -- you must define
+the modifier values yourself using a text editor.  For more detail,
+you should work through the Radiance tutorial (tutorial.1 in ray/doc)
+to gain some experience using the software.
+
+If you have the money to buy LightScape and an SGI with 128+ Mbytes of
+RAM, by all means please do so.  It is a commercial product and has
+the support and work in the interface to make it both powerful and
+friendly.  Radiance is free software and has many of the associated
+drawbacks -- limited support, documentation and interface.  Ultimately,
+I still think you can create better simulations on more complicated
+models with Radiance than are possible with the current incarnation
+of LightScape, but I'm not entirely free of bias.  Some of their output
+is stunning.
+
+Hope this helps.
+-Greg
+
+From: &quot;Tim Burr&quot; <burr@stobart.coryphaeus.com>
+Date: Mon, 3 Jul 1995 10:22:37 -0700
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re: Quick start w/DXF converter
+
+I'm all for going with the free solution.  I'm not sure about my
+colleagues here.  I think it will depend mostly on the I/O conversion
+capabilities of the systems.  We would need a decent DXF/OBJ in capability
+and a DXF/OBJ out (at least some way to get the texture coords out).
+Coryphaeus is a leading producer of 3D visual simulation modeling tools.
+We're looking at radiosity packages to compute really night lighting
+that we can then slap on as texture maps.
+
+Tim
+
+Date: Mon, 3 Jul 95 14:07:25 PDT
+From: greg (Gregory J. Ward)
+To: burr@stobart.coryphaeus.com
+Subject: Re: Quick start w/DXF converter
+
+Hi Tim,
+
+I think the I/O capability of Lightscape is superior to Radiance, particularly
+with regard to export.  Although Radiance is capable of generating surface
+textures, there are no programs customized to this purpose, so getting what
+you want is going to be difficult.
+
+-Greg
+
+Date: Mon, 3 Jul 1995 15:42:45 -0700
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re: Quick start w/DXF converter
+
+Could you include me on the unmoderated list or send me a blurb on
+how to subscribe?
+
+Well maybe that's one area that we can contribute to Radiance.  When you
+say that Radiance generates surface textures can you elaborate?  How does
+it partition (or what control does it give you to), create surface texture
+maps from the lit scene?  That is, how are you able to turn the per-vertex
+color values (that is the lighting info), into indices into a selected
+texture map within a set of generated texture maps that in total cover
+the scene?
+
+I understand that you're busy so if you're spending too much time on
+this let me know.
+
+Tim
+
+Date: Mon, 3 Jul 95 16:08:17 PDT
+From: greg (Gregory J. Ward)
+To: burr@stobart.coryphaeus.com
+Subject: Re: Quick start w/DXF converter
+
+Hi Tim,
+
+There are no per-vertex color values in Radiance unless you explicitly
+generate them by calling rtrace -I with the vertex positions and normals
+as input.  The simplest way to generate illumination maps is by running
+rpict with the -i option and a parallel view that sees only the surface
+or surfaces you are generating a texture for.  A more robust approach is
+to call rtrace as a subprocess and query the irradiance at points on all
+the surfaces, constructing a map on a coordinate system you select.
+
+If you can only handle polygonal data, you can convert the Radiance scene
+description into MGF then use the standard MGF parser (also included in
+2.5) to extract a polygonal representation.  You can then use this to
+select your computed points, and it shouldn't be too difficult.
+
+-Greg
+
+From: &quot;Tim Burr&quot; <burr@stobart.coryphaeus.com>
+Date: Mon, 3 Jul 1995 16:55:46 -0700
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Subject: Re: Quick start w/DXF converter
+
+When you get to the polygonal representation do you still have access to
+the continuous irradiance signal?  That is, isn't all you have at that
+point just the samples of the irradiance signal at the vertices?  In
+what form can you carry the full irradiance info into this polygonal
+form?
+
+No one here has heard of MGF.  Could you briefly describe.
+
+Tim
+
+Date: Mon, 3 Jul 95 18:07:57 PDT
+From: greg (Gregory J. Ward)
+To: burr@stobart.coryphaeus.com
+Subject: Re: Quick start w/DXF converter
+
+There is no system I know of, Radiance included, that maintains a continuous
+representation of irradiance.  Radiosity systems usually employ a linear
+interpolation between vertices (Gouraud shading) and Radiance uses a more
+complicated scheme that is roughly equivalent to a third-degree function
+to interpolate values.  Probably the easiest thing to do is to query values
+on a uv coordinate system of your own choosing and either interpolate
+values linearly or leave it to the hardware to deal with.
+
+I'm not surprised that you haven't heard of MGF, as it's only been out a
+few months and the only advertisement has been on comp.graphics.  Our WWW
+site for MGF is http://radsite.lbl.gov/mgf/HOME.html -- it's basically a
+language for interchange of 3-d geometry and materials.  I can put a copy
+of these web pages on the DAT as well if you can't get to our site.
+
+-Greg
+
+==========================================================================
+<a name="REFLECTION_MODEL">REFLECTION MODEL</a>
+
+Date: Wed, 3 May 1995 15:50:55 +0100 (GMT+0100)
+From: Henrik Wann Jensen <hwj@hwj.gk.dtu.dk>
+To: GJWard@lbl.gov
+Subject: Anisotropic Reflection
+
+Hi Greg,
+
+Some time ago I implemented your anisotropic reflection model. I did
+however find that the anisotropic highlights were too bright. So I
+decided to look into your implementation in the Radiance program.
+
+It seems to me that you use 1/cos^2(delta) instead of tan^2(delta) in
+the formula? Furthermore you add a small fraction omega/(4*PI) if
+the reflecting surface is flat.
+
+I modified my code into using 1/cos^2(delta) and my highlights improved
+significantly since the argument to exp became more negative. Is 
+1/cos^2(delta) more correct or have I missed something?
+
+Thanks,
+
+Henrik Wann Jensen
+
+Date: Wed, 3 May 95 10:16:18 PDT
+From: greg (Gregory J. Ward)
+To: hwj@hwj.gk.dtu.dk
+Subject: Re:  Anisotropic Reflection
+
+Hi Henrik,
+
+I'm glad to hear that my paper didn't go completely unnoticed!  I can
+understand your difficulty interpreting my code -- I had trouble just
+now when I looked at it again myself.  What's confusing is that since
+the paper was written, another fellow (Christophe Schlick) helped me to
+discover a more efficient vector formulation, so that what's in Radiance
+doesn't exactly match what's in the paper.
+
+The subtle thing you're probably missing in aniso.c is that the half-vector
+is not normalized, and in fact when you use this unnormalized vector in the
+way I have here, you do end up computing the tangent^2(delta).  Thus, the
+code exactly matches Equation 5a in the paper with the exception of the
+omega/(4*PI) factor you discovered.
+
+That factor was put in as an approximation to the effect source size has
+on a highlight.  It is not terribly accurate, and it approximates any shape
+source as a sort of blob, and extends the highlight to compensate.  It is
+applied only to flat surfaces, since curved ones have an unknown effect on
+the highlight appearance, and at that point I give up.  The proper thing to
+do of course is to send multiple samples to the light source and average
+them, which happens also in Radiance -- this just reduces noise associated
+with that process.
+
+I hope this has cleared up some of your questions.
+
+-Greg
+
+Date: Mon, 15 May 1995 19:43:56 +0200 ()
+From: Maurice Bierhuizen <M.F.A.Bierhuizen@TWI.TUDelft.NL>
+To: &quot;Gregory J. Ward&quot; <greg@hobbes.lbl.gov>
+Subject: Re: green-house questions
+
+Hello Greg,
+
+Could you help me with some questions I have on simulating cloudy sky
+scenes in Radiance?  
+Is it true that the only reflectioncomponent that's being considered in 
+calculations with cloudy skies is the diffuse indirect component?
+If so: 
+Is it true that all the -d* or -s* parameters in
+rtrace/rpict are of no importance with cloudy skies? 
+And, are the
+specularity and roughness parameters for the material types metal and
+plastic of any importance with cloudy skies? According the reflection
+formulas for plastic and metal in 'Behaviour of materials in Radiance' the
+roughness is of no use under these conditions, unless it's zero. That's
+completely in accordance to what I see with my simulations. But the
+specularity parameter should have influence on the diffuse reflection. The
+thing is that I don't see it influence the reflection of objects unless it
+is maximum (=1), and it then becomes totally black.
+
+Another question I have is about the glass materialtype. I created a test
+scene with a cloudy sky (no direct sun) and a very large glass polygon
+with its normal pointing up in the sky (Z+ direction). When I measured
+irradiance (rtrace -I option) in points below and above the glass polygon
+in the Z+ direction I did not get any different irradiance values. Can you
+explain this to me, I think irradiance should be lower under the glass
+polygon, am I wrong in thinking that? 
+
+Thank you in advance. 
+
+Greetings,
+
+Maurice Bierhuizen.
+
+Date: Mon, 15 May 95 10:53:46 PDT
+From: greg (Gregory J. Ward)
+To: M.F.A.Bierhuizen@TWI.TUDelft.NL
+Subject: Re: green-house questions
+
+Hi Maurice,
+
+In fact, the specular component is computed for any type of environment,
+including cloudy skies.  I don't know why your surface with 100% specular
+should appear black, unless you are using an old version of Radiance or
+you have set the -st value to 1.  It is true that the sky does not participate
+in the direct portion of the calculation, so the -d* options have no effect,
+however the -s* options are still important.
+
+You are correct in expecting that your -I computation under the glass should
+be lower than your -I computation above the glass, unless you have specified
+a ground source in which case the reflection off the glass might compensate
+for the loss in the transmitted component.  Another thing to be careful
+of is the setting of your -ar parameter, which could cause the calculation
+to reuse the above value for below simply because they are too close together
+for the program to distinguish them.  You might try it again with a different
+setting of -ar, or turn off ambient interpolation altogether by setting -aa 0.
+
+Hope this helps.
+-Greg
+
+Date: Thu, 6 Apr 1995 11:33:57 +0200 (MET DST)
+From: Maus <M.F.A.Bierhuizen@TWI.TUDelft.NL>
+Subject: Anisotropic Materials
+To: Radiance Mailing List <radiance-discuss@hobbes.lbl.gov>
+
+Hello there,
+
+I just read the SIGGRAPH '92 article  'Measuring and Modelling 
+Anisotropic Reflection' by Greg Ward. At the end of this article is a 
+table with some numbers for elliptical Gaussian fits for materials I 
+would like to use. In this table for each material are specified: the 
+diffuse reflection (rho_d), the specular reflection (rho_s), the RMS 
+slope in the x direction (alpha_x) and the RMS slope in the y direction 
+(alpha_y). Now my question is, how do I use them in Radiance? If I use 
+the types plastic2 or metal2 I don't know where the diffuse reflection 
+parameter should go. Should I use the BDRF type to write my own BDRF 
+function? 
+If neither of these is possible, does anyone know where to find this kind 
+of accurate figures that can be used in Radiance. I'm particularly 
+interested in aluminium, zinc, white paint, rubber and white PVC.
+Greetings,
+
+Maurice Bierhuizen. 
+
+Date: Thu, 6 Apr 95 09:37:02 PDT
+From: greg (Gregory J. Ward)
+To: M.F.A.Bierhuizen@TWI.TUDelft.NL
+Subject: Re:  Anisotropic Materials
+
+Hi Maurice,
+
+Applying the numbers in the '92 paper to Radiance is pretty straightforward,
+since the reflectance model used by plastic, metal, plastic2 and metal2
+correspond to the isotropic and anisotropic Gaussian BRDF's presented in
+the paper.  Let's take two examples, one for plastic and the other for
+metal.  Since the paper does not give any spectral (i.e. color) measurements
+for the materials, we'll assume a uniform (grey) spectrum.
+
+For the plastic example, we'll use the isotropic &quot;glossy grey paper&quot;.  The
+parameters given in the article for this are rho_d=.29, rho_s=.083, alpha_x
+and alpha_y=.082.  The Radiance primitive for this material would be:
+
+	void plastic glossy_grey_paper
+	0
+	0
+	5 .32 .32 .32 .083 .082
+
+The reason the diffuse color above is not (.29 .29 .29) is because this
+value gets multiplied by (1-.083) to arrive at the actual rho_d, so we
+had to divide our rho_d of .29 by (1-.083), which is (approximately) .32.
+
+For the metal example, we'll use the anisotropic &quot;rolled aluminum&quot;, whose
+parameters from the article are rho_d=.1, rho_s=.21, alpha_x=.04, and
+alpha_y=.09.  The Radiance primitive, assuming the material is brushed
+in the world z-direction (i.e. is rougher in the other directions),
+would be:
+
+	void metal2 rolled_aluminum
+	4 0 0 1 .
+	0
+	6 .31 .31 .31 .68 .04 .09
+
+The orientation vector given in the first line (0 0 1) is the world
+z-direction, which will correspond to the direction of the first
+roughness parameter, which is .04 in our example.  It is important not
+to confuse the article's x and y directions with world coordinates,
+which may be different.  If we wanted our surface orientation to change
+over space, we might have used a function file in place of the '.'
+above and given variables instead of constants for the orientation
+vector.
+
+Computing the diffuse and specular parameters for metal is even trickier
+than plastic.  The formulas below apply for D and S, where D is the
+(uncolored) diffuse parameter and S is the specular parameter:
+
+	D = rho_d + rho_s
+	S = rho_s/(rho_d + rho_s)
+
+These formulae are needed because the specular component is multiplied by
+the material color for metals to get the actual rho_s.
+
+I hope this clarifies rather than muddies the waters....
+
+-Greg
+
+==========================================================================
+<a HREF="#DESIGN_WORKSHOP" name="DESIGN_WORKSHOP">DESIGN WORKSHOP</a>
+
+[The following is excerpted from somewhere on the net.]
+
+Learning Radiance, by Kevin Matthews (matthews@aaa.uoregon.edu)
+
+One way to smooth out the Radiance learning curve is to build models with
+DesignWorkshop, a commercial Macintosh-based 3D modeler (with a really nice
+live 3D interface).  DesignWorkshop has a direct export function for Radiance
+that not only provides a geometry file, with sophisticated sky function all
+set up, etc., but also automatically creates a couple of shell scripts
+sufficient to completely automate your initial rendering of a view of a model.
+
+Of course, if you become a Radiance fiend you'll want to do more than the DW
+translation builds in, but even them it is a major time-saver and dumb-error
+preventer.
+
+==========================================================================
+<a name="MODELING_STARS">MODELING STARS</a>
+
+Date: Mon, 19 Jun 1995 11:25:00 +0100
+From: jromera@dolmen.tid.es (Juan Romera Arroyo)
+To: greg@hobbes.lbl.gov
+Subject: Questions
+Cc: 
+
+Hi Greg,
+
+I'm trying to simulate eclipses and I'd like to use Radiance for this purpose.
+Is there a good way to do this with Radiance ? When I tried it the shadow
+seemed to be very big on the earth's surface and the penumbra not accurate.
+the setting for rpict was: -ps 1 -dj 0.5 -pj .9  ....
+ 
+Also I'd like to know what's the best way to simulate the sky at night
+(plenty of stars) using Radiance. I also tried with many glow sources 
+(about 15,000) but it was quite slow. Maybe an easier way ?
+ 
+Thanks in advance.
+
+Best Regards
+
+Juan Romera   (jromera@dolmen.tid.es)
+
+Date: Tue, 27 Jun 95 10:38:42 PDT
+From: greg (Gregory J. Ward)
+To: jromera@dolmen.tid.es
+Subject: Re:  Questions
+
+Hi Juan,
+
+Exactly what kind of eclipse simulation are you after?  I.e. what effects
+are you trying to reproduce?  I can't answer your question otherwise.
+
+I would simulate stars as a pattern on a glow source covering the whole
+sky.  Doing it as many individual glow sources is terribly inefficient
+as you discovered.  I don't have a pattern for stars offhand, but you
+can try creating a .cal file something like so:
+
+{
+	Star pattern (stars.cal)
+}
+FREQ : 1000;		{ affects number of stars }
+POWER : 40;		{ affects size of stars }
+staron = if(noise3(Dx*FREQ,Dy*FREQ,Dz*FREQ)^POWER - .95, 1, 0);
+
+-------------
+Then, apply it to a glow like so:
+
+void brightfunc starpat
+2 staron stars.cal
+0
+0
+
+starpat glow starbright
+0
+0
+4 1e6 1e6 1e6 -1
+------------------
+
+You may have to play with the value of FREQ and POWER to get it to look
+right.
+
+-Greg
+
+==========================================================================
+<a name="SAVING_UNFILTERED">SAVING UNFILTERED PICTURE WITH RAD</a>
+
+Date: Tue, 4 Jul 1995 12:47:02 +0300 (EET DST)
+From: Yezioro Abraham <array01@techunix.technion.ac.il>
+To: Greg Ward <GJWard@lbl.gov>
+Subject: pfilt resolution
+
+Hi Greg.
+It's been almost a year since my last mail to you.
+I have a question:
+It is possible to avoid in the pfilt process (using rif files) the 
+reduction of the picture according to the desired Quality?
+I want to save the analysis with the resolution it has before the pfilt 
+process. 
+I've tried writing in the rif file, in the pfilt option:
+pfilt= -x /1 -y /1,
+But when rpict is finished i get this:
+pfilt -r 1 -x /1 -y /1 -x /2 -y /2 tst_w2.raw &gt; tst_pic
+
+Checking a very old Digest, from 92, you answer to Nikolaos Fotis, about
+the smoothness on an image: 
+&gt; 
+In short, if a smooth image is more important to you than a correct one, 
+you can take the original high-resolution image out of rpict, convert it
+to some 24-bit image type (like TIFF or TARGA), and read it into another 
+program such as Adobe's Photoshop to perform the anti-aliasing on the 
+clipped image.  If you don't have Photoshop, then I can show you how to
+do it with pcomb, but it's much slower.
+<We are taking the images, after the pfilt, to photoshop, but something in the smoothness seems to be lost. So we want to check the possibility of don't filtering the image size. Any help will be appreciated. Thanks, Abraham ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Abraham Yezioro e-mail: array01@techunix.technion.ac.il Fax: 972-4-294617 Tel. office: 972-4-294013 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Date: Tue, 4 Jul 95 12:48:13 PDT From: greg (Gregory J. Ward) To: array01@techunix.technion.ac.il Subject: Re: pfilt resolution Hi Abraham, The best way to avoid losing your original high-resolution rpict output is to create a link (I assume you are on UNIX) to the root_view.raw file. I.e. before running rad, execute: % touch root_vw1.raw % ln root_vw1.raw root_vw1.orig % touch root_vw2.raw % ln root_vw2.raw root_vw2.orig % rm root.oct % rad root.rif>&amp; root.errs &amp;
+
+Rad will still do all the same actions, but you won't lose your original
+picture files because you've created hard links to them.  (Run &quot;man ln&quot;
+for details.)
+
+-Greg
+
+Date: Wed, 5 Jul 1995 08:54:18 +0300 (EET DST)
+From: Yezioro Abraham <array01@techunix.technion.ac.il>
+To: &quot;Gregory J. Ward&quot; <greg@hobbes.lbl.gov>
+Subject: Re: pfilt resolution
+
+Thanks Greg. It really works ... but if you don't mind i think that like 
+in the rpict options you can overwrite the &quot;defaults&quot;, so as in the pfilt 
+options you should will.
+In the process of providing the TRAD tool to make easier the Radiance use 
+to us all, will be convenient to &quot;touch&quot; the pfilt options (ragarding to 
+the -r and -x -y options).
+Thanks again, and keep the good work you are doing,
+Abraham
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Abraham Yezioro
+	e-mail:      array01@techunix.technion.ac.il
+	Fax:         972-4-294617
+	Tel. office: 972-4-294013
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Date: Wed, 5 Jul 95 09:09:35 PDT
+From: greg (Gregory J. Ward)
+To: array01@techunix.technion.ac.il
+Subject: Re: pfilt resolution
+
+Hi Abraham,
+
+In fact, you can override all pfilt options EXCEPT -x and -y, since those
+would change the resulting output resolution and end up contradicting
+the RESOLUTION= variable setting.  I did this intentionally so that would
+not happen.  I would be willing to add a T/F variable called RAWSAVE that
+would prevent the raw picture files from being removed.  Would this
+satisfy you?
+
+-Greg
+
+[P.S. to this message -- the next release of rad will include two new
+variables, RAWFILE and ZFILE, which allow you to save the original unfiltered
+picture and distance map.]
+
+==========================================================================
+<a HREF="#DEBUGGING_FUNCTION" name="DEBUGGING_FUNCTION">DEBUGGING FUNCTION FILES</a>
+
+Date: Tue, 4 Jul 1995 13:19:46 +0100
+From: pcc@dmu.ac.uk
+To: greg@hobbes.lbl.gov
+Subject: Function files
+
+Hi Greg,
+
+I'm trying to write a function file, and I'm having some difficulty. 
+Are there any de-bugging aids, such as the ability to print out values ?.
+
+Regards
+
+Paul
+
+***************************************************
+* Paul Cropper                                    *
+* ECADAP Centre                                   *
+* Institute of Energy and Sustainable Development *
+* De Montfort University                          *
+* The Gateway                E-mail pcc@dmu.ac.uk *
+* Leicester                     Tel 0116 2577417  * 
+* LE1 9BH                       Fax 0116 2577449  *
+***************************************************
+
+Date: Tue, 4 Jul 95 12:52:25 PDT
+From: greg (Gregory J. Ward)
+To: pcc@dmu.ac.uk
+Subject: Re:  Function files
+
+Hi Paul,
+
+There is a script called &quot;debugcal&quot;, that allows you to take the output of
+ximage (i.e. the 't' command for tracing rays) and see what your cal file
+is computing.  There's no man page for it, which is unfortunate, and I haven't
+used it much myself, but it might do the trick.  Look at the source in
+ray/src/util/debugcal.csh to see what it does.  It employs the rcalc program.
+
+-Greg
+
+==========================================================================
+<a name="ANIMATION_FEATURES">ANIMATION FEATURES (LACKING)</a>
+
+Date: Sat, 22 Jul 1995 10:04:36 -0700
+From: danj@netcom.com (Dan Janowski)
+To: GJWard@lbl.gov
+Subject: Rad Q's: Motion Blur, Splines &amp; Cameras
+
+Just got Radiance, it's pretty neat. Thanks.
+
+I like what you have done. It feels good to use. A pleasant and direct
+scene description languange.
+
+I have a couple of questions about things that seem to be missing and
+am just curious about your thoughts on them. I apologize if I am asking
+for anything that is already possible, I may have not discovered the
+Radiance way of getting it done.
+
+So, here they are:
+
+	Motion blur (Temporal aliasing)
+	Spline surfaces
+	A real-world camera definition with
+		the camera defined in the scene language
+	Animated transformations for objects defined in
+		the description languange, i.e. a spline
+		definition and being able to tag that
+		to an object's transformation.
+
+Dan
+--
+Dan Janowski
+Triskelion Systems
+danj@netcom.com
+New York, NY
+
+Date: Mon, 24 Jul 95 14:43:31 PDT
+From: greg (Gregory J. Ward)
+To: danj@netcom.com
+Subject: Re:  Rad Q's: Motion Blur, Splines &amp; Cameras
+
+Hi Dan,
+
+It is possible but not straightforward to do the things you want.  To address
+each item specifically:
+
+        Motion blur (Temporal aliasing)
+
+You can generate multiple images at different time steps and average them
+together.  Not the best solution, but it works.  (Pcomb is the program to
+average images.)
+
+        Spline surfaces
+
+The gensurf program is a general tool for representing functional surfaces
+as (smoothed) polygons.  See ftp://hobbes.lbl.gov/pub/models/podlife.tar.Z
+for an example of how this is done for NURBS.
+
+        A real-world camera definition with
+                the camera defined in the scene language
+
+Well, I'm not sure why you would want this, but you can always put the view
+options in the scene file as a comment.  Normally, Radiance keeps views
+separate from scene data, since there is not a one to one correspondence.
+
+        Animated transformations for objects defined in
+                the description languange, i.e. a spline
+                definition and being able to tag that
+                to an object's transformation.
+
+You can use the rcalc program in combination with a format file that looks
+something like this:
+
+!xform -rx ${rx} -ry ${ry} -rz ${rz} -t ${tx} ${ty} ${tz} object.rad
+
+You'll have to look up rcalc to figure out what I'm talking about.
+
+Hope these hints are enough to get you started.
+
+-Greg
+
+[P.S. to this message -- the next version of Radiance will have some features
+for easier modeling of depth-of-field and motion blur.]
+
+==========================================================================
+<a name="ANTIMATTER_MODIFIER">ANTIMATTER MODIFIER LOOPS</a>
+
+Date: Thu, 7 Sep 95 10:15:03 METDST
+From: Maurice Bierhuizen <maus@duticg.twi.tudelft.nl>
+Subject: A question about Radiance
+To: greg@theo.lbl.gov (Gregory J. Ward)
+Mailer: Elm [revision: 70.85]
+
+Hi Greg,
+
+Could you help me with the following problem I have with a Radiance
+calculation? 
+
+At a certain point RTRACE stops its calculation with the message 'fatal
+- possible modifier loop for polygon &quot;SURFACE_461_1&quot;'. Could you
+explain this error to me?
+
+My guess is that it has to do with the antimatters I use. I think this
+because a warning precedes the above error, and it says 'warning
+duplicate modifier for antimatter &quot;anti_steal&quot;'. The thing is that I
+can't see what's wrong with its definition. The definition of the
+antimatter considered is:
+
+	void antimatter anti_steal
+	2	steal	steal
+	0
+	0
+
+To my understanding the definition of this antimatter means that it can cut
+'holes' in steal objects and that it shades the hole with steal (but am I
+right?). 
+
+Thanks in advance.
+
+Greetings,
+Maurice Bierhuizen.
+
+Date: Thu, 7 Sep 95 08:19:21 PDT
+From: greg (Greg Ward)
+To: maus@duticg.twi.tudelft.nl
+Subject: Re:  A question about Radiance
+
+Hi Maurice,
+
+The warning is not really related to the error as far as I can tell.  The
+antimatter specification you have given is indeed redundant -- you should
+get the same result (minus the warning) if you specify &quot;steal&quot; instead
+as the single modifier.  (By the way, &quot;steal&quot; in English means to take something
+without permission -- I think you want &quot;steel&quot; here unless you are working in
+Dutch.)
+
+The modifier loop error is usually caused by referring to a modifier that
+refers eventually back to itself.  One example might be:
+
+void metal steel
+0
+0
+5 .6 .5 .65 .9 .05
+
+void antimatter anti_steel
+1 steel
+0
+0
+
+# Later in this or another file...
+
+void alias steel anti_steel
+
+steel sphere sph1
+0
+0
+4 10 -3 8 1.5
+
+-----------------------
+What happens above is we think we've &quot;aliased&quot; the modifier &quot;anti_steel&quot;
+to the modifier &quot;steel&quot; so that we can use it on some objects and they
+will end up subtracting sections from some other object.  But since the
+definition of &quot;anti_steel&quot; refers to &quot;steel&quot; as one of it's arguments,
+and we have redefined &quot;steel&quot; to in fact be &quot;anti_steel&quot; -- it refers
+to itself and we end up with a modifier loop.
+
+Modifier loops were impossible in the original Radiance language.  This
+was prevented because every object was modified by the most recent definition
+of another object in the input stream, and later definitions had no
+effect.  There was no way to make a loop.  Only with the advent of
+antimatter and other primitive types that refer in their string
+arguments to other modifiers can loops arise.  This is because the
+actual objects those modifiers point to is not resolved until the object
+is used -- that is, until after the basic scene description has been
+read in.  The reference is therefore resolved according to the last
+definition of that modifier, which could occur after the referring object.
+(I hope this is making sense.)  Loops can then occur, because reference
+pointers go forward as well as backward in the file.
+
+The upshot is that somewhere in the modifiers affecting your object
+&quot;SURFACE_461_1&quot; there is an antimatter or something referring to an
+object that somehow refers back to itself.
+
+I hope this helps.
+-Greg
+
+==========================================================================
+<a name="MODELING_SEMITRANSPARENT">MODELING SEMITRANSPARENT LIGHT SHELF</a>
+
+From: manuel@ise.fhg.de
+Subject: Transparent Light Shelf
+To: greg@theo.lbl.gov (Greg Ward)
+Date: Fri, 8 Sep 1995 16:47:02 +0100 (MESZ)
+
+Hi Greg,
+
+sorry for disturbing you, but a customer wants a simulation
+(urgent, as usual) with a partially transparent light shelf:
+
+         reflection    55%
+
+         transmission  25 %
+
+Any hints who to simulate such a material are
+gratefully appreciated!
+
+(Peter Apian-Bennewitz suggested mixfunc with a mirror and glass,
+but what would come first, the mirror or the glass?)
+
+
+Many thanks!
+
+Manuel
+
+
+-------------------------------------------------------------------
+Manuel Goller
+Fraunhofer Institute for Solar Energy Systems
+Simulation Group, A608 
+Oltmannsstr. 5
+D - 79100  Freiburg
+GERMANY
+
+Phone: ++49 - (0) 761 - 4588 - 296 
+Fax:   ++49 - (0) 761 - 4588 - 132
+Email: manuel@ise.fhg.de
+-------------------------------------------------------------------
+
+Date: Fri, 8 Sep 95 10:02:22 PDT
+From: greg (Greg Ward)
+To: manuel@ise.fhg.de
+Subject: Re:  Transparent Light Shelf
+
+Hi Manuel,
+
+I wouldn't use a mixfunc between mirror and glass because the calculation
+won't find the mirror and mark the shelf as a secondary source object.
+The only thing to do is treat it as a prism2 type.  Using the transmission
+and reflection values you've given, the following specification should work:
+
+	void prism2 light_shelf_mat
+	9 0.25 Dx Dy Dz if(Rdot,0.55,0) Dx+2*Rdot*Nx Dy+2*Rdot*Ny Dz+2*Rdot*Nz .
+	0
+	0
+
+The spaces must be exactly as shown for these formulas to work inline.
+Normally, they would be put into a file and only referenced here.  (The '.'
+at the end says no file is needed besides rayinit.cal.)
+
+I'm not doing anything fancy in the above to adjust the transmission and
+reflection as a function of angle, except to set reflection to zero for
+rays coming from below (positive Dz value).
+
+I hope this works!
+-Greg
+
+Date: Tue, 12 Sep 95 16:56:02 PDT
+From: greg (Greg Ward)
+To: manuel@ise.fhg.de
+Subject: Re:  Transparent Light Shelf
+
+Hi Manuel,
+
+Well, I don't usually do this, but I was thinking about your problem with
+the light shelf again, and I realized that the solution I gave you,
+although it will work, is not optimal.
+
+A more computationally efficient solution is to use the mirror type with
+BRTDfunc as the alternate material.  Specifically:
+
+void BRTDfunc one-way-mirror
+10 if(Rdot,.55,0) if(Rdot,.55,0) if(Rdot,.55,0)
+	.25	.25	.25
+	0	0	0
+	.
+0
+9	0	0	0
+	0	0	0
+	0	0	0
+
+void mirror shelf-mirror
+1 one-way-mirror
+0
+3 .55 .55 .55
+
+shelf-mirror {shelf geometry}
+
+
+The reason for using the BRTDfunc type is that it's the only one that allows
+you to specify a different front vs. back surface reflectance.  The above
+specification is more efficient than the prism2 route primarily because it
+generates only a single virtual light source rather than two, one of which
+is redundant.
+
+I realize this probably comes too late, but I thought you should have
+good information, better late than never.
+
+-Greg
+
+==========================================================================
+<a name="MATERIAL_MIXTURES">MATERIAL MIXTURES</a>
+
+Date: Thu, 14 Sep 1995 09:43:03 -0700
+From: martin@color.arce.ukans.edu (Martin Moeck)
+Apparently-To: gjward@lbl.gov
+
+Hi Greg,
+
+I would like to model a green matte cloth with red shiny metal threads 
+in it. Could you give me a hint on how do do that?
+
+Thanks + take care,
+
+Martin
+
+Date: Thu, 14 Sep 95 08:31:45 PDT
+From: greg (Greg Ward)
+To: martin@color.arce.ukans.edu
+
+Regarding your cloth with shiny metal threads, this is a good application for
+the mixfunc type.  Use it to mix between a diffuse green material and a
+red metal material, like so:
+
+void plastic diffuse_green
+0
+0
+5 .08 .6 .1 0 .1
+
+void metal red_metal
+0
+0
+5 .8 .05 .08 .9 .05
+
+void mixfunc green_cloth_red_thread
+4 red_metal diffuse_green inthread thread.cal
+0
+0
+
+Of course, writing thread.cal is the difficult part.  You need to define
+the variable inthread to be 1.0 where you want the red thread to be and 0.0
+where you want the green cloth.  Some kind of if statement is called for.
+If you need some help with it, I can look into it later.
+
+-Greg
+
+==========================================================================
+<a name="RADIANCE_POV-RAY">RADIANCE VS. POV-RAY</a>
+
+[I grabbed this off of network news.]
+
+Radiance vs. Pov, by &quot;Cloister Bell&quot; [Jason Black] (cloister@hhhh.org)
+
+Jonathan Williams (williamj@cs.uni.edu) wrote:
+&gt;: My question is, I do basically artistic renderings, and am not incredibly
+&gt;: hung up on reality.  What benefits (if any) does Radiance have over Pov? I'm
+&gt;: looking at things such as easier syntax (not likely),
+
+Easier syntax is certainly not one of Radiance's benefits.  Writing Radiance
+files, until you get the hang of it, is truly tortuous.  It's really not that
+bad once you do get the hang of it, but the learning curve is very steep.  I
+would say that the biggest benefit to the artist is that Radiance's scene
+description language, while being difficult, supports generic shape primitives
+and texture primitives.  This allows you to create anything (well, within the
+limits of your machine's memory, etc.)  you can think of.  POV, by contrast,
+does limit you to the fixed and not entirely general shape primitives that it
+has (although heightfields somewhat make up for this, albeit in a less than
+elegant way), and even more so to the textures that it has.  A secondary (or
+at least, less important to me) benefit is Radiance's more accurate lighting.
+If you have the CPU to burn (and the patience), you can get much better
+lighting in your scenes than with POV.
+
+POV's strong points are that it does have a heck of a lot of different shape
+and texture primitives, and that its input language is much simpler.  POV is
+truly a great renderer for the beginning and intermediate computer artist.
+But it lacks some of the more advanced features that Radiance has, and in the
+end that's why I switched.
+
+
+jhh@hebron.connected.com (Joel Hayes Hunter) writes [about POV vs. Radiance]:
+&gt;: more built-in shapes,
+
+Well, yes and no.  POV has more primitives, but Radiance handles shapes
+generically.  If you like lots of primitives, then that's a plus for POV and a
+minus for Radiance, but that is also a limitation since you're limited to what
+you can do with those primitives.  Notice the incredibly prevalent use of
+heightfields in POV to get around limitations of primitives.  On the other
+hand, if you don't mind a little math in order to specify interesting shapes
+generically, then Radiance wins hands down even though it only has 9 or so
+object primitives.  It has the primitives you are most likely to want, and
+anything else can be made (with varying degrees of effort) by parametrizing
+the surface you want to construct and specifying functions of those parameters
+which yield points on the surface.  Clearly Greg Ward (the author of Radiance)
+had this tradeoff in mind when he wrote Radiance.  I'd be willing to bet that
+he was faced with the choice between implementing dozens and dozens of
+procedures for handling all sorts of primitives and doing the job once,
+generically, and so he chose the latter.
+
+This tradeoff is a win for shapes that do not easily decompose into geometric
+primitives, but a lose for ones that do.  Some examples are in order (taken
+from a scene I'm working on currently):
+
+1. Consider a 90 degree section of a tube.  In POV this is a trivial CSG
+   object, something like:
+
+intersection {
+  difference {
+    cylinder {  // the outer cylinder
+      <0,0,0>,  // center of one end
+      <0,1,0>,  // center of other end
+      0.5       // radius
+    }
+    cylinder {  // the inner, removed, cylinder
+      <0,-.01,0>,
+      <0,1.01,0>,
+      0.4
+    }
+  }
+  box {         // the 90 degree section of interest...
+    <0,0,0>,
+    <1,1,1>
+  }
+  texture {pigment Blue}
+}
+
+In Radiance, this object is difficult to produce.  Consider that it has six
+faces, only 2 of which are rectangular.  Each face has to be described
+separately:
+
+# the rectangular end pieces:
+polygon blue end1
+0
+0
+12
+  .4 0 0   .5 0 0   .5 0 1   .4 0 1
+
+polygon blue end2
+0
+0
+12
+  0 .5 0   0 .4 0   0 .4 1   0 .5 1
+
+# the curved corners of the towelbar
+
+!gensurf blue right_outer_corner \
+          '.5*cos((3+t)*PI*.5)' \
+          '.5*sin((3+t)*PI*.5)' \
+          's' 1 10 -s
+
+!gensurf blue right_inner_corner \
+          '.4*cos((3+t)*PI*.5)' \
+          '.4*sin((3+t)*PI*.5)' \
+          's' 1 10 -s
+
+!gensurf blue right_bottom \
+          '(.4+.1*s)*cos((3+t)*PI*.5)' \
+          '(.4+.1*s)*sin((3+t)*PI*.5)' \
+          '0' 1 10 -s
+
+# same as previous, but translated up
+!gensurf blue right_top \
+          '(.4+.1*s)*cos((3+t)*PI*.5)' \
+          '(.4+.1*s)*sin((3+t)*PI*.5)' \
+          '0' 1 10 -s | xform -t 0 0 2
+
+Clearly POV wins hands down on this shape.  But that's because this shape has
+such a simple decomposition in terms of regular primitives (actually, I do
+Radiance a small disservice with this example, since Radiance does have some
+CSG facilities which this example doesn't make use of).
+
+2.  Consider a curved shampoo bottle (modelled after the old-style &quot;Head and
+Shoulders&quot; bottle, before they recently changed their shape).  This bottle can
+be described in English as the shape you get when you do the following:
+
+Place a 1.25 x 0.625 oval on the ground.  Start lifting the oval.  As you do,
+change its dimensions so that its length follows a sinusoid starting at 1.25,
+peaking soon at 2.0, then narrowing down to 0.5 at the top, while the width
+follows a similar sinusoid starting at 0.625, peaking at 0.8, and ending at
+0.5.  By this point, the oval is a circle of radius 1 and is 8 units above the
+ground.  The shape swept out by this oval is the bottle.
+
+In Radiance this bottle is described as:
+
+# the above-described shape
+!gensurf blue body \
+  '(1.25+.75*sin((PI+5*PI*t)/4))*cos(2*PI*s)' \
+  '(.625+.125*sin((PI+5*PI*t)/4))*sin(2*PI*s)' \
+  '8*t' 20 20 -s
+
+# the bottom of the bottle, which i could leave out since no one will
+# ever see it:
+!gensurf blue bottom \
+ 's*1.7803*cos(2*PI*t)' \
+ 's*0.7134*sin(2*PI*t)' \
+ '0' 1 20
+
+# an end-cap, which people will see.
+blue ring endcap
+0
+0
+8
+  0 0 8   0 0 1   0   0.5
+
+In POV, well, I'll be kind and not describe how this could be made in POV.
+The only answer is &quot;heightfields&quot;, which a) are tedious to make, and b) take
+up lots of space.  Clearly Radiance kicks butt over POV on this example.
+That's because this shape doesn't have a simple breakdown in terms of
+geometric primitives on which one can do CSG, but it does have a simple
+description in terms of parametric surfaces.
+
+So depending on what sort of objects are in your scene, you may decide to go
+with POV because they're simple and POV makes it easy, or you may decide to go
+with Radiance because they're not and because you like the feeling of mental
+machismo you get for being able to handle the necessary math to make &quot;gensurf&quot;
+(the generic surface constructor) do what you want.
+
+
+&gt;: different lighting and texture models, etc.
+
+Radiance does win hands down for lighting simulation.  That's what it was
+written for, and it's hard to compete with something that is the right tool
+for the job.
+
+With textures, you are again faced with the choice of having a system with
+several primitive textures that you can combine however you like (POV), and a
+system that gives you many very good material properties and allows you to
+define your own textures mathematically in whatever way you can dream up.
+There are textures that Radiance can do that POV simply can't because POV's
+texture primitives can't be combined to handle it.
+
+For example (don't worry, this isn't as nasty as the previous), how about a
+linoleum tile floor with alternating tiles, like you often see in bathrooms,
+where the tiles form groups like this:
+
+    ---------
+    |___| | |
+    |   | | |
+    ---------
+    | | |___|
+    | | |   |
+    ---------
+
+You get the idea.  The problem is how do you get the lines to be one
+color/texture and the open spaces to be another?  In POV, the answer is &quot;you
+use an image map&quot;.  This is fine, except that it leaves the scene's author
+with the task of creating an actual image file to map in, for which s/he may
+not have the tools readily available, and that image maps take up a lot of
+memory (although probably not for a small example like this), and tweaking
+them later may not be simple.  In Radiance, you can describe this floor
+mathematically (which is pretty easy in this case since it's a repeating
+pattern):
+
+{ a tile floor pattern: }
+
+# foreground is yellow, background is grey
+foreground = 1 1 0
+background = .8 .8 .8
+
+xq = (mod(Px,16)-8);
+yq = (mod(Py,16)-8);
+x  = mod(mod(Px,16),8);
+y  = mod(mod(Py,16),8);
+
+htile(x,y) = if(abs(y-4)-.25, if(abs(y-4)-3.75,0,1), 0);
+vtile(x,y) = if(abs(x-4)-.25, if(abs(x-4)-3.75,0,1), 0);
+
+floor_color = linterp(if(xq,if(yq,htile(x,y),vtile(x,y)),
+                      if(yq,vtile(x,y),htile(x,y))),
+                      foreground,background);
+
+Granted, this is horribly unreadable and is rather tricky to actually write.
+What it boils down to is a bunch of conditions about the ray/floor
+intersection point (Px, Py) such that some of the points are eventually
+assigned to be the foreground color, and some the background color.  I won't
+explain the details of how those expressions produce the above pattern, but
+they do.  Also note that I've simplified this example down to one color
+channel; in an actual Radiance function file you can specify wholly different
+functions for the red, green, and blue channels of the texture you're
+defining.
+
+The salient feature of this example is that Radiance has facilities (even if
+they're hard to use) for creating any texture you like, so long as you can
+describe it mathematically in some form or another.  And if you can't, you can
+always fall back on an image map as in POV.
+
+POV, on the other hand, offers you a pile of built in textures, but to create
+a fundamentally different texture you have to actually add some C code to POV.
+Many users are not programmers, or may happen to be on a DOS system where you
+don't actually get a compiler with the system, which makes this solution
+impractical.  And even if they can program a new texture, it will be a long
+time before it can get incorporated into the official POV distribution and
+thus be available to people without compilers.
+
+Of course, POV has lots of neat ways to combine textures and do some pretty
+eye-popping stuff, but we all know how much of a speed hit layered textures
+are.  This is, in my opinion, why we see such an overuse of marble and wood
+A
+textures in POV; marble and wood are reasonably interesting to look at and
+anything else is either boring, not worth implementing in C, or too slow to do
+with layered textures.
+
+
+&gt;: I'm not really concerned about speed, as I'm running on a unix box at
+&gt;: school, but if it's going to take days to render simple images (a ball on a
+&gt;: checkered field), I'd like to know.
+
+I've actually been pretty impressed with Radiance's speed.  It compares quite
+well to POV.  I would say that it is on the whole faster than POV, although as
+scene complexity increases in different ways, that comparison can go right out
+the window.  For example, POV gets really slow when you have layered textures
+and hoards of objects.  Radiance does fine with lots of objects because of the
+way it stores the scene internally, but also slows down with complex textures.
+Radiance suffers more (imho) than POV when adding light sources, especially if
+there are any reflectives surfaces in the scene.  This is due to the
+mathematical properties of the radiosity algorithm.  Also, Radiance has a lot
+of command line options that allow you to cause the rendering to take much
+much longer in order to further improve the accuracy of the simulation.  Life
+is full of tradeoffs.
+
+In the balance I'd say that for the day to day work of previewing a scene that
+is under development, Radiance is faster.  Radiance wins in simple scenes by
+using an adaptive sampling algorithm that can treat large flat areas very
+quickly while spending more time on the interesting parts of the image.  When
+you crank up the options and go for the photo-quality lighting with soft
+shadows, reflections, and the whole works, be prepared to leave your machine
+alone for a few days.  The same is true of POV, of course.
+
+
+&gt;:  Also I believe its primitives and textures are quite limited (only a few of
+&gt;:  each).
+
+See above.  In addition, Radiance has a lot more primitive material types than
+POV does.  POV treats everything more or less as if it were made out of
+&quot;stuff&quot; that has properties you can set about it.  That's fine most of the
+time, but isn't very realistic; different material types do actually interact
+with light differently in a physical sense.  Radiance gives you different
+material types to handle those differences.  Radiance takes the approach to
+materials that POV takes to shapes -- lots of primitives.
+
+
+&gt;:  But apparently nothing in the whole universe models actual light as
+&gt;: accurately as this program does, so if that's what you want go for it...
+
+Well, it's a big universe, so I'd hesitate to say that.  :)  But I would
+venture to say that Radiance is the best free package that you'll find for
+doing lighting simulation.  It's still missing some features that I'd like to
+see like reflection from curved surfaces [i.e.  caustics] and focussing of
+light through transparent curved surfaces.  Of course, I know how hard those
+things are to implement, so I'm not seriously criticising any renderers out
+there for not doing them.
+
+==========================================================================
+<a name="PHOTOMETRIC_UNITS">PHOTOMETRIC UNITS AND COLOR</a>
+
+Date: Fri, 23 Jun 1995 11:15:53 -0700 (MST)
+From: Vivek Mittal <mittal@asu.edu>
+Subject: Exterior and interior illuminance values
+To: Greg Ward <gjward@hobbes.lbl.gov>
+
+Hi Greg,
+
+I was trying to get exterior horizontal illuminance value used by 
+radiance. I know that by using the 'gensky' command , I can get a value 
+for the &quot;Ground ambient level:&quot; which corresponds to the irradiance/pi 
+due to sky without the direct solar component. However, I am not really 
+sure about two things:
+
+1) how to get from the irradiance/pi the actual illuminace level (in fc 
+   or lux)
+2) is it possible to get the direct solar component also added to this.
+
+
+Also, I am trying to get the interior illuminace values on a grid at 
+workplane level for a room. I used the following command:
+
+   rtrace -ov -I+ -faa -x 1 -y 84 scene.oct <grid.inp | rcalc e '$1="54*$1+106*$2+20*$3'"> output.cal
+
+where 'scene.oct' is my octree file,' grid.inp' is a ascii file containg 84 
+rows of grid point co-ordinates and direction vectors (0 0 1 for 
+horizontal plane)
+
+I am not sure about the factors 54,106,20 I've used here.  I got these 
+from the example given by you in the MAN PAGES command 'RTRACE' (page 4)
+
+Lastly, when I click on a image generated by 'rpict' and displayed by 
+'ximage', and press 'l', I get a number corresponding to the illuminace at 
+that point (something like '35L' etc) what are the units of this value 
+and what does the 'L' stand for ? Lux ??? does this number also represent 
+the true illuminance value at that particular point. 
+
+The reason I am asking is that I tried to XIMAGE a illumination contour 
+plot generated by DAYFACT, and clicked on various points followed by 'l' 
+and the numbers I got were very low compared to the values represented by 
+the contour lines in that image.
+
+Please help me clear my confusion in this matter. 
+
+Thanks 
+
+-vivek
+
+Date: Tue, 27 Jun 95 15:48:09 PDT
+From: greg (Gregory J. Ward)
+To: mittal@asu.edu
+Subject: Re:  Exterior and interior illuminance values
+
+Hi Vivek,
+
+To get from irradiance to illuminance, just multipy by the efficacy value
+for white light, 179 lumens/watt.  To add in the direct component, multiply
+the radiance of the sun (7.18e6 in the example below) by the solid angle
+subtended by its disk (6e-5 steradians) and by the sine of the incident
+angle, which is simply the third component of the source (.9681 below):
+
+# gensky 6 21 12
+# Solar altitude and azimuth: 75.5 -8.8
+# Ground ambient level: 22.7
+
+void light solar
+0
+0
+3 7.18e+06 7.18e+06 7.18e+06
+
+solar source sun
+0
+0
+4 0.038263 -0.247650 0.968094 0.5
+
+void brightfunc skyfunc
+2 skybr skybright.cal
+0
+7 1 3.94e+01 3.11e+01 1.65e+00 0.038263 -0.247650 0.968094
+
+So, using the above gensky output, our sky illuminance value is:
+
+	22.7 * 3.1416 * 179 = 18951 lux
+
+And our solar illuminance value is:
+
+	7.18e6 * 6e-5 * .9681 * 179 = 74650 lux
+
+And the total is:
+
+	18951 + 74650 = 93600 lux (rounding off sensibly)
+
+As for the rcalc computation following rtrace, the coefficients you have
+are OK, but they depend on the definiton of RGB values.  This has changed
+slightly in the latest Radiance release, and the rtrace manual page now
+recommends:
+
+	-e '$1=47*$1+117*$2+15*$3'
+
+The result will not differ by much, since the sum of coefficients is still 179.
+
+The values reported by ximage using the 'l' command are lumens/sr/m^2 for
+normal Radiance images, or lumens/m^2 (lux) for irradiance images (generated
+with the -i option to rpict).  The 'L' following the value stands for &quot;Lumens&quot;.
+
+Picking off values in ximage only works on undoctored Radiance pictures.
+Specifically, the output of pcomb, pcompos and sometimes pinterp is not
+reliable, and falsecolor uses a combination of pcomb and pcompos to generate
+its output.  Click on the original image if you want luminance, or an
+irradiance image if you want illuminance.
+
+Hope this helps.
+-Greg
+
+From: &quot;Galasiu, Anca&quot; <galasiu@irc.lan.nrc.ca>
+To: &quot;Greg J. Ward&quot; <GJWard@lbl.gov>
+Subject: Re: Radiance info
+Date: Fri, 30 Jun 95 14:44:00 EDT
+Encoding: 38 TEXT
+
+Dear Mr. Ward,
+
+My name is Anca Galasiu and I am writing in behalf of the National
+Research Council - Lighting Research Group - Ottawa, Canada. I am
+currently working with Dr. Morad Atif on a building research project
+using the Adeline software. In the process of modeling the building
+with Radiance I came across some inconsistencies which hopefully you
+would be so kind to clear them for me. The disagreement  refers to the
+way the &quot;light&quot; primitive has to be described and input into the
+program. In the Adeline manual (Radiance reference manual, page 4) it
+says: &quot; Light is defined simply as a RGB radiance value
+(watts/rad2/m2).  However, in the Radiance user's manual, page 33, the
+same radiance value is given in watts/steradian/m2. What does &quot;rad2&quot;
+mean? Are these two units the same thing? There are also some other
+things, described on page 32 of the same volume,  that I could not
+figure out.  At the end of page 32 there is a footnote (which refers to
+the way one can determine the light source's radiance on his own)
+saying: &quot;You can use about 15 lumens/watt for an incandescent source,
+as a general rule of thumb.  A 50 watts incandescent bulb is
+approximately equivalent to 500 lumens.&quot;
+ How can these two sentences agree with each other?   Following this
+footnote there comes a paragraph that explains how to compute the
+radiance value of a source.  In this paragraph there is a sentence that
+says:  &quot;convert lumens to watts (?)  - multiply by 1 watt / 179
+lumens). The radiance value is supposedly obtained in
+watts/steradian/m2.   As one can see, the information given in the
+manual is very confusing for a first-time user of Adeline and I still
+don't know how to input the &quot;light&quot; primitive when the only information
+we have about the light sources in the building are lumens and watts.
+
+Your help in answering these questions would be very much appreciated and we 
+thank you in advance for your time.
+
+Anca Galasiu
+NRC - IRC - Building Performance Laboratory
+Ottawa, Canada
+Ph:           (613) 993-9613
+Fax:         (613) 954-3733
+E-mail:    galasiu@irc.lan.nrc.ca
+
+
+Date: Fri, 30 Jun 1995 16:36:32 -0800
+To: greg (Gregory J. Ward)
+From: chas@hobbes.lbl.gov (Charles Ehrlich)
+Subject: Re: Adeline support question
+Cc: greg, chas
+
+Anca,
+
+My name is Charles Ehrlich (Chas).  I am the contact person for Adeline
+support questions.  Your question, however, is of interest to the general
+Radiance community because it deals with the ongoing problem of incomplete
+documentation of Radiance.
+
+Your difficulties in describing light source primitives are justified and
+shared by many, especially beginners.  In my explanation I hope not to
+further confuse you, but if I do, please feel free to ask for clarifications.
+
+The unit of light used as input to Radiance light source primitives is
+luminous flux expressed in Watts/Steradian/Meter squared.  (rad2 was Greg's
+unfortunate short-hand for Steradian in the early days.)  As such, luminous
+flux is a &quot;unitless&quot; measure.  The watts we are speaking of are not the
+same as the &quot;wattage&quot; of the lamp (bulb) used in the luminaire itself,
+of course.  The reason for using luminous flux (a dimension-independant
+value) is that the rest of the rendering engine need not worry about
+what units of measure (feet versus meters) the geometry of the scene uses,
+so long as all units throughout the model are consistant.  As such, it
+IS important to scale a light source from inches to meters, for example,
+if the luminaire is modeled in inches and the scene is modeled in meters.
+If you don't know the number of lumens of your particular lamp, convert lamp
+wattage to lumens by multiplying the wattage of the lamp by the efficacy of
+that particular type of light source (incandescent=14 lumens per watt).
+
+Here is an outline of the process I use to describe a luminaire.  First
+I'll assume that you don't have an IESNA candlepower distribution file
+for the luminaire, or you may have one but it won't work with ies2rad,
+or you may have one that you don't completely trust, or you have some
+other candlepower distribution data that won't work with ies2rad.
+
+1. Count the number of lamps in the luminaire and note the wattage
+   and source type (incandescent, fluorescent, etc.)  Decide if source color
+   rendition is an important aspect of your simulation.  Understand that
+   non-white sources will require that the images be color-balanced back to
+   white, basically undoing the effort spent to create the colored sources in
+   the first place.  My advice is to assume white sources unless the scene
+   uses two source types that vary greatly in their color spectra...and this
+   difference is an important aspect of your simulation.
+2. Calculate the area of the luminaire &quot;aperature&quot; in the unit of measure
+   of your choice and choose the Radiance geometry primitive type which best
+   describes the aperature.  For a &quot;can&quot; downlight with a circular opening,
+   the surface primitive would be a ring.  For a 2x4 troffer, it would be a
+   polygon.  For a fiber optic light guide, it would be a cylinder.
+3. Calculate the area of the luminaire aperature.
+4. Determine the total number of lumens created by the luminaire's lamps.
+5. Multiply the total lamp lumens by the luminaire efficacy, dirt and
+   lumen depreciation factors, etc. to come up with the total lumens
+   you expect the luminaire to deliver into the space.  Use this value
+   for the lumen output of the luminaire.
+6. Use the lampcolor program to compute radiance using the above values.
+   If you prefer to do it by hand this is the formula for white sources:
+   (for colored sources use lampcolor).
+
+        radiance = lumens/luminaire aperature area/(WHTEFFICACY*PI)
+
+    where WHTEFFICACY=179, the luminous efficacy of white light.
+
+    Because we're assuming that our source is white, the red, green and
+    blue components of radiance are the same.
+
+Now to actually create the Radiance primitives, use this template:
+
+#
+# luminaire.rad   incandescent can luminaire, origin at center
+#
+# units=inches
+#
+void light lamp_name
+0
+0
+3 Red_radiance Green_radiance Blue_radiance
+
+lamp_name ring can_downlight
+0
+0
+8 0 0 -.00001
+  0 0 -1
+  0 luminaire aperature area
+
+.....OR.......
+
+lmap_name polygon 2x4_troffer
+0
+0
+12  1  2  -.00001
+    1 -2  -.00001
+   -1 -2  -.00001
+   -1  2  -.00001
+
+What is backwards about this process is that the luminare aperature
+geometry (and therefore the area of the aperature) is defined after the
+luminaire luminous output, but the output is dependant upon the area of the
+luminaire aperature.
+
+Make sure that the area of the geometry primitive you create matches the
+area you specified with lampcolor.  Make sure that the surface primitive's
+surface normal is oriented in the direction you want.  For a ring, you
+specify this explicitely with a x, y, z vector, for a polygon the right and
+rule determines which side of the polygon is the &quot;front&quot; surface=the direction
+of output.  For a cylinder, make sure you use a cylinder and not a tube
+(orientation is out). I reccommend that you orient your luminaire toward
+negative Z axis if the luminaire is normally ceiling or pole mounted, or
+toward the positive x axis if it wall mounted.  Locate the luminaire geometry
+such that it's axis of symmetry is along the z axis for ceiling mounted
+luminaires with its output surface a small fraction below the origin
+(0,0,-.00001) so that the ceiling surface itself does not occlude the output
+geometry.  For non-symmetrical fixtures, use some other known &quot;mounting&quot; point
+as the origin.  Always document in the fixture file where it is located for
+future reference using the radiance #comment at the begging of the commented
+lines.  It is a good idea to describe the fixture geometry and output material
+together in one separate file so that this file can be moved in space using
+xform.  A luminaire layout file then looks like:
+
+#
+# layout1.rad  Four luminaires at 8 feet on center
+# ceiling height=9 feet
+# luminaire units=inches, scaled to feet
+#
+!xform -s .0833333 -t 0 0 9 luminaire.rad
+!xform -s .0833333 -t 0 8 9 luminaire.rad
+!xform -s .0833333 -t 8 0 9 luminaire.rad
+!xform -s .0833333 -t 8 8 9 luminaire.rad
+
+
+&gt;At the end of page 32 there is a footnote (which refers to the way one
+&gt;can determine the light source's radiance on his own) saying: &quot;You can use
+&gt;about 15 lumens/watt for an incandescent source, as a general rule of thumb.
+&gt;A 50 watts incandescent bulb is approximately equivalent to 500 lumens.&quot;
+&gt; How can these two sentences agree with each other?
+
+The footnote is incorrect.  A typical incandescent lamp efficacy is
+really 14 lumens per lamp watts:  50*14=700 lumens  Then reduce the
+lamp lumens by 20-25 percent efficacy of the luminaire: 700*(1-.25)=525 lumens.
+So Greg wasn't all that far off.
+
+&gt;Following this
+&gt;footnote there comes a paragraph that explains how to compute the radiance
+&gt;value of a source.  In this paragraph there is a sentence that says:
+&gt;&quot;convert lumens to watts (?)  - multiply by 1 watt / 179 lumens). The
+&gt;radiance value is supposedly obtained in watts/steradian/m2.
+
+Here's where you need to understand the difference between lamp wattage
+and luminous flux, which is also a unit of energy which is represented
+in Radiance generic watts.  179 is the luminous efficacy of white
+light over the visible spectrum.  The units of luminous efficacy are
+179 lumens/watt.  So our footnoted 50 Watt incandescent lamp puts out
+2.9329608939  (525/179) watts of radiance (luminous flux).
+
+&gt;As one can
+&gt;see, the information given in the manual is very confusing for a first-time
+&gt;user of Adeline and I still don't know how to input the &quot;light&quot; primitive
+&gt;when the only information we have about the light sources in the building
+&gt;are lumens and watts.
+
+If I had my way about it, lampcolor would output the luminaire primitives.
+I suggest that you get ahold of some IESNA Candlepower Distribution files
+and convert them for the purpose of understanding what happens.
+
+This method only works for single-surface emmitting luminaires.  As soon
+as you attempt to model a more complex emmitting surface (for example, a
+cylinder with ring &quot;ends&quot; or a prismatic extrusion, then the output of the
+combined luminaire geometry must account for incident angle because the
+emmitting surface has a projected area greater than a single-surface emmitter,
+and because one ray is traced to _each_ surface primitive which is described
+as a light source.  In the file /usr/local/lib/ray/source.cal you will find
+functions for correcting for the projected area of box sources, flat sources,
+and other such things.  As such, the method described above is a
+simplification.  Using source.cal is a subject of a later message and
+probably more than you need to worry about right now.
+
+I'd like to hear more about your trials and tribulations with Adeline.  I
+don't promise to always spend as much time responding as I did this time,
+but I'd like to keep in touch.
+
+Another ADELINE user recently had the following problem.  His scene, while
+rendering, consumed more than his total physical RAM and began &quot;swapping&quot;
+to the hard disk (virtual memory).  He got impatient with the time it
+was taking but could not stop the rendering by any method except by
+pressing the &quot;reset&quot; button.  After doing so, his entire hard disk was
+&quot;rendered&quot; (sorry for the pun) useless and had to be re-formatted.  So,
+beware and make backups!
+
+-Chas
+Charles Ehrlich
+Principal Research Associate
+Lawrence Berkeley National Laboratory
+(510) 486-7916
+
+Via: uk.ac.unl.clstr; Mon, 19 Jun 1995 15:39:56 +0100
+Date: Mon, 19 JUN 95 15:40:17 BST
+From: HKM5JACOBSA@CLUSTER.NORTH-LONDON.AC.UK
+To: greg <greg@hobbes.lbl.gov>
+Subject: IES files
+
+Hi, Greg!
+
+I am currently writing the report about my practical year here at the Uni of
+North London where I was doing this project for the British Sport Council.
+My plan is to make the report a special one, like a sort of tutorial for the 
+use of IES files in RADIANCE. I got really into this topic, since this is 
+what the project was all about. So I want to make the knowledge I got 
+available for my collegues.
+
+Just to make sure I am not writing any fairytales in it, I have got a question
+concerning the multipliers that can be specified when converting ies2rad.
+Is it correct that it doesn't matter whether the candela multiplier that
+has to be set to get the right lumen output is given with the -m option or as
+value in the ies file itself (after <lumens per lamp>, as third value). Both 
+seem to give the same results. Furthermore, I think that the interface doesn't
+pay any attention to the value for <lumens per lamp> (second one). Correct?
+
+Another problem I got is the -f option for pfilt. It is supposed to colour
+balanced the image as if the specified luminaire was used. However, when I 
+tried to use it like this, the results were just horrible. The picture became
+eighter completely red, green, or blue, depending on what lamp I gave as a
+parametre. When I run the pictures with the lampcolour defined in the input
+file, the results were entirely different (far more realistic, you know?)
+Have you any idea what this could be due to? I am relatively sure that I used
+the command in the right form, since it didn't produce any error messages.
+Example:
+pfilt -t &quot;high pressure sodium&quot; project.norm.pic &gt; project.son.pic
+Seems alright, doesn't it?
+
+Please let me know if you have any suggestions on this.
+Looking forward to hearing from you.
+
+Axel
+
+Date: Tue, 27 Jun 95 11:38:16 PDT
+From: greg (Gregory J. Ward)
+To: HKM5JACOBSA@CLUSTER.NORTH-LONDON.AC.UK
+Subject: Re:  IES files
+
+Hi Axel,
+
+You are right about the multipliers as interpreted by ies2rad.  The -m option
+is the same as the multiplier in the input file, and the lumens per lamp (and
+the number of lamps) is not used.  There are also a couple of other multipliers
+in the input file, for ballast factor and power factor that are also in there.
+
+You are using the -t option to pfilt correctly, but it is only to balance to
+white an image that was rendered using a color light source, which is the case
+if ies2rad is run with -t using the same lamp or the IES input file has a
+comment line that matches that lamp based on the lamp table (lampdat) file
+used.
+
+-Greg
+
+Date: Mon, 21 Aug 95 10:19:10 PDT
+From: greg (Greg Ward)
+To: burr%cory.coryphaeus.com@lbl.gov, burr@stobart.coryphaeus.com
+Subject: Re:  Radiance vs. Irradiance Values
+
+Hi Tim,
+
+&gt; I know that Radiance is defined as the energy per unit area per unit time
+&gt; leaving a surface.  What I don't know is how this relates to illumination
+&gt; intensity as say measured via the HSV or RGB model.  I found some example
+&gt; light definitions that gave an RGB radiances of 100 100 100 and defined
+&gt; this equivalent to a 100 watt light bulb. Is the radiance equivalent to
+&gt; wattage?
+
+No, that must have either been a mistake or an unfortunate coincidence.
+The units of radiance are watts/steradian/sq.meter, and there are many
+things going on between the 100 watts put into a lamp and the value that
+comes out in terms of radiance.  Specifically:
+
+	1) The lamp is not 100% efficient (closer to .08% for an incandescent).
+	2) The output is distributed over the visible spectrum.
+	3) The output is distributed over the surface of the lamp.
+	4) The output is distributed over all outgoing directions.
+
+Although it is not exactly the &quot;right&quot; thing to do, most light sources in
+a simulation are created as white (i.e. equal-energy) sources, so that color
+correction on the final result is unnecessary.  If you were to use the
+appropriate spectrum for an incandescent for example, everything would come
+out looking sort of a dull orange color.  Therefore, number 2 above is usually
+skipped.  Number 3 is important -- after figuring the amount of actual radiated
+energy, you must divide by the radiating area of the light source surface in
+square meters.  (This is for a diffusely radiating source.)  A sphere has
+a surface of 4*pi*R^2, where R is the radius.  A disk has a one-sided area
+of pi*R^2.  Finally, you must divide by pi to account for the projected
+distribution of light over the radiated hemisphere at each surface point.
+(This accounts for the 1/steradian in the units of radiance.)  Thus, the
+approximate formula to compute the watts/steradian/sq.meter for an
+incandescent spherical source is:
+
+	Input_Watts * .0008 / (4*pi*R^2 * pi)
+
+For a 100 watt incandescent to end up with a radiating value of 100 w/sr/m^2,
+it would have to have a radius of just 4.5mm, which seems pretty small.  It
+would have to be a frosted quartz-halogen, I guess.  More likely, the file
+was just plain wrong.
+
+By the way, the program &quot;lampcolor&quot; is set up to do just this sort of simple
+calculation, so you don't have to.
+
+&gt; When I run rview and then trace a ray I get output like the
+&gt; following:
+&gt; 
+&gt; ray hit walnut_wood polygon &quot;floor_1.8&quot;
+&gt; at (14.3225 14.4806 0.008001) (4.17902)
+&gt; value (0.084617 0.050445 0.036884) (10.5L)
+&gt; 
+&gt; What is the last term - i.e. (10.5L)?  I assume this stands for &quot;luminance&quot;.
+&gt; When I trace a ray directly to a light source I get a &quot;luminance&quot; value
+&gt; way up there - i.e., around 18,000L.
+
+The &quot;L&quot; stands for &quot;lumens&quot;, and in this case it is lumens/steradian/sq.meter
+which is the SI unit of luminance as you surmized.  If you had been calculating
+with the -i option in effect, this would be interpreted as lumens/sq.meter,
+or lux instead.  The conversion between lumens and watts in Radiance is
+*defined* as 179 lumens/watt, which is the approximate efficacy of white
+(equal-energy) light over the visible spectrum.
+
+&gt; I guess all I want is to normalize these luminance values to the range
+&gt; 0..1 so that I can modulate existing texture maps with the luminance.
+
+You cannot put physical units that don't belong in a range into a range
+without losing something.  In the case of radiation, you are saying that
+above a certain value, you are going to start clipping the output of surfaces.
+
+&gt; It doesn't seem like torad and fromrad are in sgicvt.tar.Z.  The listing
+&gt; of what this file contains is below.
+&gt; 
+&gt; rwxr-xr-x 2015/119   95124 Apr  4 11:21 1995 obj2rad
+&gt; rwxr-xr-x 2015/119  132284 Apr  4 11:21 1995 mgf2rad
+&gt; rwxr-xr-x 2015/119   93284 Apr  4 11:21 1995 rad2mgf
+
+Oops!  My mistake -- sorry!  I had forgotten about these.  I put a new tarfile
+on there with the fromrad and torad programs, this time called sgirgb.tar.Z
+so there would be less confusion.
+
+&gt; I'm trying to use rtrace to capture the illuminance at certain sample
+&gt; points in the radiance scene.  As I mentioned before I'm writing a
+&gt; program (actually an option off of our Designer's Workbench Modeler),
+&gt; that runs thru the list of textures (the entire scene is textured),
+&gt; and shoots a ray (or effectively samples the scene), at the 3D position
+&gt; corresponding to each texel in each texture map.  I only want to
+&gt; consider diffuse illumination so I seems that I want to run rtrace
+&gt; with the -I option.  To get familiar with rtrace I used rtrace to
+&gt; sample on a line that ran across a wall in my scene.  This wall
+&gt; was illuminate by two lights so there is some definite illumination
+&gt; gradients that this line is cutting across.  I ran rtrace both with
+&gt; and w/o the -I option.  I'm a bit confused by the output of the -I
+&gt; option and was hoping that you could clarify things a bit.
+&gt; 
+&gt; Below I have included both the sample file and output file for both
+&gt; runs.
+&gt; 
+&gt; rtrace -ov test.oct <samples> out   (RUN w/o -I option)
+&gt; ---------------------------------------------------------------
+&gt; 
+&gt; &quot;samples&quot; ---------------------------------------------------------
+&gt; 
+&gt; 15.3815 16.6402 2.41717 1.0 0.0 0.0
+&gt; 15.3815 16.3345 2.4156  1.0 0.0 0.0
+&gt; 15.3815 16.0287 2.41404 1.0 0.0 0.0
+&gt; 15.3815 15.723 2.41247  1.0 0.0 0.0
+&gt; 15.3815 15.4173 2.4109  1.0 0.0 0.0
+&gt; 15.3815 15.1115 2.40934 1.0 0.0 0.0
+&gt; 15.3815 14.8058 2.40777 1.0 0.0 0.0
+&gt; 15.3815 14.5001 2.4062  1.0 0.0 0.0
+&gt; 15.3815 14.1944 2.40463 1.0 0.0 0.0
+&gt; 15.3815 13.8886 2.40307 1.0 0.0 0.0
+&gt; 15.3815 13.5829 2.4015  1.0 0.0 0.0
+&gt; 
+&gt; &quot;out&quot; --------------------------------------------------------
+&gt; 
+&gt; #?RADIANCE
+&gt; oconv standard.mat 2nd_lights.mat 2nd.rad 2nd_lights.rad
+&gt; rtrace -ov
+&gt; SOFTWARE= RADIANCE 2.5 official release May 30 1995 LBL
+&gt; FORMAT=ascii
+&gt; 
+&gt; 7.803375e-03	4.652013e-03	3.401471e-03
+&gt; 1.488979e+00	8.876603e-01	6.490420e-01
+&gt; 7.765268e-03	4.629295e-03	3.384861e-03
+&gt; 7.769140e-03	4.631604e-03	3.386549e-03
+&gt; 7.733397e-03	4.610295e-03	3.370968e-03
+&gt; 8.181990e-03	4.877724e-03	3.566508e-03
+&gt; 8.250995e-03	4.918863e-03	3.596588e-03
+&gt; 1.238935e+00	7.385956e-01	5.400484e-01
+&gt; 7.650747e-03	4.561022e-03	3.334941e-03
+&gt; 1.002132e-02	5.974249e-03	4.368268e-03
+&gt; 1.750831e-02	1.043765e-02	7.631827e-03
+&gt; 
+&gt; 
+&gt; 
+&gt; rtrace -I -ov test.oct <samples2> out2  -  RUN w/ -I option
+&gt; --------------------------------------------------------------------
+&gt; 16.3815 16.6402 2.41717 -1.0 0.0 0.0
+&gt; 16.3815 16.3345 2.4156  -1.0 0.0 0.0
+&gt; 16.3815 16.0287 2.41404 -1.0 0.0 0.0
+&gt; 16.3815 15.723 2.41247  -1.0 0.0 0.0
+&gt; 16.3815 15.4173 2.4109  -1.0 0.0 0.0
+&gt; 16.3815 15.1115 2.40934 -1.0 0.0 0.0
+&gt; 16.3815 14.8058 2.40777 -1.0 0.0 0.0
+&gt; 16.3815 14.5001 2.4062  -1.0 0.0 0.0
+&gt; 16.3815 14.1944 2.40463 -1.0 0.0 0.0
+&gt; 16.3815 13.8886 2.40307 -1.0 0.0 0.0
+&gt; 16.3815 13.5829 2.4015  -1.0 0.0 0.0
+&gt; 
+&gt; #?RADIANCE
+&gt; oconv standard.mat 2nd_lights.mat 2nd.rad 2nd_lights.rad
+&gt; rtrace -I -ov
+&gt; SOFTWARE= RADIANCE 2.5 official release May 30 1995 LBL
+&gt; FORMAT=ascii
+&gt; 
+&gt; 1.571468e-01	1.571468e-01	1.571468e-01
+&gt; 2.996901e+01	2.996901e+01	2.996901e+01
+&gt; 1.563788e-01	1.563788e-01	1.563788e-01
+&gt; 1.564564e-01	1.564564e-01	1.564564e-01
+&gt; 1.557390e-01	1.557390e-01	1.557390e-01
+&gt; 1.647728e-01	1.647728e-01	1.647728e-01
+&gt; 1.661623e-01	1.661623e-01	1.661623e-01
+&gt; 2.493524e+01	2.493524e+01	2.493524e+01
+&gt; 1.540738e-01	1.540738e-01	1.540738e-01
+&gt; 2.016437e-01	2.016437e-01	2.016437e-01
+&gt; 3.519261e-01	3.519261e-01	3.519261e-01
+&gt; 
+&gt; Questions:
+&gt; 
+&gt; 1) According to the rtrace man page if you use the -I option the
+&gt;    origin and direction vectors are interpreted as measurement
+&gt;    and orientation.  I understand the measurement to mean sample
+&gt;    point but I'm not sure why you need an orientation vector
+&gt;    in this case.
+
+The orientation vector is necessary because irradiance (and illuminance)
+are oriented quantities.  That is, they look out on some hemisphere defined
+by some point and direction.
+
+&gt; 2) Why radiance values for each of the R, G and B components different
+&gt;    for each ray but the irradiance values for each component the same
+&gt;    for each sample point?
+
+The difference is that for the values traced at the wall (w/o the -I option),
+you are figuring the color of the wall itself into the calculation, while
+the values away from the wall (w/ -I) are only considering the output of
+the light sources (though they would also include color bleeding from other
+surfaces if -ab was 1 or greater).  If you had used the -i option during
+the first run, you would have gotten roughly equal values as this causes
+the initial surface intersected to get replaced by an illuminance calculation.
+
+I hope this clarifies things.
+-Greg
+
+<hr>
+</pre>
+</body>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 9</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>

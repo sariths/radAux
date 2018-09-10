@@ -1,0 +1,1134 @@
+<HTML>
+<HEAD>
+<TITLE>
+Radiance Digest v2n7
+</TITLE>
+<a name="top"></a>
+<h2>RADIANCE Digest Volume 2, Number 7</h2>
+</HEAD><hr><pre><body>
+
+
+Dear Radiance Users,
+
+It has been several months since the last digest was posted, and in that
+time there have been a number of developments.
+
+First, I would like to mention that a paper was published on Radiance
+in the 1994 issue of Computer Graphics (the annual Siggraph
+proceedings), which contains a lot of useful information on the history
+and algorithms of this package.  Also, the CD-ROM version of the
+proceedings has an HTML version of the paper, as well as the 2.4 source
+code distribution.  The HTML version is also linked to on our new
+Radiance Web page, which is:
+
+	ftp://hobbes.lbl.gov/www/radiance/radiance.html
+
+There you will find many other goodies, such as online documentation and
+images.  If you have a Web site with Radiance-related pages, please write
+to me so I can link it in to our page.
+
+Another announcement I would like to make is the start of an unmoderated
+discussion group for Radiance users, which will be accessible from the alias:
+
+	radiance-discuss@hobbes.lbl.gov
+
+If you wish to subscribe (or unsubscribe) to this group, please send your
+name and most permanent e-mail address to:
+
+	radiance-request@hobbes.lbl.gov
+
+Please do not mail the general group with administrative requests!
+This has happened in the past, and it is nothing but a pain to
+everyone.  Mail sent to radiance-request currently gets forwarded to
+me.  If you are on the moderated mailing list (which you must be
+if you just received this digest), that does not automatically place
+you on the discussion group list.  You must subscribe separately.
+If you wish to unsubscribe from the moderated group, please send
+a message to radiance-request to that effect.
+
+One last thing about the discussion group list -- since it is a simple
+mailing list and my mailer's not too bright, you may get some bounced
+mail when you post to this group.  You should either ignore such
+messages or forward them to radiance-request so that I may update the
+list.  Please, do not complain to the discussion group, because the
+problem members won't even get your complaints, and everyone else will
+tire of reading them!  Bounced mail is usually caused by out-of-date
+e-mail addresses, which is why it's important to give me the most
+permanent address you can on your initial subscription, and inform
+me (at radiance-request) whenever your address changes.
+
+Finally, I may submit a Siggraph course proposal on Radiance,
+and would like to know how many people would sign up for such a course,
+and whether they'd prefer a half-day or full-day adventure.  Please
+write back to me (at GJWard@lbl.gov) with your opinions.
+
+Without further ado, here are the topics covered in this digest:
+
+	<A HREF="#NOISE_FUNCTIONS">NOISE_FUNCTIONS</A>			- Fractal vs. Perlin noise functions
+	<A HREF="#DAYLIGHTING">DAYLIGHTING</A>			- Various daylight-related topics
+	<A HREF="#PATTERNS">PATTERNS</A>			- Mapping patterns onto surfaces
+	<A HREF="#AMBIENT_FILES">AMBIENT_FILES</A>			- Using ambient files
+	<A HREF="#VIEW_ANGLES">VIEW_ANGLES</A>			- Computing -vh and -vv parameters
+	<A HREF="#INTERACTIVE_WALKTHROUGHS">INTERACTIVE_WALKTHROUGHS</A>	- Generating interactive walkthroughs
+	<A HREF="#SPECTRAL_COLORS">SPECTRAL_COLORS</A>			- Multi-spectral sampling
+	<A HREF="#X11_ERROR">X11_ERROR</A>			- Rview "cannot open command line..."
+	<A HREF="#TRANS_MATERIAL">TRANS_MATERIAL</A>			- Setting parameters for "trans" type
+	<A HREF="#PARTICIPATING_MEDIA">PARTICIPATING_MEDIA</A>		- Smoke and fog simulation
+	<A HREF="#MATERIALS">MATERIALS</A>			- Several related materials questions
+
+Enjoy!
+-Greg
+
+<A NAME="NOISE_FUNCTIONS">=========================================================================</A>
+NOISE_FUNCTIONS
+
+To: greg@hobbes.lbl.gov
+Subject: quick jiggle questions
+Date: Wed, 27 Apr 94 11:06:47 EDT
+From: Philip  Thompson &lt;phils@MIT.EDU>
+
+Hi Greg,
+
+What is the difference between jigglepic_u and fjigglepic_u
+in jigglepic.cal? or fnoise3() and noise3() for that matter?
+(is it fast or floating point?)
+
+Thanks,
+Philip
+
+
+Date: Wed, 27 Apr 94 09:31:54 PDT
+From: greg (Gregory J. Ward)
+To: phils@MIT.EDU
+Subject: Re:  quick jiggle questions
+
+Hi Philip,
+
+The difference is that noise3(x,y,z) is the Perlin noise function and
+fnoise3(x,y,z) is a fractal noise function with otherwise similar
+characteristics.  Ideally, you would create such a function using
+a summation of Perlin functions with a 1/f frequency spectrum, but
+this is rather expensive in practice so I have written a special
+version.  Fractal noise usually does a better job mimicking natural
+phenomena.
+
+-Greg
+
+<A NAME="DAYLIGHTING">========================================================================</A>
+DAYLIGHTING
+
+Date: 27 Apr 1994 12:03:12 -0400 (EDT)
+From: "Richard G. Mistrick" &lt;RGMARC@ENGR.PSU.EDU>
+Subject: rtrace for daylighting
+To: greg@hobbes.lbl.gov
+
+Greg:
+    We are attempting to use rtrace to analyze daylighting in empty rooms.  We
+have four walls and a window as defined in the example included in the manual.
+We are interested in illuminance on the work plane as well as at partially
+shielded and unshielded photocells.  The photocells are modelled with a small
+obstruction surrounding a point to block the view in a certain direction.  Our
+main problem is one of computation time when we attempt to perform accurate
+rtrace runs (as indicated in the "SETTING RENDERING OPTIONS" table that you
+sent to me.  
+    In a situation such as this, how can we best gain speed without losing
+accuracy.  I assume that it is best to manipulate the -a? commands.  Room size
+that we are planning to model are 15x15 ft and 30x60 ft.  I am also concerned
+that we achieve an accurate analysis of light arriving at the shielded
+photocell point.  Can you give us some advice on what parameters will most
+affect speed and accuracy by describing how -aa, -ar, -ad and -as affect what
+is occuring in the computation of the interreflected component.  A simple
+description of what Radiance is doing and how these values affect the process
+would be helpful.  A calculation at only one point is running for 20 hours on
+our system (SGI Idigo/Iris workstation) using the "Accurate" input parameters
+(-ab 3) and we are looking for a way to reduce this time.
+    Thanks in advance for your help.
+
+Regards,
+
+Rick Mistrick 
+
+
+Date: Wed, 27 Apr 94 09:44:12 PDT
+From: greg (Gregory J. Ward)
+To: RGMARC@ENGR.PSU.EDU
+Subject: Re:  rtrace for daylighting
+
+Hi Rick,
+
+In an empty room, many of the options may be relaxed without significant
+loss in accuracy.  I recommend you do the following:
+
+	1. Make sure your window is an illum, as described in the tutorial.
+
+	2. Reduce the ambient divisions (-ad) to 256.
+
+	3. Reduce the ambient super-samples (-as) to 0.
+
+	4. Reduce the ambient resolution (-ar) to 16 if you have no
+		groundplane, or the groundplane size divided by your
+		maximum room dimension divided by 16 otherwise.
+
+	5. Increase the ambient accuracy (-aa) to 0.2.
+
+	6. Set the direct jitter (-dj) to 0.7.
+
+	7. Set the direct substructuring (-ds) to 0.2.
+
+	8. Set the ambient value (-av) to something sensible, probably
+		around .3 .3 .3 in your situation.
+
+Even with your current settings, I am a bit surprised that the calculation
+is taking so long.  Do you have any external structures modeled?  Is your
+window a light source?  Are you really just calculating a single point
+using rtrace -I?  Perhaps you can send me your model.
+
+-Greg
+
+
+Date: Fri, 06 May 1994 12:55:21 -0400
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+From: stuart@archsun.arch.gatech.edu (Stuart Lewis)
+Subject: Glazing Light Loss Factors
+
+Hi Greg,
+
+Thanks again for your help with my last set of questions;  I now have 
+another one for you!
+
+I am in the process of writing a little daylighting program for Architecture 
+students based on the Lumen Method for Daylighting (IESNA RP-23) and am 
+seriously considering using Radiance to develop some data that will let us 
+add correlation factors for non-standard (ie not  0.50!) wall 
+reflectivities.  We thought it would be very useful for the students to be 
+able to visualize (and quantify!) the relationship between surface color and 
+interior illumination.  I have gotten pretty good agreement between the 
+manual results and Radiance, but ran into a question which seems to _maybe_  
+have wider relevance:
+
+How would you handle the Light Loss Factor ("accounting for dirt 
+accumulation") of the glazing?  Initially, I simply reduced the workplane 
+illumination levels by that amount (as the IES does), but it seems to me 
+that dirt accumulation might actually affect the behavior of a 
+view-preserving window (causing it to become somewhat diffuse.)  Or, do you 
+think it would be adequate to simply reduce the transmittance of the glazing 
+by that amount?  I haven't seen anything in the literature we have available 
+that would clue me in. 
+
+Since we began using Radiance for physical modelling, it seems this question 
+is more relevant in that context than in reproducing the reults from RP-23 
+(adding this feature to our program is an unanticipated bonus!)  I'm 
+thinking for example about clerestory windows or toplighting, where dirt 
+accumulation can become quite significant.
+------
+
+Also, we haven't received any of the requested information on WINDOW or DOE 
+that you were going to pass along.  If you don't mind, would you please pass 
+along that request again?  This fax number may be more reliable: 
+404-458-4090  (Max Akridge's home!)
+
+Thanks a lot,
+Stuart
+
+[Stuart Lewis, GRA
+College of Architecture
+Georgia Institute of Technology
+Atlanta, GA 30332]
+
+
+Date: Fri, 6 May 94 10:32:17 PDT
+From: greg (Gregory J. Ward)
+To: stuart@archsun.arch.gatech.edu
+Subject: Re:  Glazing Light Loss Factors
+
+Hi Stuart,
+
+I have forwarded your request again as a reminder to those who manage DOE-2
+and SUPERLITE.  I hope this time they will respond.
+
+I must admit I haven't given much thought to dirt accumulation on windows.
+Certainly, it is possible to model this with Radiance, using either the
+BRTDfunc type, transdata, transfunc, mixfunc with trans and glass, or
+trans alone (in order of increasing simplicity and decreasing generality).
+
+Since I have no data on how dirt affects the transmission of glazing,
+I am left to guess.  My guess is that it adds some diffuse component,
+which may be a function of incident angle.  What are the common ranges
+and how important is incident angle are two questions I could only
+answer by taking measurements.  I have a device that could be used
+to such a purpose, but I have not calibrated it yet for transmission
+(only reflection).
+
+All the windows experts seem to be gone at the moment -- maybe there's
+a staff meeting or something.  Anyway, I'll ask them when they come
+back and write again if I get any good research pointers for you.
+
+-Greg
+
+
+From: rcl@scs.leeds.ac.uk
+Date: Thu, 18 Aug 94 13:56:49 BST
+To: GJWard@lbl.gov
+Subject: Radiance - daylight
+
+I am fairly new to the radiance package so please forgive my
+ignorance in such matters...
+
+1) You state in digest v2n4 that EXPOSURE = K * T * S / f^2, where
+T = exposure time (in seconds), S = film speed (ISO), f = f-stop,
+K = 2.81 (conversion factor 179*PI/200) and that this is approximate for
+35mm photography. Is the 35mm assumption important for this equation or is
+the equation true for, say, CCD cameras (which I am trying to model)? This
+assumes of course that I can equate the responsivity of a CCD array with
+a certain ISO film speed.
+
+2) I am trying to get an accurate representation of a scene lit purely by
+skylight (generated either by gensky or gendaylit). I have defined my sky
+and ground as follows (adapted from the tutorial); (Note I am only
+viewing the outsides of buildings)
+
+    !gensky 7 15 12 -a 54 -o 2 -m 0 -g .2
+
+    skyfunc glow ground_glow
+    0
+    0
+    4 1.6 .8 .25 0
+
+    ground_glow source ground
+    0
+    0
+    4 0 0 -1 180
+
+    skyfunc glow sky_glow
+    0
+    0
+    4 .8 .8 1 0
+
+    sky_glow source sky
+    0
+    0
+    4 0 0 1 180
+
+	I then define a finite 'ground plane' on which my buildings stand and
+    cast any shadows onto.
+
+Does having the ground defined as a glowing hemisphere provide a realistic
+representation? I have tried defining the ground as large disc but I always
+end up gaving a black gap in the horizon. I am more interested in modelling
+reality than what may 'look' correct to the viewer.
+
+3) When I have the above as my only source of lighting rpict warns me that
+I have no light sources. Is this correct? What am I doing wrong to generate
+such an error?
+
+Thanks in advance for any help you can provide, and I apologise again for
+anything fundamental that I may have missed in the documentation.
+
+Rob Love
+
+School of Computer Studies
+University of Leeds
+Leeds
+England
+
+
+Date: Thu, 18 Aug 94 11:51:56 PDT
+From: greg (Gregory J. Ward)
+To: rcl@scs.leeds.ac.uk
+Subject: Re:  Radiance - daylight
+
+Hi Rob,
+
+In answer to your questions:
+
+1) The exposure suggested is only if you wish to reproduce a photographic
+image.  I don't know how to correlate ISO to CCD sensitivity, and even if
+I did, most cameras have such things as automatic irises and automatic gain
+that make any efforts to pin down the exposure futile.  The main question
+is, "why do you want to do this?"  Are you really trying to reproduce camera
+output, or are you simply trying to set the right exposure?  If it's the
+latter, then there are much better ways.
+
+2) Your sky representation is fine.  If there are no significant shadows
+in your exterior environment cast by large structures, then the distant
+ground approximation is adequate.  If there are significant shadows, then
+simply ADD a groundplane to this description.  Do not remove your distant
+ground approximation, or you will get that dark horizon problem.
+
+3) I do not know why the sky you showed me would give you the "no light
+sources found" warning.  That should only happen if you use a cloudy sky
+or other description w/o a sun.  Anyway, this is merely a warning, and
+indicates that without an indirect calculation (i.e. -ab >= 1), you will
+have no illumination at all.
+
+Hope this helps.
+-Greg
+
+
+From: rcl@scs.leeds.ac.uk
+Date: Thu, 18 Aug 94 20:46:28 BST
+To: greg@hobbes.lbl.gov
+Subject: Re: Radiance - daylight
+
+I am actually working in computer vision and I'm using Radiance to 
+generate some test sequences of the sun moving over some buildings during
+a complete day. Eventually I aim to be using a CCD camera to capture these
+sequences but I am using Radiance at the moment as I have complete control
+over the environment (it's always overcast in Leeds), the images are noise
+free, and it's very accurate. I would ideally like Radiance to give me 
+images that would be the same/similar to what I expect to get from a CCD 
+camera. 
+
+Since I am dealing with varying lighting my CCD camera will have gain control,
+gamma correction, iris control, etc turned off. This enables me to compare
+images taken at different times of the day without the camera attenuating
+for lack of light.
+
+So, ideally I'd like to be able to set Radiance's exposure so that it
+mimicks a certain setting on my camera (f-value, shutter speed, CCD
+responsivity) and seeing your equation for film based photography gave me
+some hope. Equating CCD sensitivity to film speed is my problem but I was
+unsure if the 35mm asumption in the equation was necessary - would the
+equation still hold if I was using a 120 size film (for example)?
+
+I am certainly not concerned with setting the exposure so it 'looks' right.
+It's what what the computer will see that is important.
+
+Many thanks for your prompt reply
+Rob
+
+
+Date: Thu, 18 Aug 94 13:07:05 PDT
+From: greg (Gregory J. Ward)
+To: rcl@scs.leeds.ac.uk
+Subject: Re: Radiance - daylight
+
+Hi Rob,
+
+All you need do is calibrate your camera against your renderings somehow.
+You can do this if you look at an evenly illuminated surface and adjust
+the speed/f-stop to a good exposure setting.  Capture an image, then
+the captured values (average) will tell you the relationship between
+illuminance and image for these settings.  (I forgot to mention that
+you must measure the light level with a luminance or lux meter.)
+
+For Radiance, the exposure is simply a multiplier between radiance
+(luminance/179) and pixel value.
+
+The formula for photography applies to your camera, in the sense that
+exposure is inversly related to the square of f-stop, and speed is
+of course a linear relationship.
+
+-Greg
+
+
+<A NAME="PATTERNS">=========================================================================</A>
+PATTERNS
+
+From: "Mr. M.J. Lupton" &lt;sk8@liverpool.ac.uk>
+Subject: Patterns from tiff files
+To: greg@hobbes.lbl.gov
+Date: Fri, 29 Apr 1994 10:42:10 +0100 (BST)
+
+Greg
+
+I have just ftp'd some textures from ccu1.auckland.ac.nz in tiff format.
+
+I then used ra_tiff with the -r option to convert them to pic format, but
+when I come to use the pic file as a texture using this arrangement of
+commands:
+void colorpict blockwork_pat
+9 red green blue block1.pic picture.cal tile_u tile_v -s .5
+0
+1 1
+
+blockwork_pat plastic concrete_blocks
+0
+0
+5 .55 .55 .5 0  0
+
+!genbox concrete_blocks northwall 9 0.06 6 | xform -t 1 15 .02
+
+the pattern only appears to be on one face of the box?
+
+What am I doing wrong
+
+Martin Lupton. Liverpool University.
+
+
+Date: Fri, 29 Apr 94 09:13:42 PDT
+From: greg (Gregory J. Ward)
+To: sk8@liverpool.ac.uk
+Subject: Re:  Patterns from tiff files
+
+Hi Martin,
+
+Radiance doesn't automatically rotate a pattern onto various faces of
+a solid, at least not with the tile_u and tile_v variables defined in
+picture.cal.  You either have to rotate the pattern to make 3 types for
+three surface orientations (XY, YZ and XZ planes), or modify the U and V
+variables defined in rayinit.cal to do it for you.  Something like the
+following should work:
+
+void colorpict blockwork_pat
+9 red green blue block1.pic . frac(U) frac(V) -s .5
+0
+0
+
+blockwork_pat plastic concrete_blocks
+0
+0
+5 .55 .55 .5 0  0
+
+!genbox concrete_blocks northwall 9 0.06 6 | xform -t 1 15 .02
+
+-Greg
+
+
+<A NAME="AMBIENT_FILES">=========================================================================</A>
+AMBIENT_FILES
+
+Date: Tue, 03 May 1994 14:48:25 +1200 (NZT)
+From: mat@ccu1.auckland.ac.nz (M Carr)
+Subject: ambient files
+To: GJWard@lbl.gov
+
+Hi Greg
+
+Just a pair of questions
+
+If I am rendering two views of a single scene at once, and they are
+both using the same ambient file, will I have any problems?
+
+What exactly are ambient files? Being view independant, they still
+change quite dramatically between views (hence my concern above), ie
+they grow.
+
+
+Mat
+______________________________________________________________________________
+Matiu Carr
+
+School of Architecture Property and Planning
+University of Auckland
+New Zealand
+
+email: m.carr@auckland.ac.nz
+
+
+Date: Thu, 5 May 94 22:48:08 PDT
+From: greg (Gregory J. Ward)
+To: mat@ccu1.auckland.ac.nz
+Subject: Re:  ambient files
+
+Hi Mat,
+
+The answer is that you needn't worry.  The values will be shared to the
+extent possible in the two renderings.  Especially if you are doing more
+than one bounce (-ab 2 or greater), many values will be common and you
+WILL save a lot of time.  It is true that the file will continue to grow,
+but that's the price you pay for speed.
+
+And, if you're using 2.3 or later, you can have as many rpict processes
+sharing the same ambient file on as many machines as you like.  Provided
+you have a working NFS lock manager (which is by no means certain), the
+file will be updated in a consistent fashion and values will be shared
+among processes.  Read the document in /pub/doc/parallel.txt on hobbes.lbl.gov
+for more details.  If you have Mosaic, you can access these through our HTML
+pages starting at "ftp://hobbes.lbl.gov/www/radiance/radiance.html".
+
+-Greg
+
+
+<A NAME="VIEW_ANGLES">=========================================================================</A>
+VIEW_ANGLES
+
+Date: Mon, 16 May 1994 16:23:28 +1200 (NZT)
+From: mat@ccu1.auckland.ac.nz (M Carr)
+Subject: rpict -vh -vv
+To: GJWard@lbl.gov
+
+Hi Greg
+
+Is there a formula for working out what a particluar pair of -vh -vv
+settings will produce in terms of the final image dimensions, there
+does not seem to be a linear correspondence.
+
+I am just using the vtv view setting.
+
+It's not urgent.
+
+Thanks
+
+Mat
+______________________________________________________________________________
+Matiu Carr
+
+
+Date: Mon, 16 May 94 12:28:22 PDT
+From: greg (Gregory J. Ward)
+To: mat@ccu1.auckland.ac.nz
+Subject: Re:  rpict -vh -vv
+
+Hi Mat,
+
+The relationship between perspective view angles and image size is
+determined by tangents, i.e.:
+
+	tan(vh/2)/tan(vv/2) == hres/vres
+
+Note that the angles must be divided in half (and expressed in radians
+if you use the standard library functions).  If you know what horizontal
+and vertical resolution you want, and you know what horizontal view angle
+you want (and your pixels are square), you can compute the corresponding
+vertical view angle like so:
+
+	% calc
+	hres = 1024
+	vres = 676
+	vh = 40
+	vv = 180/PI*2 * atan(tan(vh*PI/180/2)*vres/hres)
+	vv
+(resp)	$1=27.0215022
+
+Thus, -vh 40 -vv 27 -x 1024 -y 676 should result in (almost) no
+adjustment of the horizontal or vertical resolutions by rpict.
+If you had just taken a rough guess of the vertical view
+angle, rpict would shrink the horizontal or vertical image size
+to insure that the pixels were square.
+
+Hope this helps.
+-Greg
+
+
+<A NAME="INTERACTIVE_WALKTHROUGHS">=========================================================================</A>
+INTERACTIVE_WALKTHROUGHS
+
+From: lpostner@cs.clemson.edu
+Date: Thu, 19 May 94 13:19:55 EDT
+To: gjward@lbl.gov
+
+I have recently installed Radiance2R4 on a system of SGI Indys 5.2.
+I was interested in rendering 3D models and walking around them 
+interactively for use with VR helmets.  Is there a way of doing this
+with Radiance?  If not how easy would it be to write an interactive
+viewer?  I am not interested in the raytracing aspect, but rather 
+the radiosity part of Radiance.  Anny and all suggestions would be
+greatly appreciated.
+Thanks.
+
+Lori Postner 
+Dept. of Computer Science
+Clemson University
+email: lpostner@cs.clemson.edu
+
+
+Date: Thu, 19 May 94 10:26:51 PDT
+From: greg (Gregory J. Ward)
+To: lpostner@cs.clemson.edu
+Subject: VR and Radiance
+
+Hi Lori,
+
+There is no program that comes with Radiance for interactive walk-throughs.
+In fact, I think this problem is too difficult to solve interactively in
+the general case.  The best you can do is a diffuse approximation, as used
+in radiosity-type programs.
+
+The one way to get what you want with Radiance is on a SGI Reality Engine
+or some such that does real-time textures, then use Radiance to compute
+illumination maps.  I haven't done this myself, but I know some folks in
+Zurich who have if you need some more pointers.
+
+-Greg
+
+
+From: lpostner@cs.clemson.edu
+Subject: Re: VR and Radiance
+To: greg@hobbes.lbl.gov (Gregory J. Ward)
+Date: Thu, 19 May 94 13:53:02 EDT
+
+How do I get Radiance to dump me a 3D data file?  Also, please send me
+the addresses of the people in Zurich, perhaps they will have some good
+suggestions.  Thanks
+
+Lori Postner
+Department of Computer Science
+Clemson University
+email lpostner@cs.clemson.edu
+
+
+Date: Thu, 19 May 94 11:05:05 PDT
+From: greg (Gregory J. Ward)
+To: lpostner@cs.clemson.edu
+Subject: Re: VR and Radiance
+
+Hi Lori,
+
+The fellow who has done this is Daniel Lucius, and his address is
+&lt;lucius@arch.ethz.ch&gt;
+
+You cannot dump full 3-d illumination data from Radiance.  It is necessary
+instead to compute illumination maps individually for each surface.  From
+my limited experiments, it seems most efficient to compute the irradiance
+using a parallel view of each wall, floor and ceiling, then combine this
+with the appropriate colors and textures during rendering.
+
+For example, let's say you have the following wall:
+
+wall_mat polygon east_wall
+0
+0
+12
+	10	0	0
+	10	0	3
+	10	7	3
+	10	7	0
+
+You would run rpict like so to compute an illumination map with a resolution
+of 0.1 units (meters?):
+
+	rpict -i -vtl -vp 9.99 3.5 1.5 -vd 1 0 0 -vh 7 -vv 3 -vu 0 0 1 \
+		-ab 1 [etc...] -x 70 -y 30 octree > east_wall.pic
+
+The -i option tells rpict to compute irradiance instead of radiance.
+
+You will have to adjust the brightness and convert the output picture
+into the appropriate image format (using fromrad or something), then
+write a GL program to use it, along with the other maps.
+
+-Greg
+
+
+<A NAME="SPECTRAL_COLORS">=========================================================================</A>
+SPECTRAL_COLORS
+
+From: Carlos F. Borges &lt;borges@waylon.math.nps.navy.mil>
+Subject: Radiance question
+To: GJWard@lbl.gov
+Date: Mon, 8 Aug 94 14:59:49 PDT
+
+Dear Greg,
+
+  I enjoyed your talk in Orlando very much.  I am interested in using
+the Radiance package to try different color representation approximation
+methods and was] wondering what is the color modelling methodology of
+Radiance.  Do you use, or allow, full spectral description of lights and
+reflectances (transmittances) or is some kind of RGB method used.  Is it
+possible to change the manner in which color computations (independent
+of scene geometry) are done?  Where can I find out more on this subject
+before I start trying to use the package.  I am trying to find a system
+that allows me to change the underlying color modelling to see how well
+different simplification schemes work (like the one in my 1991 SIGGRAPH
+paper, or different spectral sampling approaches). My email address is:
+
+  borges@waylon.math.nps.navy.mil
+
+--
+Cheers,
+
+  Carlos
+
+
+Date: Mon, 8 Aug 94 15:23:34 PDT
+From: greg (Gregory J. Ward)
+To: borges@waylon.math.nps.navy.mil
+Subject: Radiance color rep.
+
+Hi Carlos,
+
+Unfortunately, I was rather stupid in my initial use of color in Radiance,
+and now I'm more or less stuck with a 3-sample representation.  These
+normally correspond to RGB, though you can define them to be whatever
+you like (e.g. XYZ).
+
+Nevertheless, certain desperate people have used Radiance to compute
+images with more spectral samples by rendering the same image several
+times, changing only the materials.  This is of course not the most
+efficient route to take, but it does work if nothing else is available.
+
+It would be possible to alter the source code to handle more spectral
+samples, but there are several places where 3 samples are assumed.
+(Most of the code is in the form of macros, which can be easily changed
+in contrast.)  The main reason I have still not generalized the code
+is because it would mess up the input format rather badly.  I may
+yet think of a way around this problem, but until I have a greater
+need and a little time to do it...
+
+If you want to use a scene description language that provides full
+color flexibility, why don't you investigate the MGF format described
+on our anonymous ftp site (hobbes.lbl.gov) in the /www/mgf directory?
+There you will also find HTML documents for Mosaic.  (i.e. try the URL:
+"ftp://hobbes.lbl.gov/www/mgf/HOME.html".)
+
+-Greg
+
+
+<A NAME="X11_ERROR">=========================================================================</A>
+X11_ERROR
+
+Date: Tue, 16 Aug 1994 10:30:19 -0700 (MST)
+From: AGMXR@acvax.inre.asu.edu
+Subject: Help with rview - radiance utility
+To: GJWard@lbl.gov
+
+Hi,
+I have i9nstalled Linux on one of the Pentium PC and compiled radiance on
+it.  When I tried to display the 'oct' using rview, it gives me a message
+"rview: cannot open command line window".  Can you help to resolve this 
+problem.  
+Thankyou very much.
+Muthu
+AGMXR@ACVAX.INRE.ASU.EDU
+
+
+Date: Tue, 16 Aug 94 10:46:34 PDT
+From: greg (Gregory J. Ward)
+To: AGMXR@acvax.inre.asu.edu
+
+Hi Muthu,
+
+The most probable cause of the command line window not opening is that
+the X11 driver is not finding the default text font, "8x13".  You
+can modify the x11.c file in the ray/src/rt directory to use a font
+you DO have, or figure out some way of making this font available.
+One way to do this is in your X11 fonts directory, there should be
+a file called "fonts.alias", in which you may add an entry for 8x13,
+and alias it to another font that you do have.
+
+Hope this helps.
+-Greg
+
+
+<A NAME="TRANS_MATERIAL">=========================================================================</A>
+TRANS_MATERIAL
+
+Date: Thu, 1 Sep 1994 05:08:22 -0700
+From: COURRET Gilles &lt;courret@divsun.unige.ch>
+To: greg@hobbes.lbl.gov
+Subject: translucent material
+
+Hi greg,
+I am working on zenithal opening Radiance simulation, and espacially
+on translucent plastic glazing. Can you confirm that :
+"
+void trans opale
+0
+0
+7 .3 .3 .3 0 0 .6 .1
+"
+is effectively a grey translucent material which has
+a transmission fraction of 60% with a specular component of 10%.
+Thanks in advance,
+Yours,
+
+Gilles
+
+Date: Thu, 1 Sep 94 13:33:55 PDT
+From: greg (Gregory J. Ward)
+To: courret@divsun.unige.ch
+Subject: Re:  translucent material
+
+Hi Gilles,
+
+So I see that you get confused by the trans type, just as I do!
+
+If what you want is no reflection from the surface whatsoever, and
+60% total transmission, 10% of which is specular (leaving 50% diffuse),
+you should use:
+
+void trans opale
+0
+0
+7 .6 .6 .6 0 0 1 .1666
+
+I hope this is what you're after.  What you gave me was:
+
+void trans opale
+0
+0
+7 .3 .3 .3 0 0 .6 .1
+
+which would have 12% diffuse reflectance ((1-.6)*.3), 16.2% diffuse
+transmittance (.3*.6*(1-.1)), and 1.8% specular transmittance (.3*.6*.1).
+
+I'm sorry that this type is so confusing.  I get horribly confused by
+it myself...
+
+-Greg
+
+
+Date: Fri, 2 Sep 1994 04:55:26 -0700
+From: COURRET Gilles &lt;courret@divsun.unige.ch>
+To: "(Gregory J. Ward)" &lt;greg@hobbes.lbl.gov>
+Subject: Re: translucent material
+
+Hi greg
+
+Thanks for your fast reply.
+With the new material definition you gave me the results are much more realistic!
+The daylight factor is much higher.
+But i have the feeling that it is a little bit to high.
+Are you sur about trans=1 for a transmission of 60% ?
+Yours,
+
+Gilles
+
+
+Date: Fri, 2 Sep 94 09:09:31 PDT
+From: greg (Gregory J. Ward)
+To: courret@divsun.unige.ch
+Subject: Re: translucent material
+
+Hi Gilles,
+
+Yes, I am sure about trans=1 for transmission of 60%, because the color
+was set to .6 .6 .6, which both transmitted components (specular and diffuse)
+are multiplied by.
+
+-Greg
+
+
+<A NAME="PARTICIPATING_MEDIA">=========================================================================</A>
+PARTICIPATING_MEDIA
+
+Date: Tue, 6 Sep 94 13:59:57 -0400
+From: randal.sims@srs.gov (Randy Sims)
+To: GJWard@lbl.gov
+Subject: Radiance vs. Participating Medium
+
+I am pursuing computations of global illumination in the presence of
+participating media.  The assumption is that absorption, emission and
+scattering events in the environment result in a radiance along any
+direction that changes with the position along that direction. Such
+media might include soot, dust, smoke, fog, etc.  Past treatments of
+such phenomena include Rushmeier and Torrance's extended radiosity
+methods (Siggraph'87) and direct Monte Carlo simulations.
+
+But, other than my interests, I'm sure you are well aware of these
+issues, phenomena and treatments. I have browsed the Radiance digests
+and find little discussion of such effects.  Is there any work and/or
+research with Radiance in this area?  Can Radiance be extended to
+address these phenomena?  Do you (individually and/or collectively --
+the Radiance community) have an interest in addressing participating
+media?
+
+Randal N. Sims (Randy)
+Westinghouse Savannah River Co.
+Savannah River Site
+773-42A, 129
+P.O. Box 616
+Aiken, SC 29802
+USA
+
+TEL: (803)725-8347
+FAX:   (803)725-8829
+Email  randal.sims@srs.gov
+
+
+Date: Tue, 6 Sep 94 11:24:03 PDT
+From: greg (Gregory J. Ward)
+To: randal.sims@srs.gov
+Subject: Re:  Radiance vs. Participating Medium
+
+Hi Randy,
+
+I have only recently begun to dabble in participating media, following
+some advice and articles from Holly Rushmeier on the topic.
+
+I'm afraid that Radiance is not very well equipped to deal with this
+problem in its current state.  I had toyed with the idea of modeling
+the particles themselves, since Radiance can handle even ridiculous
+scene complexity, but I think the resulting simulation would be so
+slow that it wouldn't be worth the bother.
+
+Instead, I have been using a shortcut that accounts only for some
+interactions, such as absorption of direct light and along eye rays,
+as well as approximate scattering from light sources to the eye.
+I do this by combining a change in the direct lighting calculation
+with a post-process using pcomb.  If you are interested in seeing
+the results, I have just one picture of the lower deck of a ship
+with a uniform distribution of soot.  (Non-uniform distributions
+might be modeled with this method, but the relation would have
+to be fairly simple.)  Just let me know what format you want the
+image in, and I'll drop it in the /xfer directory on hobbes.lbl.gov.
+(It's there right now as a Radiance picture if that will do.)
+
+-Greg
+
+
+<A NAME="MATERIALS">=========================================================================</A>
+MATERIALS
+
+Date: Mon, 12 Sep 1994 23:08:48 -0500
+From: Dana Peters &lt;peters@ERC.MsState.Edu>
+To: greg@hobbes.lbl.gov
+Subject: newbie
+
+Greetings,
+	As the subject says I am a new user and have some very basic questions.
+I am currently an architecture student and have been using Wavefront for three
+years to create architectural walkthroughs and various other animations.  I am
+familiar with very general rendering principles, but have very little 
+experience with the graphics programing principles and the actual physical
+calculations.  I do, however, have a basic understanding of C.  I have 
+installed Radiance, read the manual, worked the tutorial, and read most of the
+digests.  Ok, now for the questions
+
+1.  I have no problem with the modeling, but I do need some help with
+	materials.  I understand the basic material types (plastic, metal, 
+	glow, light) but have problems thereafter, specifically those
+	that require func files.  What types of real materials have 
+	ansiotropic roughness used in plastic2, metal2, etc?  What is the 
+	benefit of using this material type?    What, in layman's terms, does
+	a bidirectional reflectance distrobution function do to a surface?
+	Can you give me some expamples of real materials that this is used 
+	to represent?  I also have some problems with the difference between
+	dielectrics and glass, but I think I can figure that out on my own.
+
+2.  I would like to start using Radiance extensively because of its wonderful
+	and accurate renderings.  Will it be necessary for me to learn how to
+	write function definitions myself, or can I get by using those supplied
+	in the software and those written by others?  Learning how to write 
+	these would be helpful, but I currently have no idea how to define
+	procedural textures, etc.  
+
+3.  In the digests someone mentioned the possibility of having a radiance
+	training class.  Has this actually happened in the past?  will it 
+	happen in the future?  I am sure that a class would be the best way
+	for me to learn radiance. (aside from hiring a personal tutor)
+
+4.  Concerning the files at your ftp site... are most of these included in the
+	distrobution?  for example, I noticed several libraries and some 
+	objects.  Are these included somewhere or should I pick them up?
+	Also what exactly are all those things in the tests/empty/...
+	directory?  just curious.
+
+Well, I guess that is enough for now.  Sorry to bother you with such basic 
+questions.  Perhaps you could refer me to a good book or paper that might 
+explain some of the basic stuff that I am lacking.  There is no need to hurry
+with answers to these questions.  I am not in any rush.  
+
+thanks in advance,
+-Dana Peters
+peters@erc.msstate.edu
+
+
+Date: Tue, 13 Sep 94 10:37:11 PDT
+From: greg (Gregory J. Ward)
+To: peters@ERC.MsState.Edu
+Subject: Re:  newbie
+
+Hi Dana,
+
+Good questions, all.  It sounds like you have already investigated the
+Radiance Digest archives in the /pub/digest/ on hobbes.lbl.gov.  Did you
+know that these have also been collected and indexed by Veronika Summerauer
+in HTML format, and are available on the Web from the Radiance page at:
+
+	ftp://hobbes.lbl.gov/www/radiance/radiance.html
+
+Anyway, I don't think I've answered your questions before, so I'll attempt
+to do justice to them here.
+
+> 1.  I have no problem with the modeling, but I do need some help with
+> 	materials.  I understand the basic material types (plastic, metal, 
+> 	glow, light) but have problems thereafter, specifically those
+> 	that require func files.  What types of real materials have 
+> 	ansiotropic roughness used in plastic2, metal2, etc?  What is the 
+> 	benefit of using this material type?    What, in layman's terms, does
+> 	a bidirectional reflectance distrobution function do to a surface?
+> 	Can you give me some expamples of real materials that this is used 
+> 	to represent?  I also have some problems with the difference between
+> 	dielectrics and glass, but I think I can figure that out on my own.
+
+Yes, materials are difficult, aren't they?  Plastic2 and metal2
+are appropriate for surfaces like varnished wood and brushed or rolled metal
+-- anything that has elongated highlights.  Note that you don't necessarily
+have to use a function file for these types.  If the brushed direction is
+aligned with a vector and the surface is relatively flat, you can simply
+use a constant vector in the place of the "ux uy uz" variables, e.g:
+
+	void metal2 brushed_aluminum
+	4 1 0 0 .
+	0
+	6 .7 .7 .7 .85 .02 .08
+
+Since the .02 value corresponds to the roughness along the [1 0 0] vector,
+and the .08 value is the roughness in the perpendicular direction, the
+above material has a highlight that is narrower in the X direction.
+
+A bidirectional reflectance-transmittance distribution function (BRTDF,
+often called BSDF for bidirectional scattering distribution function),
+is a general function describing how light interacts with a surface material.
+You should use it only when all the other material types fail, as it is the
+most difficult to apply and the least efficient type in Radiance.  One
+example where it might be needed is velvet, which has very peculiar
+reflectance properties.  Retroreflective materials are another example.
+
+The difference between dielectric and glass is simply that glass simulates
+two close, parallel, dielectric surfaces.  Glass is more efficient since
+it approximates the internal reflections in closed form rather than
+computing all the many rays that two dielectric surfaces would require.
+
+> 
+> 2.  I would like to start using Radiance extensively because of its wonderful
+> 	and accurate renderings.  Will it be necessary for me to learn how to
+> 	write function definitions myself, or can I get by using those supplied
+> 	in the software and those written by others?  Learning how to write 
+> 	these would be helpful, but I currently have no idea how to define
+> 	procedural textures, etc.  
+
+Unfortunately, this is something I have never documented.  Suprisingly, a
+number of users have figured it out on their own and written procedural
+patterns and textures and contributed their work to the /pub/libraries/
+directory on hobbes.lbl.gov.  I suggest that you look at these as well
+as the .cal files distributed with Radiance and try to learn by
+example if you need to roll your own.
+
+> 
+> 3.  In the digests someone mentioned the possibility of having a radiance
+> 	training class.  Has this actually happened in the past?  will it 
+> 	happen in the future?  I am sure that a class would be the best way
+> 	for me to learn radiance. (aside from hiring a personal tutor)
+
+Yes, there was a workshop held for about 20 people in Spring of 1991, and
+another this Spring for only 5 people in Germany (disappointing turnout,
+but the tuition was rather high to pay for my travel out there).  I am
+thinking of holding a Siggraph course on Radiance either next year or
+the year after.
+
+> 
+> 4.  Concerning the files at your ftp site... are most of these included in the
+> 	distrobution?  for example, I noticed several libraries and some 
+> 	objects.  Are these included somewhere or should I pick them up?
+> 	Also what exactly are all those things in the tests/empty/...
+> 	directory?  just curious.
+
+The main distribution contains source code, documentation and examples not
+found elsewhere on the ftp server.  The /pub/* directories contain mostly
+Radiance-related contributions, and are distributed by tape to people who
+don't have ftp access.  In most cases, there are README files describing
+the contents of each directory.
+
+The /pub/tests/ directory was designed to contain comparisons between
+Radiance and other global illumination calculations, but contributions
+over the years have been rather disappointing.
+
+-Greg
+</PRE>
+</BODY>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 7</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+</h5>
+</html>

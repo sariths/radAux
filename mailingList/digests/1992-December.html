@@ -1,0 +1,978 @@
+<TITLE>Radiance Digest, v2n4</TITLE>
+<html>
+<a name="top"><h2>Radiance Digest Volume 2, Number 4</h2></a>
+<hr>
+<pre><body>
+
+Dear Radiance Users,
+
+It's time for another collection of questions and answers on Radiance.
+If this digest is unwelcomed junk mail, please write to GJWard@lbl.gov
+to have your name removed from the list.
+
+Here is a list of topics for this time:
+
+	<A HREF="#VIDEO">VIDEO</A>	- Simulating video photography with Radiance
+	<A HREF="#INTERREFLECTION">INTERREFLECTION</A> - Diffuse interreflection accuracy
+	<A HREF="#PENUMBRAS">PENUMBRAS</A> - Generating accurate penumbras
+	<A HREF="#HEIGHT_FIELDS">HEIGHT_FIELDS</A> - Generating colored height fields
+	<A HREF="#INSTANCES">INSTANCES</A> - Octree instancing problems
+	<A HREF="#CONSTANTS">CONSTANTS</A> - Constant expressions in .cal files
+	<A HREF="#IMAGES">IMAGES</A> - Image formats, gamma correction, contrast and colors
+	<A HREF="#GENERAL">GENERAL</A> - Some general questions about global illumination and rendering
+	<A HREF="#TEXDATA">TEXDATA</A> - Using the texdata type for bump mapping
+	CSG - Using antimatter type for destructive solid geometry
+
+We have been having poor communication lately with our DOE managers back
+in Washington, DC.  Because of this, I may soon ask for your feedback on
+plans for transfer of Radiance to a wider user community.
+
+-Greg
+
+<A NAME="VIDEO">=========================================================</A>
+VIDEO	- Simulating video photography with RADIANCE
+
+Date: Fri, 28 Aug 92 14:39:57 CDT
+From: pandya@graf6.jsc.nasa.gov (Abhilash Pandya)
+Apparently-To: GJWard@lbl.gov
+
+Greg-
+
+  In our work, we are trying to generate accurate maps of lighing. 
+Your program provides us with accurate radiance values at each
+pixel in an image.  We would like to produce images that an eye or
+camera will produce.  These systems have mechanisms to filter the 
+images with iris and lens control.  Do you have information on how 
+this transformation can be done?  We are able to apply scale factors
+to make the images look realistic, but these are guesses.
+
+By the way, your package is a very good one, in just 2 weeks we were
+able to trace complex space shuttle lighting very easily.  Nice work.
+
+Pandya.
+
+Date: Fri, 28 Aug 92 13:24:34 PDT
+From: greg (Gregory J. Ward)
+To: pandya@graf6.jsc.nasa.gov
+Subject: clarification
+
+Hello Pandya,
+
+I am glad you have had some success with your shuttle lighting work.
+I would be very interested to see any results you are willing (and able)
+to share.
+
+Could you clarify your question for me a bit, please?  Do you want to
+reproduce the automatic iris and shutter control found in cameras?
+Do you wish to model also depth of field?
+
+I do have some formulas that can tell you roughly how to set the exposure
+value to correspond to a given f-stop, ASA and shutter speed of a camera,
+but the automatic exposure control of cameras varies quite a bit from
+one make of camera to another.
+
+-Greg
+
+Date: Thu, 3 Sep 92 17:29:59 PDT
+From: greg (Gregory J. Ward)
+To: pandya@graf6.jsc.nasa.gov
+Subject: camera simulation
+
+> 1. We are planning to run an experiment in a lighting lab where
+> we measure the light distribution and material properties for 
+> Shuttle and Station applications.  Our overall goal is to compare 
+> the output of a camera (with the fstop, film speed, shutter speed 
+> and development process gamma all known) with a radiance output for
+> a test case. How do we process the radiance output to emulate the
+> camera image?  We would be interested in the formulas you mentioned
+> and also any reference list that deals with validation of your 
+> model. 
+
+Here is the note on film speed and aperture:
+
+Francis found the appropriate equation for film exposure in the IES
+handbook.  There isn't an exact relation, but the following formula
+can be used to get an approximate answer for 35mm photography:
+
+	Radiance EXPOSURE = K * T * S / f^2
+
+		where:
+			T = exposure time (in seconds)
+			S = film speed (ISO)
+			f = f-stop
+			K = 2.81 (conversion factor 179*PI/200)
+
+This came from the IES Lighting Handbook, 1987 Application Volume, section 11,
+page 24.
+
+So, if you were trying to produce an image as it would appear shot at
+1/60 sec. on ASA 100 (ISO 21) film at f-4, you would apply pfilt
+thusly:
+
+	pfilt -1 -e `ev "2.81*1/60*21/4^2"` raw.pic > fin.pic
+
+> 2. We would like to extend the static case (#1) to a dynamic case 
+> where we can model the automatic iris control and fstop found in 
+> the eye and also video cameras.  We have information on how the 
+> video uses average ambient light to adjust the iris aperture 
+> (circuit diagrams). We know how the fstop is computed dynamically
+> (using infared rays to detected the neareast surface).  What
+> approach do you suggest?
+
+I assume you meant to say "focus" in the penultimate sentence above.
+Currently, "depth of field" simulation is not directly supported in
+Radiance.  In effect, an infinite f-stop is always used with results
+in unlimited depth of field (ie. as from a perfect pinhole camera).
+If you wish to fully model the dynamic exposure compensation of a
+video camera, you will have to use different exposure values for
+pfilt as above, but on a per-frame basis.
+
+> 3. We need to find a scale factor to be used in the falsecolor
+> routine that corresponds to the actual range of illuminance in
+> the image.  The default value may saturate the image in certain 
+> regions.  How do we find the optimal scale value in nits without
+> trial and error?
+
+Ah, yes.  A fair question.  It just so happens that until recently
+there was no way to determine the maximum value in an image.  I have
+just written a program called "pextrem" that quickly computes the
+minimum and maximum values for a Radiance picture.  This program will
+be included in version 2.2 when it is released this fall.  I have
+appended it for your benefit along with an improved version of
+falsecolor at the end of this message.
+
+> We will be glad to share the information on the results of our study 
+> when we are at that stage. 
+
+I'd love to see it!
+
+-Greg
+
+<A NAME="INTERREFLECTION">=========================================================</A>
+INTERREFLECTION - Diffuse interreflection accuracy
+
+Date:         Mon, 31 Aug 92 23:59:53 CET
+From: SJK%PLWRTU11.BITNET@Csa3.lbl.gov
+To: greg@hobbes.lbl.gov
+Subject: Diffuse interreflection
+ 
+Hello Greg,
+ 
+Thank you for your excellent answers to my (excellent? Hmmm) questions.
+I have really overlooked a possibility to specify angle dependencies
+in brightfunc.
+ 
+I have one more question. It is not urgent (as well as previous ones)
+so don't worry about them if you are busy with something else.
+ 
+Now I try to investigate diffuse interreflection calculation in
+RADIANCE. I began with a cubic room covered with totally diffusive
+white plastic (reflectivity 2/3) and a single small light source
+inside. The diffude interreflection in this case should produce
+ambient light with total energy twice as large as the energy of
+the light source. Analysing results I noticed that some small error
+(5-10%) remains even after 10 iterations. Further investigation
+revealed that the same problem exists for the simplest case of a
+sphere with light source at its center. So my question is
+(numbering continues the previous letter):
+ 
+6. How to improve diffuse interreflection accuracy?
+ 
+Consider the following scene:
+ 
+void light white_source
+0 0
+3 10000 10000 10000
+ 
+void plastic white
+0
+0
+5 .667 .667 .667 0 0
+ 
+white bubble room
+0 0 4    5 5 5   5
+ 
+# Light source
+white_source sphere central_source
+0 0
+4  5 5 5   0.1
+ 
+I used parameters:
+ 
+-vtv -vp 5 5 4 -vd 0 0 -1 -vu 0 1 0 -vh 120 -vv 120 -x 100 -ab 5 -t 30
+ 
+Due to full symmetry we can calculate ambient light exactly and
+not only the final value but even the value after any number
+of ambient iteration. The surface brightness (constant) after
+n iterations should be following (neglecting absorption in the light
+source):
+ 
+      B = r^2/R^2 * C * P * d * (1+d+d^2+...+d^n)
+ 
+where B is the brightness in nits; r is the radius of the light source;
+R is the radius of the room; C is constant conversion factor =
+179 lumens/Watt; P is power density of the light source (Watt/m^2/sr);
+d is the surface reflectivity.
+ 
+The results for the example above are shown in the following table:
+ 
+   -ab n     Theory    RADIANCE
+ -------------------------------
+      0       477        477
+      1       795        797
+      2      1007       1015
+      4      1242       1295
+      5      1305       1351
+      6      1347       1362
+     10      1414       1362
+   infty     1432      (1362?)
+ -------------------------------
+ 
+So, we can see that till n=2 the accordance is perfect, then
+RADIANCE begins to overestimate ambient light, but after six
+iterations saturation occurs so that the final value is
+underestimated.
+ 
+Is it possible to achieve more accurate calculation of ambient light?
+What parameter is responsible for it? I tried to vary values of
+-ad, -aa, -lr, and -lw parameters with no effect.
+ 
+Andrei Khodulev,      sjk@plwrtu11.bitnet
+
+Date: Mon, 31 Aug 92 22:37:37 PDT
+From: greg (Gregory J. Ward)
+To: SJK%PLWRTU11.BITNET@Csa3.lbl.gov
+Subject: Question #6
+
+Hello Andrei,
+
+The reason that Radiance never converged in your example problem is
+that each successive interreflection uses half as many sample rays.
+(See the 1988 Siggraph article on the technique for an explanation.)
+With so many bounces, you dropped below the one ray threshold at
+about the 7th bounce, which is why no further convergence was obtained.
+To get better convergence, you would have to decrease the value of
+-lw (to zero if you like), increase -lr (to 12 or whatever), and ALSO
+increase the value of -ad to at least 2^N, where N is the number of
+bounces you wish to compute.
+
+By the way, Radiance assumes that your average surface reflectance is
+around 50%, which is a good part of why your 67% reflectance room shows
+poor convergence with the default parameter values.  I could have used
+the actual surface reflectance to guide the calculation, but that would
+cause problems with the reuse of the indirect irradiance values.
+
+The preferred way to get a more accurate value is to estimate the
+average radiance in the space and set the -av parameter accordingly.
+I wish there were a reliable automatic way to do this, but there
+really isn't one, which is why the default value is zero.  In your
+example, the correct ambient value specification would be 1432/179,
+which is 8 W/sr/m^2.  Of course, you would obtain convergence with
+this value right away.
+
+As for the overestimation of values for 3-6 bounces, it's conceivable
+that Radiance would be off by that much, but it's more likely you're just
+seeing the errors associated with the Radiance picture format, which
+at best keeps within 1% of the computed values.  I tried the same
+experiment with rtrace (and the default parameter values) for -ab 6,
+and got a result of 1349 nits, which is within .1% of the correct
+value of 1350 nits.  (Note that you should have used .667 instead
+of 2/3 for the surface reflectance in your calculations, since that's
+what you put in the input file.)
+
+I want to thank you once more for setting up such an excellent
+test scene.  I really should be paying you for all your good work!
+
+-Greg
+
+<A NAME="PENUMBRAS">=========================================================</A>
+PENUMBRAS - Generating accurate penumbras
+
+Date: Tue, 1 Sep 92 17:16:49 PDT
+From: wex@rooster.Eng.Sun.COM (Daniel Wexler)
+To: greg@hobbes.lbl.gov
+Subject: Penumbra problems
+
+Greg,
+	We have been toying with the command line arguments to Radiance
+to achieve nice soft shadows. Unfortunately we have been cursed with
+severe aliasing. I have put an example image in the xfer account on
+hobbes (aliased_ball.pic). I think the problem is obvious. We use
+pfilt to achieve supersampling, but the aliasing will not go away until
+the artifacts in the original image are eliminated. Essentially, we would
+like the most accurate image regardless of computation time. If you
+know what arguments would achieve this result, that would be great. I
+don't think we need to use any ambient calculation for these images,
+but please correct me if I'm wrong.
+
+Thanks,
+	Dan
+
+
+Here is the command we used to create the image:
+
+rpict -x 1000 -y 1000 -vtv -vp -5.112623 -7.815219 -3.025246 \
+      -vd 0.177627 0.917738 0.355254 -vu -0.000000 -1.000000 -0.000000 \
+      -vh 63.985638 -vv 63.985638 -ps 2 -dj 0.5 -pj 1.0 
+      -ds 0.00001 -dc 1.0 NTtmp.oct > NTtmp.pic
+
+And here is the radiance file; note that the modeller outputs a separate
+file for each object, and uses xform to position them:
+
+void plastic gray_plastic
+0
+0
+5 0.7 0.7 0.7 0.05 0.1
+around 50%, which is a good part of why your 67% reflectance room shows
+poor convergence with the default parameter values.  I could have used
+the actual surface reflectance to guide the calculation, but that would
+cause problems with the reuse of the indirect irradiance values.
+
+The preferred way to get a more accurate value is to estimate the
+average radiance in the space and set the -av parameter accordingly.
+I wish there were a reliable automatic way to do this, but there
+really isn't one, which is why the default value is zero.  In your
+example, the correct ambient value specification would be 1432/179,
+which is 8 W/sr/m^2.  Of course, you would obtain convergence with
+this value right away.
+
+As for the overestimation of values for 3-6 bounces, it's conceivable
+that Radiance would be off by that much, but it's more likely you're just
+seeing the errors associated with the Radiance picture format, which
+at best keeps within 1% of the computed values.  I tried the same
+experiment with rtrace (and the default parameter values) for -ab 6,
+and got a result of 1349 nits, which is within .1% of the correct
+value of 1350 nits.  (Note that you should have used .667 instead
+of 2/3 for the surface reflectance in your calculations, since that's
+what you put in the input file.)
+
+I want to thank you once more for setting up such an excellent
+test scene.  I really should be paying you for all your good work!
+
+-Greg
+
+=========================================================
+PENUMBRAS - Generating accurate penumbras
+
+Date: Tue, 1 Sep 92 17:16:49 PDT
+From: wex@rooster.Eng.Sun.COM (Daniel Wexler)
+To: greg@hobbes.lbl.gov
+Subject: Penumbra problems
+
+Greg,
+	We have been toying with the command line arguments to Radiance
+to achieve nice soft shadows. Unfortunately we have been cursed with
+severe aliasing. I have put an example image in the xfer account on
+hobbes (aliased_ball.pic). I think the problem is obvious. We use
+pfilt to achieve supersampling, but the aliasing will not go away until
+the artifacts in the original image are eliminated. Essentially, we would
+like the most accurate image regardless of computation time. If you
+know what arguments would achieve this result, that would be great. I
+don't think we need to use any ambient calculation for these images,
+but please correct me if I'm wrong.
+
+Thanks,
+	Dan
+
+
+Here is the command we used to create the image:
+
+rpict -x 1000 -y 1000 -vtv -vp -5.112623 -7.815219 -3.025246 \
+      -vd 0.177627 0.917738 0.355254 -vu -0.000000 -1.000000 -0.000000 \
+      -vh 63.985638 -vv 63.985638 -ps 2 -dj 0.5 -pj 1.0 -ds 0.00001 \
+      -dc 1.0 NTtmp.oct > NTtmp.pic
+
+And here is the radiance file; note that the modeller outputs a separate
+file for each object, and uses xform to position them:
+
+void plastic gray_plastic
+0
+0
+5 0.7 0.7 0.7 0.05 0.1
+rpict -x 4096 -y 4096 ... octree | pfilt -1 -x /4 -y /4 -r .7 > output.pic
+
+Regarding your other arguments, you should try the following:
+
+	-ps 1 -dj 0.5 -pj .9 -ds 0.1
+
+The -ds value you used is really much higher than necessary, and has no
+effect with spherical light sources anyway (which is part of your problem
+with this particular scene).
+
+If you want to get rid of the brushed appearance, you can modify the
+random.h header by defining urand() to be the same as frandom(), though
+you will get a noisier (higher variance) result:
+
+#define  urand(i)	frandom()
+
+One place you will not easily eliminate spatial aliasing in Radiance is
+at the boundaries of light sources.  Since all calculations, including
+image filtering, is done in floating point, very large differences in
+neighboring pixel values will continue to cause ugly jaggies even at
+large sample densities.  The only way around this is to cheat by clipping
+prior to filtering, a step I choose to avoid since it compromises the
+integrity of the result.
+
+Let me know if these suggestions aren't enough.
+-Greg
+
+<A NAME="HEIGHT_FIELDS">=========================================================</A>
+HEIGHT_FIELDS - Generating colored height fields
+
+Date: Thu, 3 Sep 92 17:30:24 PDT
+From: greg (Gregory J. Ward)
+To: fsb@sparc.vitro.com
+Subject: Re: Radiance Digest, v2n3
+
+Dear Steve,
+
+> OK I tried this and get a brown looking surface when I give it
+> brown plastic modifier.  It uses the same modifier for every patch.
+> Is there a way to make the modifier select a color according to
+> elevation?  Like below a certain point is blue for water, and then 
+> green, and then on up is brown, and then the highest elevations
+> are white?  I haven't been using this package for very long so am
+> not really that familiar with how to do things yet.
+
+The usual way to see the height field is to insert a light source
+(such as the sun as output by gensky) and the lighting will show
+it to you naturally.  If you want to do some fun stuff with colors,
+you can use a pattern based on the Z position of the surface point, eg:
+
+# A1 is level of water, A2 is level of snow
+void colorfunc ranges
+4 r_red r_grn r_blu ranges.cal
+0
+2 1.5 3.5
+
+ranges plastic ground_mat
+0
+0
+5 1 1 1 0 0
+
+---------------------------------- ranges.cal :
+{ Select water or ground or snow depending on altitude }
+{ A1 is water level, A2 is snow level }
+{ move from green to brown between A1 and A2 }
+lp = (Pz-A1)/(A2-A1);
+r_red = if(-lp, .02, if(lp-1, .75, linterp(lp,.1,.5)));
+r_grn = if(-lp, .2, if(lp-1, .75, linterp(lp,.5,.3)));
+r_blu = if(-lp, .4, if(lp-1, .75, linterp(lp,.1,.1)));
+
+-Greg
+
+<A NAME="INSTANCES">=========================================================</A>
+INSTANCES - Octree instancing problems
+
+From: Environmental Design Unit <edu@de-montfort.ac.uk>
+Date: Thu, 17 Sep 92 16:00:11 BST
+To: greg@hobbes.lbl.gov
+Subject: Re: instancing octrees
+
+Hello Greg,
+
+I'm getting some strange behaviour from "oconv" when
+instancing octrees.  I've made a single storey description
+of a building and created the (frozen) octree (~0.5Mb).  A
+five storey octree can be made virtually instantly, whereas
+with 6 or more, "oconv" seems to get hung, gradually soaking
+up more memory.  I let one run over lunch and it still didn't
+finish!  I've tried increasing the resolution and setting a
+bounding box, but to no effect.  Am I right in thinking that
+it is, in fact, something to do with the bounding-box?
+
+I see that version 2R2b is on pub/xfer, should I be using it?
+
+Regards,
+
+-John
+
+Date: Thu, 17 Sep 92 17:56:17 PDT
+From: greg (Gregory J. Ward)
+To: edu@de-montfort.ac.uk
+Subject: Re: instancing octrees
+
+Hi John,
+
+Never mind my previous response.  I fooled around with the problem a bit,
+and realized that the real difficulty is in resolving the octree instances'
+boundaries.  Because your stories are (presumably) wider and longer than
+they are high, the bounding cube determined by oconv for the original
+frozen octree extends quite a bit above and below the actual objects.
+(I suppose that oconv should start with a bounding parallelepiped rather
+than a cube, but there you are.)  When you subsequently stack your octrees
+to create a building, the vertical faces of the corresponding bounding
+cubes are largely coincident.  As you may or may not know, oconv will
+then resolve these coincident faces to the resolution specified with
+the -r option (1024 by default).  This can take quite a long time.
+
+There are two possible solutions.  The best one is probably to reduce
+the value of -r to 200 or so, provided that you don't have a lot of
+other detail in your encompassing scene.  The other solution is to
+increase the value of the -n option to the number of stories of your
+building, or to the maximum horizontal dimension divided by the story
+height, whichever is smaller.
+
+Ideally, the instanced octrees should not significantly overlap.  As
+you noticed, it's even worse when the faces of the bounding cubes
+are coplanar and overlapping.
+
+Hope this helps!
+
+-Greg
+
+P.S.  The behavior of oconv used to be MUCH worse with regards to overlapping
+instances.  It used to try to resolve the entire intersecting VOLUME to the
+maximum resolution!
+
+<A NAME="CONSTANTS">=========================================================</A>
+CONSTANTS - Constant expressions in .cal files
+
+Date: Thu, 24 Sep 92 11:41:57 -0400
+From: David Jones  <djones@Lightning.McRCIM.McGill.EDU>
+To: greg@hobbes.lbl.gov
+Subject: Re:  radiance 2.1 change with "cal" files??
+
+In looking in your "ray.1" and trying to understand my error,
+I got confused about "constants".  I had pondered arg(n), but since it had
+worked before, I dismissed it.
+
+I must admit I don't understand the concept of a "constant function".
+
+Can you elaborate?  ... and does declaring something as a "constant"
+really translate into much of a savings?
+
+as always, thanks for your help,
+
+   dj
+
+Date: Thu, 24 Sep 92 08:52:47 PDT
+From: greg (Gregory J. Ward)
+To: djones@Lightning.McRCIM.McGill.EDU
+Subject: Re:  radiance 2.1 change with "cal" files??
+
+Hi Dave,
+
+The savings garnered from a constant expression depends on the complexity
+of the expression.  When expensive function calls are involved, the savings
+can be substantial.
+
+A constant function is simply a function whose value depends solely on its
+arguments.  All of the standard math functions have the constant attribute,
+as do most of the additional builtin functions.  Even the rand(x) function
+has the constant attribute, since it returns the same pseudorandom number
+for the same value of x.
+
+Functions and variables that somehow depend on values that may change due
+to a changing execution environment or altered definitions must not be
+given the constant attribute or you will get inconsistent results.  This is
+because the expression is evaluated only once.
+
+Remember also that constant subexpressions are eliminated, so by using
+constant function and variable definitions, you save in any expression
+that refers to them.
+
+I hope this explains it a little better.
+<A NAME="IMAGES">=========================================================</A>
+IMAGES - Image formats, gamma correction, contrast and colors
+
+Date: Sat, 3 Oct 92 19:42:12 -0400
+From: "Jim Callahan" <jmc@sioux.eel.ufl.edu>
+To: greg@hobbes.lbl.gov
+Subject: Exposure & PS(TIFF)
+
+Hi Greg-
+
+	I understand that Radiance stores images as 32-Bit RGB.  How does
+an adjustment of exposure effect the colors displayed.  Obviously it
+affects the brightness of the image, but what are the differences between
+exposure and gamma correction? Are both needed?  If a light source is too
+dim, I want to know in absolute terms. 
+
+	This is a bit confusing to me because I realize that the eye is
+constantly readjusting its exposure.  I would like to be able to say that
+the image is a "realistic" simulation of a scene, but can this really be
+done?
+
+	Also, do you have any experience with encapsulated PostScript as a
+image format.  I can convert to TIFF with the "ra_tiff" program but I don't
+know where I should go from there.
+
+
+	By the way, what kind of Indigo are you considering?  I got a
+chance to see the R4k Elan here in Gainesville and it was impressive.  We
+calculated that it would be faster than the whole 17 machine network I use
+now in terms of floating point operations! 
+
+ 	
+	See ya later...
+
+						-Jim
+	
+Date: Sun, 4 Oct 92 11:04:43 PDT
+From: greg (Gregory J. Ward)
+To: jmc@sioux.eel.ufl.edu
+Subject: Re:  Exposure & PS(TIFF)
+
+Hi Jim,
+
+You've touched on a very complicated issue.  The 32-bit format used in
+Radiance stores a common 1-byte exponent and linear (uncorrected gamma)
+values.  This provides better than 1% accuracy over a dynamic range
+of about 10^30:1, compared to about 3% accuracy over a 100:1 dynamic
+range for 24-bit gamma-corrected color.
+
+Changing the exposure of a Radiance image changes only the relative
+brightness of the image.  Gamma correction is meaningful only in the
+presence of a monitor or display device with a power law response
+function.  Gamma correction is an imperfect attempt to compensate for
+this response function to get back linear radiances.  Thus, applying
+the proper gamma correction for your monitor merely gives you a linear
+correlation between CRT radiance and the radiance value calculated.
+(Radiance is named after the value it calculates, in case you didn't
+already know.)
+
+However, as you correctly pointed out, linear radiances are not necessarily
+what you want to have displayed.  Since the dynamic range of a CRT is limited
+to less than 100:1 in most environments, mapping calculated radiances to
+such a small range of dispayable values does not necessarily evoke the same
+response from the viewer that the actual scene would.  The film industry has
+known this for many years, and has a host of processing and exposure techniques
+for dealing with the problem.  Even though computer graphics provides us with
+much greater flexibility in designing our input to output radiance mapping,
+we have only just begun to consider the problem, and it has not gotten nearly
+the attention it deserves.  (If you are interested in learning more on the
+topic, I suggest you check out the excellent CG+A article and longer Georgia
+Tech technical report by Jack Tumblin and Holly Rushmeier.)
+
+Color is an even stickier problem.  Gary Meyer and others have explored a
+little the problem of mapping out-of-gamut colors to a CRT, but offhand
+I don't know what work has been done on handling clipped (over-bright)
+values.  This is another interesting perceptual issue ripe for exploration.
+
+The best you can currently claim for a computer graphics rendering is that
+photography would produce similar results.  Combined with accurate
+luminance calculations, this should be enough to convince most people.
+In absolute terms, the only way to know is by understanding lighting
+design and luminance/illuminance levels appropriate to the task.  It will
+be many years before we will have displays capable of SHOWING us
+unambiguously whether or not a given lighting level is adequate.
+
+I think encapsulated PostScript is just PostScript with embedded data
+(such as a PICT image) that makes it easier for other software to deal
+with since it isn't then necessary to include a complete PostScript
+interpreter just to display the file contents.  Such files are used
+commonly in the Macintosh and other desktop publishing environments.
+
+Russell Street of Aukland University wrote a translator to PICT format,
+and I have recently finished a translator to black and white PostScript.
+Paul Bourke (also of Aukland University) said he was finishing a color
+PostScript translator, so we might have that available soon as well.
+(Personally, I think PostScript is a terrible way to transfer raster
+data -- the files are humungous and printing them tries my patience.)
+If you are going to a Mac environment, I still think TIFF or PICT are
+your best bets.
+
+I am getting a R4000 Indigo XS24.  It seems to perform very well with
+Radiance, outpacing my Sun 3/60 by a factor of about 30!
+
+-Greg
+
+<A NAME="GENERAL">=========================================================</A>
+GENERAL - Some general questions about global illumination and rendering
+
+Date: Mon, 5 Oct 92 10:07:33 +0100
+From: u7x31ad@sun4.lrz-muenchen.de
+To: greg@hobbes.lbl.gov
+Subject: Radiance and Mac
+
+High Greg,
+i am a student here at munich university and on striving through Internet
+i came across Your Radiance-SW. Since i've been interested in Computer
+Graphics for quite a long time already i was very happy to find something
+like Radiance.
+Is there any possibilty to get the radiance-system running on a Macintosh.
+The system i have is a Qudra 950, 64/520MB, 16"RGB Screen.
+What i want to do is to create photorealistic pictures of rooms etc. but not
+only with raytracing. What i am looking for is a combination  from both:
+Raytracing & Radiosity. Do You know any SW that uses a method also
+calculating specular refelctions on surfaces?
+An adition i am thinking about a methode to include the characteristics
+of the various types of lamps used to give light to a scenery.
+But not to take too much of Your time - if Your interested please let
+me know and i will try to explain it in better english
+Thank You
+Christian von Stengel
+u7x31ad@sun4.lrz-muenchen.de
+
+Date: Mon, 5 Oct 92 09:35:13 PDT
+From: greg (Gregory J. Ward)
+To: u7x31ad@sun4.lrz-muenchen.de
+Subject: Re:  Radiance and Mac
+
+Hello Christian,
+
+Currently, the only way to get Radiance running on the Macintosh is to get
+Apple's A/UX product.  This is an implementation of UNIX System V with
+Berkeley extensions, and the current distribution (3.0) includes X11 as
+well.  It costs about $600.00 in the States and takes up about 160 Mbytes
+of disk space.  The good news is that you can still run most of your Mac
+software under A/UX (and note that you don't HAVE to run A/UX if you don't
+want to just because you installed it), and I use Radiance with A/UX all
+the time and have found it to be quite reliable.
+
+I have not ported Radiance to the native Mac OS, primarily due to lack of
+time and motivation.  If you have used Radiance, you know that it is not
+a menu-based application, and thus doesn't fit into the Macintosh environment
+very well.  Someday, when a proper user interface is written for the software,
+we can look more seriously at integrating into the Mac world.
+
+As far as I know, Radiance is the only free software that accounts for
+arbitrary diffuse and specular interactions in complicated geometries.
+It does not follow the usual "radiosity" finite element approach, but
+it does calculate diffusehis as part of an independent graphics
+study course.)
+
+I have a couple questions I was hoping yo
+
+1)  We have a large skylight in the roof of the lobby.  To simulate this
+in our model, I followed the example in the tutorial document you
+provide with the Radiance package. (At the end of the tutorial you
+create a window that can transmit light and that can be seen through.) 
+
+The lobby is completely enclosed and the only light sources are what
+we've created inside (some track lighting and recessed incandescent
+lights) and the light from the skylight.  Before I added the
+skylight, the light from the light sources was sufficient to
+'look' around the room (I didn't need to add the -av option in rpict).
+But when I add the skylight with the simulated sky as a new light 
+source, the amount of light is blinding.  I have to use 
+'ximage -e -6 ...' to see anything.
+
+How can I turn down the intensity of the light from the sky?  I'm
+not picking up the info (so far) out of the documentation.  As I said,
+I used the method you described in the tutorial.  (I'm also
+including the artificial ground as in the tutorial because I
+plan to put some first floor windows in later.)
+
+
+2)  Can you recommend any of your examples (or documentation) on how
+to put a pattern on a surface?   We're simulating a clear glass brick
+wall made up of many small bricks by using one  large polygon of glass.
+But we need to simulate the grout (between the actual bricks)
+on the large glass polygon.  I could just overlay white polygon strips
+over the glass polygon, but the pattern function should be applicable
+here.  Any suggestions?
+
+Thanks,
+
+--Mike
+
+Mike Acker,macker@valhalla.cs.wright.edu
+
+Date: Fri, 16 Oct 92 10:34:44 PDT
+From: greg (Gregory J. Ward)
+To: macker@valhalla.cs.wright.edu
+Subject: Re:  Radiance Question
+
+Hello Mike,
+
+In answer to your first question, it sounds as if you are doing nothing wrong
+in your modeling of a skylight.  It is quite normal for a Radiance rendering
+to require exposure adjustment, either brighter or darker, prior to display.
+Pfilt is the usual program to accomplish this.
+
+Whereas most rendering programs produce 24-bit integer color images, Radiance
+produces 32-bit floating point color images, and there is no loss of quality
+in adjusting the exposure after the rendering is complete.  (Normally, this
+would wash out a 24-bit rendering.)  It is important NOT to change the value
+of your light sources just to get a rendering that is the right exposure,
+since you would lose the physical values that Radiance attempts to maintain
+in its simulation.  (For example, the 'l' command in ximage would produce
+meaningless values.)
+
+As for your second question, you can affect the transmission of the "glass"
+or "dielectric" types with a pattern, but you cannot affect their reflection,
+since that is determined by the index of refraction which is not accessible
+in this way.  Thus, you could produce dark grout with a pattern, but not
+light grout, because the reflectance of glass is fixed around 5%.
+
+If you want white grout, I would use the -a option of xform to place many
+polygonal strips just in front and/or behind the glass.  The impact on
+the calculation time should be negligible.
+
+-Greg
+
+<A NAME="TEXDATA">=========================================================</A>
+TEXDATA - Using the texdata type for bump mapping
+
+Date: Wed, 21 Oct 1992 13:19:48 +0800
+From: Simon Crone <crones@cs.curtin.edu.au>
+Apparently-To: GJWard@lbl.gov
+
+Hello Greg,
+
+	I am after information on how to use the data files for the
+Texdata type.  I want to be able to use a Radiance picture file
+as a texture 'map'.  Ie. using the picture file's red value to
+change the x normal, the blue value to change the y normal and
+the z value to change the z height.  How might I go about this?
+	If you could supply an example, that would be great.
+
+Many thanks,
+	Simon Crone.
+
+Date: Wed, 21 Oct 92 11:48:02 PDT
+From: greg (Gregory J. Ward)
+To: crones@cs.curtin.edu.au
+Subject: texture data
+
+Hi Simon,
+
+There is no direct way to do what you are asking in Radiance.  Why do you
+want to take a picture and interpret it in this way?  Is it merely for the
+effect?  If you have a picture and wish to access it as data in a texdata
+primitive, you must first convert the picture to three files, one for red
+(x perturbation), one for green (y perturbation) and one for z 
+(z perturbation -- not the same as height).  I can give you more details
+on how to do this if you give me a little more information about your
+specific application and need.
+
+-Greg
+
+Date: Thu, 22 Oct 1992 05:06:06 +0800
+From: Simon Crone <crones@cs.curtin.edu.au>
+To: GJWard@lbl.gov
+Subject: Texture-data
+
+Hi Greg,
+
+The reason I wish to interpret picture files as texture data is as follows;
+
+The raytracing program ( CAN Raytracing System ) that is being used in our 
+Architecture department contains a number of texture pictures or "bump maps" 
+that are used for various materials definitions.
+I am currently converting the raytrace material list ( around 80+ materials ) 
+to radiance material descriptions.
+It would be a lot easier if I could use the existing raytrace "bump map" 
+pictures to perturb materials rather than creating new procedural pattern.
+A prime example of this is a water texture.  The raytrace program has a very 
+realistic water pattern, while my efforts to create such a procedural pattern 
+have led to some fascinating, if not realistic textures ( The Molten Murcury 
+pool is my favourite!)
+
+The blue channel ( z ) is used as a height for calculation of shadows across 
+a perturbed surface in the raytrace program and does not perturb the z normal.
+I realise this may not be possible in Radiance.
+
+I hope this helps.
+
+
+	Simon 
+
+Date: Wed, 21 Oct 92 17:50:17 PDT
+From: greg (Gregory J. Ward)
+To: crones@cs.curtin.edu.au
+Subject: Re:  Texture-data
+
+Hmmm.  Sounds like a nice system.  Who makes it (CAN)?  What does it cost?
+
+Anyway, you are correct in thinking that Radiance does not provide height-
+variation for shadowing, so this information may as well be thrown away.
+
+First, you need to put your x and y perturbations into two separate files
+that look like this:
+
+	2
+	0 1 height
+	0 1 width
+
+	dx00 dx01 dx02 ... dx0width
+	dx10 dx11 dx12 ... dx1width
+	.
+	.
+	.
+	dxheight0 dxheight1 dxheight2 ... dxheightwidth
+
+Replace "height" with the vertical size of the map (# of points), and "width"
+with the horizontal size.  The y perturbation file will look pretty much
+the same.  (The line spacing and suchlike is irrelevant.)  Let's say you
+named these files "xpert.dat" and "ypert.dat".
+
+Next, decide the orientation of your surface and apply the texture to it.
+For a surface in the xy plane, you might use the following:
+
+void texdata my_texture
+9 pass_dx pass_dy nopert xpert.dat ypert.dat ypert.dat tex.cal frac(Px) frac(Py)
+0
+0
+
+my_texture plastic water
+0
+0
+5 .1 .2 .6 .05 0
+
+water ring lake
+0
+0
+8
+	0	0	0
+	0	0	1
+	0	10
+
+Finally, you need to create the following file (tex.cal):
+
+{ A dumb texture mapping file }
+pass_dx(dx,dy,dz)=dx; pass_dy(dx,dy,dz)=dy; pass_dz(dx,dy,dz)=dz;
+nopert(dx,dy,dz)=0;
+
+This just repeats the texture with a size of 1.  You can use scalefactors
+and different coordinate mappings to change this.  If this works or doesn't
+work, let me know.  (I have NEVER tried to map textures in this way, so you
+will be the first person I know of to use this feature.)
+
+-Greg
+
+Date: Fri, 23 Oct 1992 00:32:13 +0800
+From: Simon Crone <crones@cs.curtin.edu.au>
+To: GJWard@lbl.gov
+Subject: Texture-data
+
+Greg, hello again,
+
+Well, the good news is that the texture mapping works! 
+I've converted the raytrace water bump map from RLE format1
+
+	!genprism orange_slice slice 3  0 0  2 0  2 1.5  -l 0 0 -2 \
+
+Genprism makes a triangular prism to cut the wedge from the sphere.
+This will make a slice using the same material as the peel.  If you
+want a different material there, you can prepend your material to the
+list of string arguments for orange_slice.
+
+Note that there are problems with the antimatter type that make the
+the gensurf solution preferable if you can live with it.
+
+Hope this helps!
+-Greg
+
+
+</PRE></body>
+<hr>
+<p align="left"><strong>Back to </strong><a HREF="#top"><strong>Top of Digest
+Volume 2, Number 4</strong></a><br>
+<font size="3"><strong>Return to </strong></font><a
+HREF="../HOME.html"><font size="3"><strong><i>RADIANCE</i>
+Home Page</strong></font></a><br>
+<strong>Return to </strong><a HREF="rad_dig_HOME.html"><strong><i>RADIANCE</i>
+Digests Overview</strong></a></p>
+<hr>
+<h5>
+All trademarks and product names mentioned herein are the property
+of their registered owners.<br>
+All written material is the property of its respective contributor.<br>
+Neither the contributors nor their employers are responsible for
+consequences arising from any use or misuse of this information.<br>
+We make no guarantee that any of this information is correct.
+</h5>
+</html>
